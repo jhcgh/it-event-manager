@@ -139,7 +139,7 @@ export default function HomePage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="remote">Remote</SelectItem>
-                <SelectItem value="in-person">In-person</SelectItem>
+                <SelectItem value="in-person">In Person</SelectItem>
               </SelectContent>
             </Select>
           </div>

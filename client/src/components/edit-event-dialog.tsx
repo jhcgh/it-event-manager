@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -92,9 +91,9 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
 
           <div className="space-y-2">
             <Label htmlFor="description">Description * (Max 50 words)</Label>
-            <Textarea 
-              id="description" 
-              {...form.register("description")} 
+            <Textarea
+              id="description"
+              {...form.register("description")}
               onChange={(e) => {
                 const words = e.target.value.trim().split(/\s+/).length;
                 if (words > 50) {
@@ -203,12 +202,30 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Switch
-              checked={form.getValues("isRemote")}
-              onCheckedChange={(checked) => form.setValue("isRemote", checked)}
-            />
-            <Label>Remote Event</Label>
+          <div className="space-y-2">
+            <Label>Event Location Type *</Label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  id="inPerson"
+                  className="h-4 w-4"
+                  checked={!form.getValues("isRemote")}
+                  onChange={() => form.setValue("isRemote", false)}
+                />
+                <Label htmlFor="inPerson">In Person</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  id="remote"
+                  className="h-4 w-4"
+                  checked={form.getValues("isRemote")}
+                  onChange={() => form.setValue("isRemote", true)}
+                />
+                <Label htmlFor="remote">Remote</Label>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
