@@ -62,12 +62,14 @@ export default function HomePage() {
             {user ? (
               <>
                 <CreateEventDialog />
-                <Link href="/dashboard">
-                  <Button size="sm" variant="outline" className="flex items-center gap-1.5 text-xs">
-                    <LayoutDashboard className="h-3.5 w-3.5" />
-                    My Dashboard
-                  </Button>
-                </Link>
+                {!user.isSuperAdmin && (
+                  <Link href="/dashboard">
+                    <Button size="sm" variant="outline" className="flex items-center gap-1.5 text-xs">
+                      <LayoutDashboard className="h-3.5 w-3.5" />
+                      My Dashboard
+                    </Button>
+                  </Link>
+                )}
                 <Button 
                   size="sm"
                   variant="outline" 
