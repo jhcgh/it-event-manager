@@ -382,7 +382,17 @@ export default function AdminPage() {
               <AlertTriangle className="h-6 w-6 text-destructive" />
               Admin Dashboard
             </h1>
-            <div className="w-32"></div>
+            <div className="w-32 flex justify-end">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-xs h-7 px-2 gap-2"
+                onClick={() => logoutMutation.mutate()}
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -481,15 +491,10 @@ export default function AdminPage() {
                             <Button
                               variant={u.status === "active" ? "destructive" : "outline"}
                               size="sm"
-                              onClick={async () => {
-                                if (u.status === "active") {
-                                  await apiRequest("POST", `/api/admin/users/${u.id}/terminate`);
-                                }
-                                toggleUserStatusMutation.mutate({
-                                  userId: u.id,
-                                  status: u.status === "active" ? "suspended" : "active"
-                                });
-                              }}
+                              onClick={() => toggleUserStatusMutation.mutate({
+                                userId: u.id,
+                                status: u.status === "active" ? "suspended" : "active"
+                              })}
                               className="flex items-center gap-1 w-[82px]"
                             >
                               {u.status === "active" ? (

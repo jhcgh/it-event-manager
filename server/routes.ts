@@ -199,12 +199,6 @@ export function registerRoutes(app: Express): Server {
     res.sendStatus(200);
   });
 
-  app.post("/api/admin/users/:id/terminate", async (req, res) => {
-    if (!req.user?.isAdmin) return res.sendStatus(403);
-    await storage.terminateUserSessions(parseInt(req.params.id));
-    res.sendStatus(200);
-  });
-
   const httpServer = createServer(app);
   return httpServer;
 }
