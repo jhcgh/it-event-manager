@@ -67,7 +67,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
+      <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-2 flex justify-between items-center">
           <div className="w-32">
             <Link href="/">
@@ -77,7 +77,9 @@ export default function DashboardPage() {
               </Button>
             </Link>
           </div>
-          <h1 className="text-2xl font-bold flex-1 text-center">My Dashboard</h1>
+          <h1 className="text-2xl font-bold flex-1 text-center bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            My Dashboard
+          </h1>
           <div className="flex items-center gap-1.5 w-32 justify-end">
             <Link href="/profile">
               <Button 
@@ -101,97 +103,94 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-xl font-semibold">My Events</h2>
-          <CreateEventDialog />
+      <div className="bg-gradient-to-b from-primary/5 to-background border-b">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold">My Events</h2>
+            <CreateEventDialog />
+          </div>
         </div>
+      </div>
 
-        <div className="rounded-md border">
+      <main className="container mx-auto px-4 py-8">
+        <div className="rounded-lg border bg-card shadow-sm">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Event Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Event Date</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>URL</TableHead>
-                <TableHead>Remote</TableHead>
-                <TableHead>Actions</TableHead>
+              <TableRow className="bg-muted/50">
+                <TableHead className="font-semibold">Event Name</TableHead>
+                <TableHead className="font-semibold">Description</TableHead>
+                <TableHead className="font-semibold">Event Date</TableHead>
+                <TableHead className="font-semibold">Location</TableHead>
+                <TableHead className="font-semibold">Type</TableHead>
+                <TableHead className="font-semibold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.map((event) => (
-                <TableRow key={event.id}>
-                  <TableCell className="font-medium">
-                    {event.title}
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {event.description}
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(event.date), "PPP")}
-                  </TableCell>
-                  <TableCell>
-                    {event.isRemote ? "Remote" : `${event.city}, ${event.country}`}
-                  </TableCell>
-                  <TableCell className="capitalize">{event.type}</TableCell>
-                  <TableCell>
-                    {event.url && (
-                      <a 
-                        href={event.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        View
-                      </a>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {event.isRemote ? "Yes" : "No"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <EditEventDialog event={event} />
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="outline" size="sm" className="flex items-center gap-2 text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                            Delete
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will permanently delete the event
-                              "{event.title}" and remove it from our records.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteEventMutation.mutate(event.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              {deleteEventMutation.isPending ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                  Deleting...
-                                </>
-                              ) : (
-                                "Delete Event"
-                              )}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
+              {events.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    No events found. Create your first event to get started.
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                events.map((event) => (
+                  <TableRow key={event.id} className="transition-colors hover:bg-muted/50">
+                    <TableCell className="font-medium">
+                      {event.title}
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {event.description}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(event.date), "PPP")}
+                    </TableCell>
+                    <TableCell>
+                      {event.isHybrid ? "In Person & Online" : 
+                       event.isRemote ? "Online" : 
+                       `${event.city}, ${event.country}`}
+                    </TableCell>
+                    <TableCell className="capitalize">{event.type}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <EditEventDialog event={event} />
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="flex items-center gap-2 text-destructive hover:bg-destructive/10">
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the event
+                                "{event.title}" and remove it from our records.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteEventMutation.mutate(event.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                {deleteEventMutation.isPending ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                    Deleting...
+                                  </>
+                                ) : (
+                                  "Delete Event"
+                                )}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
