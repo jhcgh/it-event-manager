@@ -22,6 +22,7 @@ export function CreateEventDialog() {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date>(new Date());
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
@@ -98,7 +99,7 @@ export function CreateEventDialog() {
 
           <div className="space-y-2">
             <Label>Date *</Label>
-            <Popover>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant={"outline"}
@@ -124,6 +125,24 @@ export function CreateEventDialog() {
                   disabled={(date) => date < new Date()}
                   initialFocus
                 />
+                <div className="flex justify-end gap-2 p-3 border-t">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCalendarOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      form.setValue("date", date);
+                      setCalendarOpen(false);
+                    }}
+                  >
+                    OK
+                  </Button>
+                </div>
               </PopoverContent>
             </Popover>
             {form.formState.errors.date && (
