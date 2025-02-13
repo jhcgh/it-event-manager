@@ -437,13 +437,13 @@ function AdminPage() {
               <AlertTriangle className="h-6 w-6 text-destructive" />
               Admin Dashboard
             </h1>
-            <div className="w-32 flex justify-end">
+            <div className="w-32 flex justify-end items-center gap-1.5">
               <Button 
                 size="sm" 
                 variant="outline" 
                 onClick={() => logoutMutation.mutate()} 
                 disabled={logoutMutation.isPending}
-                className="flex items-center gap-1.5 text-xs"
+                className="flex items-center gap-1.5 text-xs h-7 px-2"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 {logoutMutation.isPending ? "Logging out..." : "Logout"}

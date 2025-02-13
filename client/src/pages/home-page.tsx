@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { HoverUserMenu } from "@/components/hover-user-menu";
 
 export default function HomePage() {
   const { user, logoutMutation } = useAuth();
@@ -51,7 +52,7 @@ export default function HomePage() {
 
   const filteredEvents = events.filter((event: Event) => {
     const matchesSearch = event.title.toLowerCase().includes(search.toLowerCase()) ||
-                       event.description.toLowerCase().includes(search.toLowerCase());
+                         event.description.toLowerCase().includes(search.toLowerCase());
     const eventDate = new Date(event.date);
     const matchesMonth = !selectedMonth || (
       eventDate >= startOfMonth(selectedMonth) &&
@@ -59,9 +60,9 @@ export default function HomePage() {
     );
     const matchesType = selectedType === "all" || event.type === selectedType;
     const matchesLocation = !selectedLocation || 
-                           (selectedLocation === "online" ? (event.isRemote && !event.isHybrid) :
-                            selectedLocation === "in-person" ? (!event.isRemote && !event.isHybrid) :
-                            event.isHybrid);
+                            (selectedLocation === "online" ? (event.isRemote && !event.isHybrid) :
+                             selectedLocation === "in-person" ? (!event.isRemote && !event.isHybrid) :
+                             event.isHybrid);
     return matchesSearch && matchesMonth && matchesType && matchesLocation;
   });
 
@@ -92,15 +93,7 @@ export default function HomePage() {
                     </Link>
                   </>
                 )}
-                <Link href="/profile">
-                  <Button 
-                    size="sm"
-                    variant="ghost" 
-                    className="flex items-center hover:bg-accent h-7 w-7 p-0"
-                  >
-                    <UserCircle className="h-4 w-4" />
-                  </Button>
-                </Link>
+                <HoverUserMenu user={user} />
                 <Button 
                   size="sm"
                   variant="outline" 
