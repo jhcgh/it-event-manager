@@ -29,5 +29,14 @@ export function ProtectedRoute({
     );
   }
 
+  // Redirect super users from dashboard to admin panel
+  if (user.isSuperAdmin && path === "/dashboard") {
+    return (
+      <Route path={path}>
+        <Redirect to="/admin" />
+      </Route>
+    );
+  }
+
   return <Component />
 }
