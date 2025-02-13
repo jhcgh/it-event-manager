@@ -71,7 +71,7 @@ export function CreateEventDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="flex items-center gap-2">
+        <Button size="sm" variant="outline" className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
           Create Event
         </Button>

@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, Plus, LayoutDashboard, LogOut } from "lucide-react";
 import { useState } from "react";
 import { Event } from "@shared/schema";
 import { format, startOfMonth, endOfMonth } from "date-fns";
@@ -57,19 +57,24 @@ export default function HomePage() {
           <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
             TechEvents.io
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {user ? (
               <>
                 <CreateEventDialog />
                 <Link href="/dashboard">
-                  <Button size="sm">My Dashboard</Button>
+                  <Button size="sm" variant="outline" className="flex items-center gap-2">
+                    <LayoutDashboard className="h-4 w-4" />
+                    My Dashboard
+                  </Button>
                 </Link>
                 <Button 
                   size="sm"
                   variant="outline" 
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
+                  className="flex items-center gap-2"
                 >
+                  <LogOut className="h-4 w-4" />
                   {logoutMutation.isPending ? "Logging out..." : "Logout"}
                 </Button>
               </>
