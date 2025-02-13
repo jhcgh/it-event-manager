@@ -45,7 +45,8 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       type: event.type,
       url: event.url || "",
       imageUrl: event.imageUrl || "",
-    }
+    },
+    mode: 'onSubmit'
   });
 
   const handleLocationTypeChange = (type: "in-person" | "online" | "hybrid") => {
@@ -181,7 +182,11 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   });
                 } else {
                   form.clearErrors("description");
-                  form.setValue("description", e.target.value);
+                  form.setValue("description", e.target.value, { 
+                    shouldValidate: false,
+                    shouldDirty: true,
+                    shouldTouch: false
+                  });
                 }
               }}
             />
