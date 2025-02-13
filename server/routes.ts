@@ -14,6 +14,16 @@ const upload = multer({
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
+  // Add profile update endpoint
+  app.patch("/api/profile", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const updatedUser = await storage.updateUser(req.user.id, req.body);
+    if (!updatedUser) return res.sendStatus(404);
+
+    res.json(updatedUser);
+  });
+
   // Public event routes
   app.get("/api/events", async (req, res) => {
     const events = await storage.getAllEvents();

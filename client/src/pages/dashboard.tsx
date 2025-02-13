@@ -83,6 +83,9 @@ export default function DashboardPage() {
             <Link href="/">
               <Button variant="ghost">Home</Button>
             </Link>
+            <Link href="/profile">
+              <Button variant="ghost">Profile</Button>
+            </Link>
             <Button variant="outline" onClick={() => logoutMutation.mutate()}>
               Logout
             </Button>

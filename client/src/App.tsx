@@ -8,6 +8,7 @@ import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard";
 import AdminPage from "@/pages/admin";
+import ProfilePage from "@/pages/profile";
 import { ProtectedRoute } from "./lib/protected-route";
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/dashboard" component={DashboardPage} />
       <ProtectedRoute path="/admin" component={AdminPage} />
+      <ProtectedRoute path="/profile" component={ProfilePage} />
       <Route component={NotFound} />
     </Switch>
   );
