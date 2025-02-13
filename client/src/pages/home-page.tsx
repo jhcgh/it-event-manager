@@ -61,14 +61,16 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                <CreateEventDialog />
                 {!user.isSuperAdmin && (
-                  <Link href="/dashboard">
-                    <Button size="sm" variant="outline" className="flex items-center gap-1.5 text-xs">
-                      <LayoutDashboard className="h-3.5 w-3.5" />
-                      My Dashboard
-                    </Button>
-                  </Link>
+                  <>
+                    <CreateEventDialog />
+                    <Link href="/dashboard">
+                      <Button size="sm" variant="outline" className="flex items-center gap-1.5 text-xs">
+                        <LayoutDashboard className="h-3.5 w-3.5" />
+                        My Dashboard
+                      </Button>
+                    </Link>
+                  </>
                 )}
                 <Link href="/profile">
                   <Button 
