@@ -46,7 +46,7 @@ export function CreateEventDialog() {
         date: data.date.toISOString(),
       };
       const res = await apiRequest("POST", "/api/events", formattedData);
-      return res.json();
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
@@ -128,7 +128,9 @@ export function CreateEventDialog() {
                       form.setValue("date", newDate);
                     }
                   }}
-                  disabled={(date) => date < new Date()}
+                  disabled={(date) =>
+                    date < new Date(new Date().setHours(0, 0, 0, 0))
+                  }
                   initialFocus
                 />
                 <div className="flex justify-end gap-2 p-3 border-t">
