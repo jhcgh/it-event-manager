@@ -26,12 +26,8 @@ function Router() {
         <Route path="/auth" component={AuthPage} />
         <ProtectedRoute path="/dashboard" component={DashboardPage} />
         <ProtectedRoute path="/admin" component={AdminPage} />
-        <ProtectedRoute path="/profile">
-          {() => <ProfilePage />}
-        </ProtectedRoute>
-        <Route>
-          {() => <NotFound />}
-        </Route>
+        <ProtectedRoute path="/profile" component={ProfilePage} />
+        <Route component={NotFound} />
       </Switch>
     </div>
   );

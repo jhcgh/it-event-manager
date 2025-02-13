@@ -60,22 +60,29 @@ app.use((req, res, next) => {
     }
 
     const PORT = parseInt(process.env.PORT || "5000", 10);
+    log(`Starting server on port ${PORT}...`);
 
     // Create a Promise to handle server startup
     const startServer = new Promise<void>((resolve, reject) => {
       const onError = (error: Error) => {
+        log(`Error starting server: ${error.message}`);
         console.error('Failed to start server:', error);
         reject(error);
       };
 
       try {
         server.listen(PORT, "0.0.0.0", () => {
-          console.log(`Server is listening on port ${PORT}`);
-          log(`Server is running at http://0.0.0.0:${PORT}`);
+          const address = server.address();
+          const port = typeof address === 'object' ? address?.port : PORT;
+          log(`Server bound successfully to port ${port}`);
+          console.log(`Server is listening on port ${port}`);
+
           // Signal that the server is ready
           if (process.send) {
             process.send('ready');
+            log('Sent ready signal to parent process');
           }
+
           resolve();
         }).on('error', onError);
       } catch (error) {
