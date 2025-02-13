@@ -16,6 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 
 export default function DashboardPage() {
   const { user, logoutMutation } = useAuth();
@@ -79,6 +80,9 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <div className="flex items-center gap-4">
             <span>{user?.username}</span>
+            <Link href="/">
+              <Button variant="ghost">Home</Button>
+            </Link>
             <Button variant="outline" onClick={() => logoutMutation.mutate()}>
               Logout
             </Button>
