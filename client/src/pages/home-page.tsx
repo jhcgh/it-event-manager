@@ -1,14 +1,14 @@
+import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, Calendar as CalendarIcon, MapPin, Video, Users } from "lucide-react";
+import { Search, Calendar as CalendarIcon, MapPin, Video, Users, Plus } from "lucide-react";
 import { useState } from "react";
 import { Event } from "@shared/schema";
 import { format, startOfMonth, endOfMonth } from "date-fns";
-import { useAuth } from "@/hooks/use-auth";
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -51,16 +51,20 @@ export default function HomePage() {
           </h1>
           <div className="flex items-center gap-4">
             {user ? (
-              <Link href="/dashboard">
-                <Button className="cursor-pointer hover:opacity-90">
-                  My Dashboard
-                </Button>
-              </Link>
+              <>
+                <Link href="/dashboard">
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Create Event
+                  </Button>
+                </Link>
+                <Link href="/dashboard">
+                  <Button>My Dashboard</Button>
+                </Link>
+              </>
             ) : (
               <Link href="/auth">
-                <Button className="cursor-pointer hover:opacity-90">
-                  Login
-                </Button>
+                <Button>Login</Button>
               </Link>
             )}
           </div>
