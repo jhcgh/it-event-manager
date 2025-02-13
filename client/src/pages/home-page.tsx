@@ -113,6 +113,7 @@ export default function HomePage() {
           <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
             Find and join the best technology events, conferences, and workshops happening around the world.
             Connect with industry experts and grow your network.
+            <span className="block mt-2 text-primary font-semibold">Post Events for Free</span>
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
@@ -197,22 +198,23 @@ export default function HomePage() {
                   <TableRow 
                     key={event.id}
                     className="cursor-pointer transition-colors hover:bg-muted/50"
+                    onClick={() => navigate(`/event/${event.id}`)}
                   >
-                    <TableCell className="font-medium" onClick={() => navigate(`/event/${event.id}`)}>
+                    <TableCell className="font-medium">
                       {event.title}
                     </TableCell>
-                    <TableCell className="max-w-xs truncate" onClick={() => navigate(`/event/${event.id}`)}>
+                    <TableCell className="max-w-xs truncate">
                       {event.description}
                     </TableCell>
-                    <TableCell onClick={() => navigate(`/event/${event.id}`)}>
+                    <TableCell>
                       {format(new Date(event.date), "PPP")}
                     </TableCell>
-                    <TableCell onClick={() => navigate(`/event/${event.id}`)}>
+                    <TableCell>
                       {event.isHybrid ? "In Person & Online" : 
                        event.isRemote ? "Online" : 
                        `${event.city}, ${event.country}`}
                     </TableCell>
-                    <TableCell className="capitalize" onClick={() => navigate(`/event/${event.id}`)}>
+                    <TableCell className="capitalize">
                       {event.type}
                     </TableCell>
                   </TableRow>
