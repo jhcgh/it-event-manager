@@ -92,19 +92,26 @@ export function registerRoutes(app: Express): Server {
 
     let imageUrl;
     if (req.file) {
-      // Resize image to 1200x630 (16:9 aspect ratio)
+      // Process and optimize the image
       const resizedImage = await sharp(req.file.buffer)
         .resize(1200, 630, {
           fit: 'cover',
-          position: 'center'
+          position: 'center',
+          withoutEnlargement: true
         })
-        .jpeg({ quality: 80 })
+        .jpeg({ 
+          quality: 80,
+          progressive: true,
+          force: true // Convert all images to JPEG
+        })
         .toBuffer();
       
-      // Save the resized image
-      const filename = `${Date.now()}-${req.file.originalname}`;
+      // Generate unique filename and save
+      const filename = `${Date.now()}-${req.file.originalname.replace(/\.[^/.]+$/, "")}.jpg`;
       imageUrl = `/uploads/${filename}`;
-      await storage.createEvent(req.user.id, {
+      
+      // Create event with processed image
+      const event = await storage.createEvent(req.user.id, {
         ...parsed.data,
         imageUrl
       });
