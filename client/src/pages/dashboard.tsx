@@ -69,11 +69,13 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="container mx-auto px-4 py-2 flex justify-between items-center">
-          <h1 className="text-base font-bold">My Dashboard</h1>
-          <div className="flex items-center gap-1.5">
+          <div className="w-32">
             <Link href="/">
               <Button size="sm" variant="ghost" className="text-xs h-7 px-2">Events List</Button>
             </Link>
+          </div>
+          <h1 className="text-base font-bold flex-1 text-center">My Dashboard</h1>
+          <div className="flex items-center gap-1.5 w-32 justify-end">
             <Link href="/profile">
               <Button 
                 size="sm"
