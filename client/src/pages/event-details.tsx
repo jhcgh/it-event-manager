@@ -10,7 +10,8 @@ import {
   Link as LinkIcon,
   Tag,
   Info,
-  ImageIcon
+  ImageIcon,
+  Type
 } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
@@ -72,19 +73,15 @@ export default function EventDetailsPage() {
           <CardHeader>
             <div className="flex items-start justify-between">
               <div>
-                <CardTitle className="text-3xl mb-2">{event.title}</CardTitle>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  {format(new Date(event.date), "PPP")}
-                </div>
+                <h2 className="text-xl font-semibold flex items-center gap-2 mb-2">
+                  <Type className="h-5 w-5" />
+                  Event Name
+                </h2>
+                <CardTitle className="text-3xl">{event.title}</CardTitle>
               </div>
-              <Badge variant="outline" className="capitalize">
-                <Tag className="h-3 w-3 mr-1" />
-                {event.type}
-              </Badge>
             </div>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-8">
             <div className="space-y-2">
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <Info className="h-5 w-5" />
@@ -97,42 +94,50 @@ export default function EventDetailsPage() {
 
             <div className="space-y-2">
               <h2 className="text-xl font-semibold flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Location Details
+                <Calendar className="h-5 w-5" />
+                Event Date
               </h2>
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-medium mb-1">Event Format</h3>
-                  <p className="text-muted-foreground flex items-center gap-2">
-                    {event.isHybrid ? (
-                      <>
-                        <Globe className="h-4 w-4" />
-                        In Person & Online
-                      </>
-                    ) : event.isRemote ? (
-                      <>
-                        <Globe className="h-4 w-4" />
-                        Online Event
-                      </>
-                    ) : (
-                      <>
-                        <MapPin className="h-4 w-4" />
-                        In Person Event
-                      </>
-                    )}
-                  </p>
-                </div>
+              <p className="text-muted-foreground">
+                {format(new Date(event.date), "PPP")}
+              </p>
+            </div>
 
-                {!event.isRemote && (
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                Event Location Type
+              </h2>
+              <p className="text-muted-foreground">
+                {event.isHybrid ? "In Person & Online" : 
+                 event.isRemote ? "Online" : "In Person"}
+              </p>
+            </div>
+
+            {!event.isRemote && (
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Location
+                </h2>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h3 className="font-medium mb-1">Physical Location</h3>
-                    <p className="text-muted-foreground flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      {event.city}, {event.country}
-                    </p>
+                    <h3 className="font-medium mb-1">City</h3>
+                    <p className="text-muted-foreground">{event.city}</p>
                   </div>
-                )}
+                  <div>
+                    <h3 className="font-medium mb-1">Country</h3>
+                    <p className="text-muted-foreground">{event.country}</p>
+                  </div>
+                </div>
               </div>
+            )}
+
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Tag className="h-5 w-5" />
+                Event Type
+              </h2>
+              <p className="text-muted-foreground capitalize">{event.type}</p>
             </div>
 
             {event.url && (
@@ -157,12 +162,13 @@ export default function EventDetailsPage() {
               <div className="space-y-2">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
                   <ImageIcon className="h-5 w-5" />
-                  Event Image
+                  Image URL
                 </h2>
+                <p className="text-muted-foreground break-all">{event.imageUrl}</p>
                 <img
                   src={event.imageUrl}
                   alt={event.title}
-                  className="rounded-lg max-w-full h-auto"
+                  className="rounded-lg max-w-full h-auto mt-2"
                 />
               </div>
             )}
