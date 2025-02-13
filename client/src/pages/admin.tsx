@@ -221,30 +221,37 @@ function CreateSuperUserDialog() {
 }
 
 function UserEventsDialog({ user }: { user: User }) {
-  const { data: userEvents = [], isLoading } = useQuery<Event[]>({
+  const { data: userEvents = [], isLoading, error } = useQuery<Event[]>({
     queryKey: [`/api/users/${user.id}/events`],
-    enabled: !!user.id, // Only fetch if user.id is available
+    enabled: !!user.id,
   });
-
-  if (isLoading) return <p>Loading events...</p>;
 
   return (
     <Dialog>
       <DialogTrigger asChild>
         <Button>View Events</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{user.username}'s Upcoming Events</DialogTitle>
+          <DialogTitle>{user.username}'s Events</DialogTitle>
+          <DialogDescription>View all events associated with this user</DialogDescription>
         </DialogHeader>
-        <div>
+        <div className="space-y-4 mt-4">
+          {isLoading && <p className="text-center text-muted-foreground">Loading events...</p>}
+          {error && <p className="text-center text-destructive">Error loading events</p>}
+          {!isLoading && !error && userEvents.length === 0 && (
+            <p className="text-center text-muted-foreground">No events found</p>
+          )}
           {userEvents.map(event => (
-            <div key={event.id}>
-              <h3>{event.title}</h3>
-              <p>{format(new Date(event.date), "PPP 'at' p")}</p>
+            <div key={event.id} className="border rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-2">{event.title}</h3>
+              <div className="text-sm text-muted-foreground">
+                <p>Date: {format(new Date(event.date), "PPP 'at' p")}</p>
+                <p>Location: {event.isRemote ? "Online" : `${event.city}, ${event.country}`}</p>
+                <p>Type: {event.type}</p>
+              </div>
             </div>
           ))}
-          {userEvents.length === 0 && <p>No upcoming events found.</p>}
         </div>
       </DialogContent>
     </Dialog>
