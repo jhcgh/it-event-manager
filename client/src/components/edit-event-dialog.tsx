@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Pencil, CalendarIcon } from "lucide-react";
+import { Loader2, Pencil, CalendarIcon, Image as ImageIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { InsertEvent, insertEventSchema, Event } from "@shared/schema";
@@ -15,7 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 type EditEventDialogProps = {
   event: Event;
@@ -29,6 +29,8 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
   const [locationType, setLocationType] = useState<"in-person" | "online" | "hybrid">(
     event.isHybrid ? "hybrid" : event.isRemote ? "online" : "in-person"
   );
+  const [selectedImage, setSelectedImage] = useState<string | null>(event.imageUrl || null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
@@ -57,6 +59,18 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
     } else if (type === "hybrid") {
       form.setValue("isRemote", true);
       form.setValue("isHybrid", true);
+    }
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+        form.setValue("imageUrl", reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -99,6 +113,43 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
           <DialogTitle>Edit Event</DialogTitle>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="image" className="flex items-center gap-2">
+              Event Image
+              <ImageIcon className="h-4 w-4" />
+            </Label>
+            <input
+              type="file"
+              id="image"
+              accept="image/*"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleImageChange}
+            />
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-primary/50 transition-colors",
+                "flex flex-col items-center justify-center gap-2",
+                selectedImage ? "aspect-video" : "h-[200px]"
+              )}
+            >
+              {selectedImage ? (
+                <img
+                  src={selectedImage}
+                  alt="Event preview"
+                  className="rounded-lg max-h-[300px] w-full object-cover"
+                />
+              ) : (
+                <>
+                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Click to upload an image
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="title">Event Name *</Label>
             <Input id="title" {...form.register("title")} />

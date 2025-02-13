@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Plus, CalendarIcon } from "lucide-react";
+import { Loader2, Plus, CalendarIcon, Image as ImageIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { InsertEvent, insertEventSchema } from "@shared/schema";
@@ -15,7 +15,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 export function CreateEventDialog() {
   const { toast } = useToast();
@@ -23,6 +23,8 @@ export function CreateEventDialog() {
   const [date, setDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [locationType, setLocationType] = useState<"in-person" | "online" | "hybrid">("in-person");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
@@ -54,6 +56,18 @@ export function CreateEventDialog() {
     }
   };
 
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+        form.setValue("imageUrl", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const createEventMutation = useMutation({
     mutationFn: async (data: InsertEvent) => {
       const res = await apiRequest("POST", "/api/events", data);
@@ -67,6 +81,7 @@ export function CreateEventDialog() {
       });
       form.reset();
       setDate(new Date());
+      setSelectedImage(null);
       setOpen(false);
     },
     onError: (error: Error) => {
@@ -98,6 +113,44 @@ export function CreateEventDialog() {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="image" className="flex items-center gap-2">
+              Event Image
+              <ImageIcon className="h-4 w-4" />
+            </Label>
+            <input
+              type="file"
+              id="image"
+              accept="image/*"
+              className="hidden"
+              ref={fileInputRef}
+              onChange={handleImageChange}
+            />
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-primary/50 transition-colors",
+                "flex flex-col items-center justify-center gap-2",
+                selectedImage ? "aspect-video" : "h-[200px]"
+              )}
+            >
+              {selectedImage ? (
+                <img
+                  src={selectedImage}
+                  alt="Event preview"
+                  className="rounded-lg max-h-[300px] w-full object-cover"
+                />
+              ) : (
+                <>
+                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Click to upload an image
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="title">Event Name *</Label>
             <Input id="title" {...form.register("title")} />
@@ -285,14 +338,6 @@ export function CreateEventDialog() {
             <Input id="url" type="url" {...form.register("url")} />
             {form.formState.errors.url && (
               <p className="text-sm text-destructive">{form.formState.errors.url.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="imageUrl">Image URL (Optional)</Label>
-            <Input id="imageUrl" type="url" {...form.register("imageUrl")} />
-            {form.formState.errors.imageUrl && (
-              <p className="text-sm text-destructive">{form.formState.errors.imageUrl.message}</p>
             )}
           </div>
 

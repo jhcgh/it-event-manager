@@ -10,14 +10,14 @@ import {
   Link as LinkIcon,
   Tag,
   Info,
-  ImageIcon,
   Type
 } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export default function EventDetailsPage() {
   const { id } = useParams();
@@ -55,123 +55,123 @@ export default function EventDetailsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
+      <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link href="/">
-              <Button variant="ghost" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Events
-              </Button>
-            </Link>
-          </div>
+          <Link href="/">
+            <Button variant="ghost" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Events
+            </Button>
+          </Link>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-xl font-semibold flex items-center gap-2 mb-2">
-                  <Type className="h-5 w-5" />
-                  Event Name
-                </h2>
-                <CardTitle className="text-3xl">{event.title}</CardTitle>
+        <Card className="overflow-hidden">
+          {event.imageUrl && (
+            <div className="relative w-full aspect-video">
+              <img
+                src={event.imageUrl}
+                alt={event.title}
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
+                <h1 className="text-4xl font-bold text-white">{event.title}</h1>
+                <div className="flex items-center gap-3 mt-2">
+                  <Badge variant="outline" className="bg-white/10 text-white border-white/20">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    {format(new Date(event.date), "PPP")}
+                  </Badge>
+                  <Badge variant="outline" className="bg-white/10 text-white border-white/20 capitalize">
+                    <Tag className="h-3 w-3 mr-1" />
+                    {event.type}
+                  </Badge>
+                </div>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Info className="h-5 w-5" />
-                Description
-              </h2>
-              <p className="text-muted-foreground whitespace-pre-wrap">
-                {event.description}
-              </p>
-            </div>
+          )}
 
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Event Date
-              </h2>
-              <p className="text-muted-foreground">
-                {format(new Date(event.date), "PPP")}
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Globe className="h-5 w-5" />
-                Event Location Type
-              </h2>
-              <p className="text-muted-foreground">
-                {event.isHybrid ? "In Person & Online" : 
-                 event.isRemote ? "Online" : "In Person"}
-              </p>
-            </div>
-
-            {!event.isRemote && (
-              <div className="space-y-2">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Location
-                </h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="font-medium mb-1">City</h3>
-                    <p className="text-muted-foreground">{event.city}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-medium mb-1">Country</h3>
-                    <p className="text-muted-foreground">{event.country}</p>
-                  </div>
+          <CardContent className={cn(
+            "grid gap-8 p-6",
+            event.imageUrl ? "mt-0" : "mt-6"
+          )}>
+            {!event.imageUrl && (
+              <div>
+                <h1 className="text-4xl font-bold">{event.title}</h1>
+                <div className="flex items-center gap-3 mt-3">
+                  <Badge variant="outline">
+                    <Calendar className="h-3 w-3 mr-1" />
+                    {format(new Date(event.date), "PPP")}
+                  </Badge>
+                  <Badge variant="outline" className="capitalize">
+                    <Tag className="h-3 w-3 mr-1" />
+                    {event.type}
+                  </Badge>
                 </div>
               </div>
             )}
 
             <div className="space-y-2">
               <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Tag className="h-5 w-5" />
-                Event Type
+                <Info className="h-5 w-5" />
+                About This Event
               </h2>
-              <p className="text-muted-foreground capitalize">{event.type}</p>
+              <p className="text-muted-foreground leading-relaxed">
+                {event.description}
+              </p>
             </div>
 
-            {event.url && (
+            <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-2">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <LinkIcon className="h-5 w-5" />
-                  Event URL
+                  <Globe className="h-5 w-5" />
+                  Event Format
                 </h2>
-                <a
-                  href={event.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-primary hover:underline"
-                >
-                  <LinkIcon className="h-4 w-4" />
-                  Visit Event Website
-                </a>
+                <p className="text-muted-foreground">
+                  {event.isHybrid ? "In Person & Online" : 
+                   event.isRemote ? "Online" : "In Person"}
+                </p>
               </div>
-            )}
 
-            {event.imageUrl && (
+              {!event.isRemote && (
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Location
+                  </h2>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    {event.city}, {event.country}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <ImageIcon className="h-5 w-5" />
-                  Image URL
+                  <Type className="h-5 w-5" />
+                  Event Type
                 </h2>
-                <p className="text-muted-foreground break-all">{event.imageUrl}</p>
-                <img
-                  src={event.imageUrl}
-                  alt={event.title}
-                  className="rounded-lg max-w-full h-auto mt-2"
-                />
+                <p className="text-muted-foreground capitalize">{event.type}</p>
               </div>
-            )}
+
+              {event.url && (
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <LinkIcon className="h-5 w-5" />
+                    Event URL
+                  </h2>
+                  <a
+                    href={event.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-primary hover:underline"
+                  >
+                    <LinkIcon className="h-4 w-4" />
+                    Visit Event Website
+                  </a>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </main>
