@@ -54,7 +54,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="container mx-auto px-4 py-2 flex justify-between items-center">
-          <h1 className="text-base font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
             TechEvents.io
           </h1>
           <div className="flex items-center gap-1.5">
