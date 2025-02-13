@@ -77,7 +77,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold">My Dashboard</h1>
           <div className="flex items-center gap-4">
             <Link href="/">
               <Button variant="ghost">Events List</Button>
