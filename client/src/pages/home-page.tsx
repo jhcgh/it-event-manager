@@ -45,7 +45,6 @@ export default function HomePage() {
     return matchesSearch && matchesMonth && matchesType && matchesLocation;
   });
 
-  // Get next 24 months for the month picker
   const months = Array.from({ length: 24 }, (_, i) => {
     const date = new Date();
     date.setMonth(date.getMonth() + i);
@@ -63,14 +62,6 @@ export default function HomePage() {
             {user ? (
               <>
                 <CreateEventDialog />
-                {(user.isAdmin || user.isSuperAdmin) && (
-                  <Link href="/admin">
-                    <Button size="sm" variant="outline" className="flex items-center gap-1.5 text-xs">
-                      <Settings className="h-3.5 w-3.5" />
-                      Admin Panel
-                    </Button>
-                  </Link>
-                )}
                 <Link href="/dashboard">
                   <Button size="sm" variant="outline" className="flex items-center gap-1.5 text-xs">
                     <LayoutDashboard className="h-3.5 w-3.5" />
