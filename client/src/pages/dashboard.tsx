@@ -127,7 +127,14 @@ export default function DashboardPage() {
                     selected={form.getValues("date")}
                     onSelect={(date) => form.setValue("date", date || new Date())}
                     className="rounded-md border"
-                    fromDate={new Date()} // Prevent selecting past dates
+                    disabled={(date) => {
+                      // Compare only the date parts, not the time
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const compareDate = new Date(date);
+                      compareDate.setHours(0, 0, 0, 0);
+                      return compareDate < today;
+                    }}
                   />
                   {form.formState.errors.date && (
                     <p className="text-sm text-destructive">{form.formState.errors.date.message}</p>
