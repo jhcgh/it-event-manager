@@ -55,7 +55,10 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       isHybrid: type === "hybrid"
     };
     Object.entries(updates).forEach(([key, value]) => {
-      form.setValue(key as "isRemote" | "isHybrid", value);
+      form.setValue(key as "isRemote" | "isHybrid", value, { 
+        shouldValidate: false,
+        shouldDirty: false
+      });
     });
   };
 
@@ -65,7 +68,10 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
-        form.setValue("imageUrl", reader.result as string);
+        form.setValue("imageUrl", reader.result as string, {
+          shouldValidate: false,
+          shouldDirty: false
+        });
       };
       reader.readAsDataURL(file);
     }
