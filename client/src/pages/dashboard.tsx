@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserCircle, Trash2 } from "lucide-react";
+import { Loader2, UserCircle, Trash2, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
@@ -71,7 +71,10 @@ export default function DashboardPage() {
         <div className="container mx-auto px-4 py-2 flex justify-between items-center">
           <div className="w-32">
             <Link href="/">
-              <Button size="sm" variant="ghost" className="text-xs h-7 px-2">Events List</Button>
+              <Button variant="ghost" size="sm" className="text-xs h-7 px-2 gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Events List
+              </Button>
             </Link>
           </div>
           <h1 className="text-base font-bold flex-1 text-center">My Dashboard</h1>
