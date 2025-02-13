@@ -53,7 +53,7 @@ export default function HomePage() {
             {user ? (
               <Link href="/dashboard">
                 <Button className="cursor-pointer hover:opacity-90">
-                  Dashboard
+                  My Dashboard
                 </Button>
               </Link>
             ) : (
