@@ -128,7 +128,6 @@ export default function DashboardPage() {
                     onSelect={(date) => form.setValue("date", date || new Date())}
                     className="rounded-md border"
                     fromDate={new Date()} // Prevent selecting past dates
-                    disabled={(date) => date < new Date()} // Additional check for dates before today
                   />
                   {form.formState.errors.date && (
                     <p className="text-sm text-destructive">{form.formState.errors.date.message}</p>
