@@ -362,8 +362,8 @@ export default function AdminPage() {
   }
 
   // Split users into super users and customers
-  const superUsers = users.filter(u => u.isSuperAdmin);
-  const customers = users.filter(u => !u.isSuperAdmin);
+  const superUsers = users.filter(u => u.isSuperAdmin === true);
+  const customers = users.filter(u => !u.isSuperAdmin || u.isSuperAdmin === null);
 
   return (
     <div className="min-h-screen bg-background">

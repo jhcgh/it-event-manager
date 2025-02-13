@@ -26,7 +26,8 @@ export function registerRoutes(app: Express): Server {
         lastName: "Admin",
         companyName: "SaaS Platform",
         title: "Super Administrator",
-        mobile: "+1234567890"
+        mobile: "+1234567890",
+        isSuperAdmin: true // Explicitly set isSuperAdmin flag
       };
 
       // Check if admin already exists
@@ -108,18 +109,18 @@ export function registerRoutes(app: Express): Server {
           optimizeScans: true
         })
         .toBuffer();
-      
+
       // Generate unique filename and save
       const filename = `${Date.now()}-${req.file.originalname.replace(/\.[^/.]+$/, "")}.jpg`;
       imageUrl = `/uploads/${filename}`;
-      
+
       // Create event with processed image
       const event = await storage.createEvent(req.user.id, {
         ...parsed.data,
         imageUrl
       });
     }
-    
+
     const event = await storage.createEvent(req.user.id, {
       ...parsed.data,
       imageUrl
@@ -153,7 +154,7 @@ export function registerRoutes(app: Express): Server {
     try {
       const eventId = parseInt(req.params.id);
       const event = await storage.getEvent(eventId);
-      
+
       if (!event) return res.sendStatus(404);
       if (event.userId !== req.user.id && !req.user.isAdmin) return res.sendStatus(403);
 
@@ -235,6 +236,20 @@ export function registerRoutes(app: Express): Server {
     await storage.deleteUser(parseInt(req.params.id));
     res.sendStatus(200);
   });
+
+  // Add new route for creating super users
+  app.post("/api/admin/users/super", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+    try {
+      const userData = { ...req.body, isSuperAdmin: true }; // Ensure isSuperAdmin is set
+      const newUser = await storage.createUser(userData);
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error("Error creating super user:", error);
+      res.status(500).json({ message: "Failed to create super user" });
+    }
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;
