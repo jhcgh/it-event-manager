@@ -3,16 +3,15 @@ import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Search, Calendar as CalendarIcon, MapPin, Video, Users } from "lucide-react";
 import { useState } from "react";
 import { Event } from "@shared/schema";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 
 export default function HomePage() {
   const [search, setSearch] = useState("");
-  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [selectedType, setSelectedType] = useState<string>();
   const [selectedLocation, setSelectedLocation] = useState<"remote" | "in-person">();
 
@@ -23,11 +22,22 @@ export default function HomePage() {
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(search.toLowerCase()) ||
                          event.description.toLowerCase().includes(search.toLowerCase());
-    const matchesDate = !selectedDate || format(event.date, "yyyy-MM-dd") === format(selectedDate, "yyyy-MM-dd");
+    const eventDate = new Date(event.date);
+    const matchesMonth = !selectedMonth || (
+      eventDate >= startOfMonth(selectedMonth) &&
+      eventDate <= endOfMonth(selectedMonth)
+    );
     const matchesType = !selectedType || event.type === selectedType;
     const matchesLocation = !selectedLocation || 
                            (selectedLocation === "remote" ? event.isRemote : !event.isRemote);
-    return matchesSearch && matchesDate && matchesType && matchesLocation;
+    return matchesSearch && matchesMonth && matchesType && matchesLocation;
+  });
+
+  // Get next 12 months for the month picker
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + i);
+    return date;
   });
 
   return (
@@ -58,17 +68,23 @@ export default function HomePage() {
               />
             </div>
 
-            <Calendar
-              mode="month"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
-              className="rounded-md border"
-              ISOWeek={true}
-              showOutsideDays={false}
-              formatters={{
-                formatCaption: (date) => format(date, "MMMM yyyy")
-              }}
-            />
+            <Select 
+              value={selectedMonth?.toISOString()} 
+              onValueChange={(value) => setSelectedMonth(new Date(value))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue>
+                  {selectedMonth ? format(selectedMonth, "MMMM yyyy") : "Select month"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((date) => (
+                  <SelectItem key={date.toISOString()} value={date.toISOString()}>
+                    {format(date, "MMMM yyyy")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             <Select value={selectedType} onValueChange={setSelectedType}>
               <SelectTrigger>
