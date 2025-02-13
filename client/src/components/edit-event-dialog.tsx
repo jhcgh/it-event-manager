@@ -81,6 +81,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
       toast({
         title: "Success",
         description: "Event updated successfully",
@@ -154,6 +155,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
               )}
             </div>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="title">Event Name *</Label>
             <Input id="title" {...form.register("title")} />
@@ -176,8 +178,8 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   });
                 } else {
                   form.clearErrors("description");
+                  form.register("description").onChange(e);
                 }
-                form.register("description").onChange(e);
               }}
             />
             {form.formState.errors.description && (
@@ -319,7 +321,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
           <div className="space-y-2">
             <Label>Event Type *</Label>
             <Select
-              defaultValue={form.getValues("type")}
+              value={form.getValues("type")}
               onValueChange={(value) => form.setValue("type", value)}
             >
               <SelectTrigger>
@@ -341,14 +343,6 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             <Input id="url" type="url" {...form.register("url")} />
             {form.formState.errors.url && (
               <p className="text-sm text-destructive">{form.formState.errors.url.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="imageUrl">Image URL (Optional)</Label>
-            <Input id="imageUrl" type="url" {...form.register("imageUrl")} />
-            {form.formState.errors.imageUrl && (
-              <p className="text-sm text-destructive">{form.formState.errors.imageUrl.message}</p>
             )}
           </div>
 
