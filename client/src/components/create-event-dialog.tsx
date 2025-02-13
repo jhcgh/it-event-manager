@@ -191,6 +191,14 @@ export function CreateEventDialog() {
             {form.formState.errors.type && (
               <p className="text-sm text-destructive">{form.formState.errors.type.message}</p>
             )}
+            <p className="text-sm text-muted-foreground mt-2">
+              {form.getValues("type") === "seminar" && 
+                "A seminar is a small, focused meeting where experts discuss a specific topic."}
+              {form.getValues("type") === "workshop" && 
+                "A workshop is a hands-on session where participants learn and practice new skills."}
+              {form.getValues("type") === "conference" && 
+                "A conference is a large event with keynote speakers and breakout sessions on various topics."}
+            </p>
           </div>
 
           <div className="space-y-2">
