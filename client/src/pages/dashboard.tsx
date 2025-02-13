@@ -39,7 +39,10 @@ export default function DashboardPage() {
 
   const deleteEventMutation = useMutation({
     mutationFn: async (eventId: number) => {
-      await apiRequest("DELETE", `/api/events/${eventId}`);
+      const response = await apiRequest("DELETE", `/api/events/${eventId}`);
+      if (!response.ok) {
+        throw new Error('Failed to delete event');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });

@@ -147,12 +147,19 @@ export function registerRoutes(app: Express): Server {
   app.delete("/api/events/:id", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
-    const event = await storage.getEvent(parseInt(req.params.id));
-    if (!event) return res.sendStatus(404);
-    if (event.userId !== req.user.id) return res.sendStatus(403);
+    try {
+      const eventId = parseInt(req.params.id);
+      const event = await storage.getEvent(eventId);
+      
+      if (!event) return res.sendStatus(404);
+      if (event.userId !== req.user.id && !req.user.isAdmin) return res.sendStatus(403);
 
-    await storage.deleteEvent(parseInt(req.params.id));
-    res.sendStatus(200);
+      await storage.deleteEvent(eventId);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      res.status(500).json({ message: 'Failed to delete event' });
+    }
   });
 
   app.get("/api/events/:id/calendar", async (req, res) => {

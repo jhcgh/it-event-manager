@@ -93,8 +93,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEvent(id: number): Promise<void> {
-    await db.delete(events)
-      .where(eq(events.id, id));
+    const result = await db.delete(events)
+      .where(eq(events.id, id))
+      .returning();
+    
+    if (!result.length) {
+      throw new Error('Event not found or already deleted');
+    }
   }
 
   // Admin-specific Methods
