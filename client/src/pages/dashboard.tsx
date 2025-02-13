@@ -25,7 +25,7 @@ export default function DashboardPage() {
     defaultValues: {
       title: "",
       description: "",
-      date: new Date(),
+      date: new Date(), // Set today as default
       location: "",
       isRemote: false,
       type: "seminar",
@@ -127,6 +127,8 @@ export default function DashboardPage() {
                     selected={form.getValues("date")}
                     onSelect={(date) => form.setValue("date", date || new Date())}
                     className="rounded-md border"
+                    fromDate={new Date()} // Prevent selecting past dates
+                    disabled={(date) => date < new Date()} // Additional check for dates before today
                   />
                   {form.formState.errors.date && (
                     <p className="text-sm text-destructive">{form.formState.errors.date.message}</p>
