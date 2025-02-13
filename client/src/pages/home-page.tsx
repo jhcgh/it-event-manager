@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, Users } from "lucide-react";
+import { Search } from "lucide-react";
 import { useState } from "react";
 import { Event } from "@shared/schema";
 import { format, startOfMonth, endOfMonth } from "date-fns";
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [selectedType, setSelectedType] = useState<string>();
@@ -64,6 +64,13 @@ export default function HomePage() {
                 <Link href="/dashboard">
                   <Button>My Dashboard</Button>
                 </Link>
+                <Button 
+                  variant="outline" 
+                  onClick={() => logoutMutation.mutate()}
+                  disabled={logoutMutation.isPending}
+                >
+                  {logoutMutation.isPending ? "Logging out..." : "Logout"}
+                </Button>
               </>
             ) : (
               <Link href="/auth">
