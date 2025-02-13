@@ -204,17 +204,6 @@ export function CreateEventDialog() {
               <div className="flex items-center gap-2">
                 <input
                   type="radio"
-                  id="online"
-                  name="locationType"
-                  className="h-4 w-4"
-                  checked={locationType === "online"}
-                  onChange={() => handleLocationTypeChange("online")}
-                />
-                <Label htmlFor="online">Online</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
                   id="hybrid"
                   name="locationType"
                   className="h-4 w-4"
@@ -223,42 +212,53 @@ export function CreateEventDialog() {
                 />
                 <Label htmlFor="hybrid">In Person & Online</Label>
               </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  id="online"
+                  name="locationType"
+                  className="h-4 w-4"
+                  checked={locationType === "online"}
+                  onChange={() => handleLocationTypeChange("online")}
+                />
+                <Label htmlFor="online">Online</Label>
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Location *</Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="city">City</Label>
-                <Input
-                  id="city"
-                  placeholder="Enter city"
-                  {...form.register("city")}
-                  disabled={locationType === "online"}
-                />
-                {form.formState.errors.city && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.city.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  placeholder="Enter country"
-                  {...form.register("country")}
-                  disabled={locationType === "online"}
-                />
-                {form.formState.errors.country && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.country.message}
-                  </p>
-                )}
+          {locationType !== "online" && (
+            <div className="space-y-2">
+              <Label>Location *</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    placeholder="Enter city"
+                    {...form.register("city")}
+                  />
+                  {form.formState.errors.city && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.city.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country">Country</Label>
+                  <Input
+                    id="country"
+                    placeholder="Enter country"
+                    {...form.register("country")}
+                  />
+                  {form.formState.errors.country && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.country.message}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label>Event Type *</Label>
