@@ -381,7 +381,17 @@ export default function AdminPage() {
               <AlertTriangle className="h-6 w-6 text-destructive" />
               Admin Dashboard
             </h1>
-            <div className="w-32"></div>
+            <div className="w-32 flex justify-end">
+              <Link href="/profile">
+                <Button 
+                  size="sm"
+                  variant="ghost" 
+                  className="flex items-center hover:bg-accent h-7 w-7 p-0"
+                >
+                  <UserCircle className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
