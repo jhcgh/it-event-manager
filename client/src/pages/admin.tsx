@@ -1,10 +1,19 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { User, Event } from "@shared/schema";
+import { User, Event, UpdateUser } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, UserX, Calendar, Users, AlertTriangle } from "lucide-react";
+import { 
+  Loader2, 
+  UserX, 
+  Calendar, 
+  Users, 
+  AlertTriangle,
+  Shield,
+  Ban,
+  CheckCircle
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -28,13 +37,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 export default function AdminPage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
   // Redirect non-admin users
-  if (user && !user.isAdmin) {
+  if (!user?.isAdmin && !user?.isSuperAdmin) {
     return <Redirect to="/" />;
   }
 
@@ -43,7 +53,7 @@ export default function AdminPage() {
   });
 
   const { data: events = [], isLoading: isLoadingEvents } = useQuery<Event[]>({
-    queryKey: ["/api/events"],
+    queryKey: ["/api/admin/events"],
   });
 
   const deleteUserMutation = useMutation({
@@ -66,6 +76,48 @@ export default function AdminPage() {
     },
   });
 
+  const toggleUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, status }: { userId: number; status: "active" | "suspended" }) => {
+      const updateData: UpdateUser = { status };
+      await apiRequest("PATCH", `/api/admin/users/${userId}`, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User status updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleAdminStatusMutation = useMutation({
+    mutationFn: async ({ userId, isAdmin }: { userId: number; isAdmin: boolean }) => {
+      const updateData: UpdateUser = { isAdmin };
+      await apiRequest("PATCH", `/api/admin/users/${userId}`, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "Admin status updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoadingUsers || isLoadingEvents) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -76,7 +128,7 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
+      <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <AlertTriangle className="h-6 w-6 text-destructive" />
@@ -111,6 +163,7 @@ export default function AdminPage() {
                       <TableHead>Company</TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Phone</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Admin</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -121,44 +174,109 @@ export default function AdminPage() {
                         <TableCell>{u.username}</TableCell>
                         <TableCell>{u.companyName}</TableCell>
                         <TableCell>{u.title}</TableCell>
-                        <TableCell>{u.telephone}</TableCell>
+                        <TableCell>{u.mobile}</TableCell>
                         <TableCell>
-                          {u.isAdmin ? (
-                            <span className="text-primary">Yes</span>
+                          <Badge
+                            variant={u.status === "active" ? "default" : "destructive"}
+                            className="capitalize"
+                          >
+                            {u.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {u.isSuperAdmin ? (
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                              Super Admin
+                            </Badge>
+                          ) : u.isAdmin ? (
+                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                              Admin
+                            </Badge>
                           ) : (
                             "No"
                           )}
                         </TableCell>
                         <TableCell>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
+                          <div className="flex items-center gap-2">
+                            {!u.isSuperAdmin && user?.isSuperAdmin && (
                               <Button
-                                variant="destructive"
+                                variant="outline"
                                 size="sm"
+                                onClick={() => toggleAdminStatusMutation.mutate({
+                                  userId: u.id,
+                                  isAdmin: !u.isAdmin
+                                })}
                                 className="flex items-center gap-1"
                               >
-                                <UserX className="h-4 w-4" />
-                                Delete
+                                <Shield className="h-4 w-4" />
+                                {u.isAdmin ? "Remove Admin" : "Make Admin"}
                               </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this user? This
-                                  action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteUserMutation.mutate(u.id)}
+                            )}
+
+                            {!u.isSuperAdmin && (
+                              <>
+                                <Button
+                                  variant={u.status === "active" ? "destructive" : "outline"}
+                                  size="sm"
+                                  onClick={() => toggleUserStatusMutation.mutate({
+                                    userId: u.id,
+                                    status: u.status === "active" ? "suspended" : "active"
+                                  })}
+                                  className="flex items-center gap-1"
                                 >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                                  {u.status === "active" ? (
+                                    <>
+                                      <Ban className="h-4 w-4" />
+                                      Suspend
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="h-4 w-4" />
+                                      Activate
+                                    </>
+                                  )}
+                                </Button>
+
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      className="flex items-center gap-1"
+                                    >
+                                      <UserX className="h-4 w-4" />
+                                      Delete
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete this user? This
+                                        action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => deleteUserMutation.mutate(u.id)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        {deleteUserMutation.isPending ? (
+                                          <>
+                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            Deleting...
+                                          </>
+                                        ) : (
+                                          "Delete User"
+                                        )}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -181,6 +299,7 @@ export default function AdminPage() {
                       <TableHead>Date</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Organizer</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -198,10 +317,20 @@ export default function AdminPage() {
                             {format(new Date(event.date), "PPP")}
                           </TableCell>
                           <TableCell>
-                            {event.isRemote ? "Remote" : event.location}
+                            {event.isHybrid ? "In Person & Online" :
+                             event.isRemote ? "Online" :
+                             `${event.city}, ${event.country}`}
                           </TableCell>
                           <TableCell className="capitalize">
                             {event.type}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={event.status === "active" ? "default" : "destructive"}
+                              className="capitalize"
+                            >
+                              {event.status}
+                            </Badge>
                           </TableCell>
                           <TableCell>{organizer?.username}</TableCell>
                         </TableRow>

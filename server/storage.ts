@@ -1,7 +1,7 @@
 import { IStorage } from "./storage";
-import { User, Event, InsertUser, InsertEvent, users, events } from "@shared/schema";
+import { User, Event, InsertUser, InsertEvent, UpdateUser, users, events } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import session from "express-session";
 import { pool } from "./db";
@@ -15,10 +15,11 @@ export class DatabaseStorage implements IStorage {
     this.sessionStore = new PostgresSessionStore({
       pool,
       createTableIfMissing: true,
-      tableName: 'session' // Explicitly name the session table
+      tableName: 'session'
     });
   }
 
+  // User Management Methods
   async getUser(id: number): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
@@ -37,20 +38,25 @@ export class DatabaseStorage implements IStorage {
   async updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined> {
     const [user] = await db
       .update(users)
-      .set(updateData)
+      .set({ ...updateData, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
     return user;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    return await db.select()
+      .from(users)
+      .orderBy(desc(users.createdAt));
   }
 
   async deleteUser(id: number): Promise<void> {
-    await db.delete(users).where(eq(users.id, id));
+    await db.update(users)
+      .set({ status: 'deleted', updatedAt: new Date() })
+      .where(eq(users.id, id));
   }
 
+  // Event Management Methods
   async createEvent(userId: number, insertEvent: InsertEvent): Promise<Event> {
     const [event] = await db
       .insert(events)
@@ -65,24 +71,91 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllEvents(): Promise<Event[]> {
-    return await db.select().from(events);
+    return await db.select()
+      .from(events)
+      .orderBy(desc(events.createdAt));
   }
 
   async getUserEvents(userId: number): Promise<Event[]> {
-    return await db.select().from(events).where(eq(events.userId, userId));
+    return await db.select()
+      .from(events)
+      .where(eq(events.userId, userId))
+      .orderBy(desc(events.createdAt));
   }
 
   async updateEvent(id: number, userId: number, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
     const [event] = await db
       .update(events)
-      .set(updateData)
-      .where(eq(events.id, id))
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(
+        and(
+          eq(events.id, id),
+          eq(events.userId, userId)
+        )
+      )
       .returning();
     return event;
   }
 
   async deleteEvent(id: number): Promise<void> {
-    await db.delete(events).where(eq(events.id, id));
+    await db.update(events)
+      .set({ status: 'deleted', updatedAt: new Date() })
+      .where(eq(events.id, id));
+  }
+
+  // Admin-specific Methods
+  async adminGetAllUsers(includeDeleted: boolean = false): Promise<User[]> {
+    let query = db.select().from(users);
+    if (!includeDeleted) {
+      query = query.where(eq(users.status, 'active'));
+    }
+    return await query.orderBy(desc(users.createdAt));
+  }
+
+  async adminUpdateUser(id: number, updateData: UpdateUser): Promise<User | undefined> {
+    const [user] = await db
+      .update(users)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async adminGetAllEvents(includeDeleted: boolean = false): Promise<Event[]> {
+    let query = db.select().from(events);
+    if (!includeDeleted) {
+      query = query.where(eq(events.status, 'active'));
+    }
+    return await query.orderBy(desc(events.createdAt));
+  }
+
+  async adminUpdateEvent(id: number, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
+    const [event] = await db
+      .update(events)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(events.id, id))
+      .returning();
+    return event;
+  }
+
+  async adminCreateAdmin(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({ ...insertUser, isAdmin: true })
+      .returning();
+    return user;
+  }
+
+  async adminSuspendUser(id: number): Promise<void> {
+    await db.update(users)
+      .set({ status: 'suspended', updatedAt: new Date() })
+      .where(eq(users.id, id));
+  }
+
+  async adminReactivateUser(id: number): Promise<void> {
+    await db.update(users)
+      .set({ status: 'active', updatedAt: new Date() })
+      .where(eq(users.id, id));
   }
 }
 
