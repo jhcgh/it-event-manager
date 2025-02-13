@@ -1,7 +1,7 @@
 import { IStorage } from "./storage";
 import { User, Event, InsertUser, InsertEvent, UpdateUser, users, events } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, notEq } from "drizzle-orm";
+import { eq, and, desc, ne } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import session from "express-session";
 import { pool } from "./db";
@@ -47,7 +47,7 @@ export class DatabaseStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     return await db.select()
       .from(users)
-      .where(notEq(users.status, 'deleted'))
+      .where(ne(users.status, 'deleted'))
       .limit(100)
       .orderBy(desc(users.createdAt));
   }
