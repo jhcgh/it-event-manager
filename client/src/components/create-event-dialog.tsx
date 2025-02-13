@@ -22,6 +22,7 @@ export function CreateEventDialog() {
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date>(new Date());
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [locationType, setLocationType] = useState<"in-person" | "online" | "hybrid">("in-person");
 
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
@@ -38,6 +39,20 @@ export function CreateEventDialog() {
       imageUrl: "",
     }
   });
+
+  const handleLocationTypeChange = (type: "in-person" | "online" | "hybrid") => {
+    setLocationType(type);
+    if (type === "in-person") {
+      form.setValue("isRemote", false);
+      form.setValue("isHybrid", false);
+    } else if (type === "online") {
+      form.setValue("isRemote", true);
+      form.setValue("isHybrid", false);
+    } else if (type === "hybrid") {
+      form.setValue("isRemote", true);
+      form.setValue("isHybrid", true);
+    }
+  };
 
   const createEventMutation = useMutation({
     mutationFn: async (data: InsertEvent) => {
@@ -173,6 +188,45 @@ export function CreateEventDialog() {
           </div>
 
           <div className="space-y-2">
+            <Label>Event Location Type *</Label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  id="inPerson"
+                  name="locationType"
+                  className="h-4 w-4"
+                  checked={locationType === "in-person"}
+                  onChange={() => handleLocationTypeChange("in-person")}
+                />
+                <Label htmlFor="inPerson">In Person</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  id="online"
+                  name="locationType"
+                  className="h-4 w-4"
+                  checked={locationType === "online"}
+                  onChange={() => handleLocationTypeChange("online")}
+                />
+                <Label htmlFor="online">Online</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  id="hybrid"
+                  name="locationType"
+                  className="h-4 w-4"
+                  checked={locationType === "hybrid"}
+                  onChange={() => handleLocationTypeChange("hybrid")}
+                />
+                <Label htmlFor="hybrid">In Person & Online</Label>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label>Location *</Label>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -181,6 +235,7 @@ export function CreateEventDialog() {
                   id="city"
                   placeholder="Enter city"
                   {...form.register("city")}
+                  disabled={locationType === "online"}
                 />
                 {form.formState.errors.city && (
                   <p className="text-sm text-destructive">
@@ -194,57 +249,13 @@ export function CreateEventDialog() {
                   id="country"
                   placeholder="Enter country"
                   {...form.register("country")}
+                  disabled={locationType === "online"}
                 />
                 {form.formState.errors.country && (
                   <p className="text-sm text-destructive">
                     {form.formState.errors.country.message}
                   </p>
                 )}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Event Location Type *</Label>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  id="inPerson"
-                  className="h-4 w-4"
-                  checked={!form.getValues("isRemote") && !form.getValues("isHybrid")}
-                  onChange={() => {
-                    form.setValue("isRemote", false);
-                    form.setValue("isHybrid", false);
-                  }}
-                />
-                <Label htmlFor="inPerson">In Person</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  id="online"
-                  className="h-4 w-4"
-                  checked={form.getValues("isRemote") && !form.getValues("isHybrid")}
-                  onChange={() => {
-                    form.setValue("isRemote", true);
-                    form.setValue("isHybrid", false);
-                  }}
-                />
-                <Label htmlFor="online">Online</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  id="hybrid"
-                  className="h-4 w-4"
-                  checked={form.getValues("isHybrid")}
-                  onChange={() => {
-                    form.setValue("isRemote", true);
-                    form.setValue("isHybrid", true);
-                  }}
-                />
-                <Label htmlFor="hybrid">In Person & Online</Label>
               </div>
             </div>
           </div>
@@ -268,7 +279,6 @@ export function CreateEventDialog() {
               <p className="text-sm text-destructive">{form.formState.errors.type.message}</p>
             )}
           </div>
-
 
           <div className="space-y-2">
             <Label htmlFor="url">Event URL</Label>
