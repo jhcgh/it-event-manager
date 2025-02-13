@@ -16,9 +16,13 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 export function CreateEventDialog() {
   const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState<Date>(new Date());
+
   const form = useForm<InsertEvent>({
     resolver: zodResolver(insertEventSchema),
     defaultValues: {
@@ -45,6 +49,7 @@ export function CreateEventDialog() {
         description: "Event created successfully",
       });
       form.reset();
+      setOpen(false);
     },
     onError: (error: Error) => {
       toast({
@@ -60,7 +65,7 @@ export function CreateEventDialog() {
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -99,33 +104,25 @@ export function CreateEventDialog() {
                   variant={"outline"}
                   className={cn(
                     "w-full justify-start text-left font-normal",
-                    !form.getValues("date") && "text-muted-foreground"
+                    !date && "text-muted-foreground"
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {form.getValues("date") ? (
-                    format(form.getValues("date"), "PPP")
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
+                  {date ? format(date, "PPP") : <span>Pick a date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
-                  selected={form.getValues("date")}
-                  onSelect={(date) => {
-                    if (date) {
-                      form.setValue("date", date);
+                  selected={date}
+                  onSelect={(newDate) => {
+                    if (newDate) {
+                      setDate(newDate);
+                      form.setValue("date", newDate);
                     }
                   }}
+                  disabled={(date) => date < new Date()}
                   initialFocus
-                  disabled={(date) => {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    return date < today;
-                  }}
-                  fromDate={new Date()}
                 />
               </PopoverContent>
             </Popover>
@@ -144,11 +141,10 @@ export function CreateEventDialog() {
 
           <div className="flex items-center gap-2">
             <Switch
-              id="isRemote"
               checked={form.getValues("isRemote")}
               onCheckedChange={(checked) => form.setValue("isRemote", checked)}
             />
-            <Label htmlFor="isRemote">Remote Event</Label>
+            <Label>Remote Event</Label>
           </div>
 
           <div className="space-y-2">
@@ -189,11 +185,16 @@ export function CreateEventDialog() {
 
           <Button type="submit" className="w-full" disabled={createEventMutation.isPending}>
             {createEventMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Creating...
+              </>
             ) : (
-              <Plus className="h-4 w-4 mr-2" />
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Event
+              </>
             )}
-            Create Event
           </Button>
         </form>
       </DialogContent>
