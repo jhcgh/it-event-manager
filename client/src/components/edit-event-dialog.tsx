@@ -103,7 +103,11 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="action-button flex items-center gap-1"
+        >
           <Pencil className="h-4 w-4" />
           Edit
         </Button>
@@ -126,7 +130,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
               ref={fileInputRef}
               onChange={handleImageChange}
             />
-            <div 
+            <div
               onClick={() => fileInputRef.current?.click()}
               className={cn(
                 "border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-primary/50 transition-colors",

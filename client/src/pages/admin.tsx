@@ -575,7 +575,7 @@ export default function AdminPage() {
                             <TableCell>{organizer?.username}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <EditEventDialog event={event} className="action-button" />
+                                <EditEventDialog event={event} />
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button
