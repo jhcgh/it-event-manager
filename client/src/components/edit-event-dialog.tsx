@@ -55,10 +55,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       isHybrid: type === "hybrid"
     };
     Object.entries(updates).forEach(([key, value]) => {
-      form.setValue(key as "isRemote" | "isHybrid", value, { 
-        shouldDirty: true,
-        shouldValidate: true 
-      });
+      form.setValue(key as "isRemote" | "isHybrid", value);
     });
   };
 
@@ -68,10 +65,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
-        form.setValue("imageUrl", reader.result as string, {
-          shouldDirty: true,
-          shouldValidate: true
-        });
+        form.setValue("imageUrl", reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -181,10 +175,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   });
                 } else {
                   form.clearErrors("description");
-                  form.setValue("description", e.target.value, {
-                    shouldDirty: true,
-                    shouldValidate: true
-                  });
+                  form.setValue("description", e.target.value);
                 }
               }}
             />
@@ -218,10 +209,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   onSelect={(newDate) => {
                     if (newDate) {
                       setDate(newDate);
-                      form.setValue("date", newDate, {
-                        shouldDirty: true,
-                        shouldValidate: true
-                      });
+                      form.setValue("date", newDate);
                     }
                   }}
                   disabled={(date) =>
