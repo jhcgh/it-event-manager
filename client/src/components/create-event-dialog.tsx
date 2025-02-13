@@ -35,18 +35,14 @@ export function CreateEventDialog() {
       type: "seminar",
       contactInfo: "",
       url: "",
-      imageUrl: "" // Added imageUrl to defaultValues
+      imageUrl: "" 
     }
   });
 
   const createEventMutation = useMutation({
     mutationFn: async (data: InsertEvent) => {
-      // Convert the date to an ISO string before sending
-      const formattedData = {
-        ...data,
-        date: data.date.toISOString(),
-      };
-      const res = await apiRequest("POST", "/api/events", formattedData);
+      // No need to convert date to ISO string as it's handled by the schema
+      const res = await apiRequest("POST", "/api/events", data);
       return await res.json();
     },
     onSuccess: () => {

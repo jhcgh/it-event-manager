@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, boolean, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -36,10 +36,15 @@ export const insertUserSchema = createInsertSchema(users)
   })
   .omit({ id: true, isAdmin: true });
 
-export const insertEventSchema = createInsertSchema(events).omit({ 
-  id: true,
-  userId: true
-});
+// Modify the event schema to handle date properly
+export const insertEventSchema = createInsertSchema(events)
+  .extend({
+    date: z.coerce.date()
+  })
+  .omit({ 
+    id: true,
+    userId: true
+  });
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
