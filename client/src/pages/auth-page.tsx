@@ -8,6 +8,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema, InsertUser } from "@shared/schema";
 import { Redirect } from "wouter";
+import { z } from "zod";
+
+// Extend the schema to include password confirmation
+const registerSchema = insertUserSchema.extend({
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
@@ -19,11 +30,12 @@ export default function AuthPage() {
     },
   });
 
-  const registerForm = useForm({
-    resolver: zodResolver(insertUserSchema),
+  const registerForm = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema),
     defaultValues: {
       username: "",
       password: "",
+      confirmPassword: "",
       firstName: "",
       lastName: "",
       companyName: "",
@@ -35,6 +47,12 @@ export default function AuthPage() {
   if (user) {
     return <Redirect to="/dashboard" />;
   }
+
+  const handleRegister = (data: RegisterFormData) => {
+    // Remove confirmPassword before sending to API
+    const { confirmPassword, ...registrationData } = data;
+    registerMutation.mutate(registrationData);
+  };
 
   return (
     <div className="min-h-screen grid md:grid-cols-2">
@@ -88,9 +106,7 @@ export default function AuthPage() {
 
               <TabsContent value="register">
                 <form
-                  onSubmit={registerForm.handleSubmit((data: InsertUser) =>
-                    registerMutation.mutate(data)
-                  )}
+                  onSubmit={registerForm.handleSubmit(handleRegister)}
                   className="space-y-4"
                 >
                   <div className="space-y-2">
@@ -120,6 +136,20 @@ export default function AuthPage() {
                     {registerForm.formState.errors.password && (
                       <p className="text-sm text-destructive">
                         {registerForm.formState.errors.password.message}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="register-confirm-password">Confirm Password</Label>
+                    <Input
+                      id="register-confirm-password"
+                      type="password"
+                      {...registerForm.register("confirmPassword")}
+                    />
+                    {registerForm.formState.errors.confirmPassword && (
+                      <p className="text-sm text-destructive">
+                        {registerForm.formState.errors.confirmPassword.message}
                       </p>
                     )}
                   </div>
