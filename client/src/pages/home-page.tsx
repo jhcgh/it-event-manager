@@ -59,10 +59,15 @@ export default function HomePage() {
             </div>
 
             <Calendar
-              mode="single"
+              mode="month"
               selected={selectedDate}
               onSelect={setSelectedDate}
               className="rounded-md border"
+              ISOWeek={true}
+              showOutsideDays={false}
+              formatters={{
+                formatCaption: (date) => format(date, "MMMM yyyy")
+              }}
             />
 
             <Select value={selectedType} onValueChange={setSelectedType}>
