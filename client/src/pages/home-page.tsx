@@ -53,16 +53,16 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+        <div className="container mx-auto px-4 py-2 flex justify-between items-center">
+          <h1 className="text-base font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
             TechEvents.io
           </h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {user ? (
               <>
                 <CreateEventDialog />
                 <Link href="/dashboard">
-                  <Button size="sm" variant="outline" className="flex items-center gap-1 text-sm">
+                  <Button size="sm" variant="outline" className="flex items-center gap-1 text-xs h-7 px-2">
                     <LayoutDashboard className="h-3 w-3" />
                     My Dashboard
                   </Button>
@@ -72,7 +72,7 @@ export default function HomePage() {
                   variant="outline" 
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
-                  className="flex items-center gap-1 text-sm"
+                  className="flex items-center gap-1 text-xs h-7 px-2"
                 >
                   <LogOut className="h-3 w-3" />
                   {logoutMutation.isPending ? "Logging out..." : "Logout"}
@@ -80,7 +80,7 @@ export default function HomePage() {
               </>
             ) : (
               <Link href="/auth">
-                <Button size="sm" className="text-sm">Login</Button>
+                <Button size="sm" className="text-xs h-7 px-2">Login</Button>
               </Link>
             )}
           </div>
