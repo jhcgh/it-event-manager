@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, LayoutDashboard, LogOut, Settings } from "lucide-react";
+import { Search, Plus, LayoutDashboard, LogOut, Settings, UserCircle } from "lucide-react";
 import { useState } from "react";
 import { Event } from "@shared/schema";
 import { format, startOfMonth, endOfMonth } from "date-fns";
@@ -70,6 +70,16 @@ export default function HomePage() {
                     </Button>
                   </Link>
                 )}
+                <Link href="/profile">
+                  <Button 
+                    size="sm"
+                    variant="ghost" 
+                    className="flex items-center gap-1 hover:bg-accent text-xs h-7 px-2"
+                  >
+                    <UserCircle className="h-3 w-3" />
+                    {user.username}
+                  </Button>
+                </Link>
                 <Button 
                   size="sm"
                   variant="outline" 
