@@ -329,10 +329,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             <Select
               value={form.getValues("type")}
               onValueChange={(value) => {
-                form.setValue("type", value, {
-                  shouldDirty: true,
-                  shouldValidate: true
-                });
+                form.setValue("type", value);
               }}
             >
               <SelectTrigger>
