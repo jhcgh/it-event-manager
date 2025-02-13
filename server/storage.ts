@@ -93,8 +93,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEvent(id: number): Promise<void> {
-    await db.update(events)
-      .set({ status: 'deleted', updatedAt: new Date() })
+    await db.delete(events)
       .where(eq(events.id, id));
   }
 
