@@ -28,10 +28,14 @@ export function registerRoutes(app: Express): Server {
         mobile: "+1234567890"
       };
 
-      // Delete existing admin if any (for clean initialization)
+      // Check if admin already exists
       const existing = await storage.getUserByUsername(adminData.username);
       if (existing) {
-        await storage.deleteUser(existing.id);
+        return res.json({ 
+          message: "Admin account already exists",
+          username: adminData.username,
+          password: adminData.password
+        });
       }
 
       const parsed = insertUserSchema.parse(adminData);
@@ -49,7 +53,10 @@ export function registerRoutes(app: Express): Server {
       });
     } catch (error) {
       console.error('Error creating super admin:', error);
-      res.status(500).json({ message: "Failed to create super admin" });
+      res.status(500).json({ 
+        message: "Failed to create super admin",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
