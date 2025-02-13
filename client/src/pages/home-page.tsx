@@ -54,17 +54,18 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <header className="border-b">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
             TechEvents.io
           </h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {user ? (
               <>
                 <CreateEventDialog />
                 <Link href="/dashboard">
-                  <Button>My Dashboard</Button>
+                  <Button size="sm">My Dashboard</Button>
                 </Link>
                 <Button 
+                  size="sm"
                   variant="outline" 
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
@@ -74,7 +75,7 @@ export default function HomePage() {
               </>
             ) : (
               <Link href="/auth">
-                <Button>Login</Button>
+                <Button size="sm">Login</Button>
               </Link>
             )}
           </div>
