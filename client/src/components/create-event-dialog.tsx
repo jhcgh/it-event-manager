@@ -39,6 +39,7 @@ export function CreateEventDialog() {
       type: "seminar",
       url: "",
       imageUrl: "",
+      status: "active", // Ensure status is set to active by default
     }
   });
 
@@ -70,11 +71,17 @@ export function CreateEventDialog() {
 
   const createEventMutation = useMutation({
     mutationFn: async (data: InsertEvent) => {
-      const res = await apiRequest("POST", "/api/events", data);
+      const eventData = {
+        ...data,
+        status: "active", // Explicitly set status to active when creating
+      };
+      const res = await apiRequest("POST", "/api/events", eventData);
       return await res.json();
     },
     onSuccess: () => {
+      // Invalidate both regular and admin event queries
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
       toast({
         title: "Success",
         description: "Event created successfully",

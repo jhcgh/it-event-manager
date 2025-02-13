@@ -20,7 +20,8 @@ import {
   Ban,
   CheckCircle,
   UserPlus,
-  ArrowLeft
+  ArrowLeft,
+  LogOut
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -221,6 +222,30 @@ function UserEventsDialog({ user }: { user: User }) {
     enabled: !!user.id,
   });
 
+  const { toast } = useToast();
+  const deleteEventMutation = useMutation({
+    mutationFn: async (eventId: number) => {
+      await apiRequest("DELETE", `/api/events/${eventId}`);
+    },
+    onSuccess: () => {
+      // Invalidate all related queries
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/events`] });
+      toast({
+        title: "Success",
+        description: "Event deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -239,11 +264,47 @@ function UserEventsDialog({ user }: { user: User }) {
           )}
           {userEvents.map(event => (
             <div key={event.id} className="border rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-2">{event.title}</h3>
-              <div className="text-sm text-muted-foreground">
-                <p>Date: {format(new Date(event.date), "PPP 'at' p")}</p>
-                <p>Location: {event.isRemote ? "Online" : `${event.city}, ${event.country}`}</p>
-                <p>Type: {event.type}</p>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">{event.title}</h3>
+                  <div className="text-sm text-muted-foreground">
+                    <p>Date: {format(new Date(event.date), "PPP 'at' p")}</p>
+                    <p>Location: {event.isRemote ? "Online" : `${event.city}, ${event.country}`}</p>
+                    <p>Type: {event.type}</p>
+                  </div>
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" className="flex items-center gap-1">
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Event</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete this event? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => deleteEventMutation.mutate(event.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        {deleteEventMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Deleting...
+                          </>
+                        ) : (
+                          "Delete Event"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           ))}
@@ -253,9 +314,8 @@ function UserEventsDialog({ user }: { user: User }) {
   );
 }
 
-
-export default function AdminPage() {
-  const { user } = useAuth();
+function AdminPage() {
+  const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
 
   // Redirect non-admin users
@@ -318,11 +378,13 @@ export default function AdminPage() {
     },
   });
 
-  const deleteEventMutation = useMutation({
+  const deleteEventMutationAdmin = useMutation({
     mutationFn: async (eventId: number) => {
       await apiRequest("DELETE", `/api/events/${eventId}`);
     },
     onSuccess: () => {
+      // Invalidate both regular and admin event queries
+      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
       toast({
         title: "Success",
@@ -375,7 +437,18 @@ export default function AdminPage() {
               <AlertTriangle className="h-6 w-6 text-destructive" />
               Admin Dashboard
             </h1>
-            <div className="w-32"></div>
+            <div className="w-32 flex justify-end">
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => logoutMutation.mutate()} 
+                disabled={logoutMutation.isPending}
+                className="flex items-center gap-1.5 text-xs"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                {logoutMutation.isPending ? "Logging out..." : "Logout"}
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -633,10 +706,10 @@ export default function AdminPage() {
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                                       <AlertDialogAction
-                                        onClick={() => deleteEventMutation.mutate(event.id)}
+                                        onClick={() => deleteEventMutationAdmin.mutate(event.id)}
                                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                       >
-                                        {deleteEventMutation.isPending ? (
+                                        {deleteEventMutationAdmin.isPending ? (
                                           <>
                                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                             Deleting...
@@ -665,3 +738,4 @@ export default function AdminPage() {
     </div>
   );
 }
+export default AdminPage;
