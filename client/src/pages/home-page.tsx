@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, LayoutDashboard, LogOut, UserCircle, Loader2 } from "lucide-react";
+import { Search, LayoutDashboard, UserCircle, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Event } from "@shared/schema";
 import { format, startOfMonth, endOfMonth } from "date-fns";
@@ -20,7 +20,7 @@ import {
 import { HoverUserMenu } from "@/components/hover-user-menu";
 
 export default function HomePage() {
-  const { user, logoutMutation } = useAuth();
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [selectedType, setSelectedType] = useState<string>("all");  
@@ -94,16 +94,6 @@ export default function HomePage() {
                   </>
                 )}
                 <HoverUserMenu user={user} />
-                <Button 
-                  size="sm"
-                  variant="outline" 
-                  onClick={() => logoutMutation.mutate()}
-                  disabled={logoutMutation.isPending}
-                  className="flex items-center gap-1.5 text-xs"
-                >
-                  <LogOut className="h-3.5 w-3.5" />
-                  {logoutMutation.isPending ? "Logging out..." : "Logout"}
-                </Button>
               </>
             ) : (
               <Link href="/auth">

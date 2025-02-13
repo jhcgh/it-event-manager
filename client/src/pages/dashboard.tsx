@@ -31,7 +31,7 @@ import {
 import { HoverUserMenu } from "@/components/hover-user-menu";
 
 export default function DashboardPage() {
-  const { user, logoutMutation } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
@@ -90,14 +90,6 @@ export default function DashboardPage() {
           </h1>
           <div className="flex items-center gap-1.5 w-32 justify-end">
             {user && <HoverUserMenu user={user} />}
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={() => logoutMutation.mutate()} 
-              className="text-xs h-7 px-2"
-            >
-              Logout
-            </Button>
           </div>
         </div>
       </header>

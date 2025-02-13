@@ -440,16 +440,6 @@ function AdminPage() {
             </h1>
             <div className="w-32 flex justify-end items-center gap-1.5">
               {user && <HoverUserMenu user={user} />}
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => logoutMutation.mutate()} 
-                disabled={logoutMutation.isPending}
-                className="flex items-center gap-1.5 text-xs h-7 px-2"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                {logoutMutation.isPending ? "Logging out..." : "Logout"}
-              </Button>
             </div>
           </div>
         </div>
