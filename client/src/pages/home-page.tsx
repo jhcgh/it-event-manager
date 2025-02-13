@@ -38,7 +38,9 @@ export default function HomePage() {
             TechEvents.io
           </h1>
           <Link href="/auth">
-            <Button>Login</Button>
+            <Button className="cursor-pointer hover:opacity-90">
+              Login
+            </Button>
           </Link>
         </div>
       </header>
