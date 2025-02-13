@@ -193,25 +193,28 @@ export default function HomePage() {
                 </TableRow>
               ) : (
                 filteredEvents.map((event: Event) => (
-                  <Link href={`/event/${event.id}`} key={event.id}>
-                    <TableRow className="cursor-pointer transition-colors hover:bg-muted/50">
-                      <TableCell className="font-medium">
+                  <TableRow 
+                    key={event.id}
+                    className="cursor-pointer transition-colors hover:bg-muted/50"
+                  >
+                    <TableCell className="font-medium">
+                      <Link href={`/event/${event.id}`}>
                         {event.title}
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">
-                        {event.description}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(event.date), "PPP")}
-                      </TableCell>
-                      <TableCell>
-                        {event.isHybrid ? "In Person & Online" : 
-                         event.isRemote ? "Online" : 
-                         `${event.city}, ${event.country}`}
-                      </TableCell>
-                      <TableCell className="capitalize">{event.type}</TableCell>
-                    </TableRow>
-                  </Link>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {event.description}
+                    </TableCell>
+                    <TableCell>
+                      {format(new Date(event.date), "PPP")}
+                    </TableCell>
+                    <TableCell>
+                      {event.isHybrid ? "In Person & Online" : 
+                       event.isRemote ? "Online" : 
+                       `${event.city}, ${event.country}`}
+                    </TableCell>
+                    <TableCell className="capitalize">{event.type}</TableCell>
+                  </TableRow>
                 ))
               )}
             </TableBody>
