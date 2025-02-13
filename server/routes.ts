@@ -165,6 +165,13 @@ export function registerRoutes(app: Express): Server {
     res.json(users);
   });
 
+  // Add admin events route
+  app.get("/api/admin/events", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+    const events = await storage.adminGetAllEvents();
+    res.json(events);
+  });
+
   app.delete("/api/admin/users/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
     await storage.deleteUser(parseInt(req.params.id));
