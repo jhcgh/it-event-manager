@@ -6,6 +6,7 @@ import { Loader2, UserCircle } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
+import { EditEventDialog } from "@/components/edit-event-dialog";
 import {
   Table,
   TableBody,
@@ -73,6 +74,7 @@ export default function DashboardPage() {
                 <TableHead>Contact Info</TableHead>
                 <TableHead>URL</TableHead>
                 <TableHead>Remote</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -106,6 +108,9 @@ export default function DashboardPage() {
                   </TableCell>
                   <TableCell>
                     {event.isRemote ? "Yes" : "No"}
+                  </TableCell>
+                  <TableCell>
+                    <EditEventDialog event={event} />
                   </TableCell>
                 </TableRow>
               ))}

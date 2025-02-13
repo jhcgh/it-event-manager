@@ -52,6 +52,25 @@ export function registerRoutes(app: Express): Server {
     res.status(201).json(event);
   });
 
+  app.patch("/api/events/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const event = await storage.getEvent(parseInt(req.params.id));
+    if (!event) return res.sendStatus(404);
+    if (event.userId !== req.user.id) return res.sendStatus(403);
+
+    const parsed = insertEventSchema.partial().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json(parsed.error);
+
+    const updatedEvent = await storage.updateEvent(
+      parseInt(req.params.id),
+      req.user.id,
+      parsed.data
+    );
+
+    res.json(updatedEvent);
+  });
+
   app.get("/api/events/:id/calendar", async (req, res) => {
     const event = await storage.getEvent(parseInt(req.params.id));
     if (!event) return res.sendStatus(404);
