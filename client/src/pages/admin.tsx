@@ -515,8 +515,12 @@ export default function AdminPage() {
                           (u) => u.id === event.userId
                         );
                         return (
-                          <TableRow key={event.id}>
-                            <TableCell className="font-medium cursor-pointer" onClick={() => window.location.href = `/event/${event.id}`}>
+                          <TableRow
+                            key={event.id}
+                            className="cursor-pointer transition-colors hover:bg-muted/50"
+                            onClick={() => window.location.href = `/event/${event.id}`}
+                          >
+                            <TableCell className="font-medium">
                               {event.title}
                             </TableCell>
                             <TableCell>
