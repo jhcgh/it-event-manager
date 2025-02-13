@@ -46,6 +46,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { EditEventDialog } from "@/components/edit-event-dialog";
+import { Trash2 } from "lucide-react";
 
 // Create Super User Dialog Component
 function CreateSuperUserDialog() {
@@ -283,6 +285,26 @@ export default function AdminPage() {
   });
 
 
+  const deleteEventMutation = useMutation({
+    mutationFn: async (eventId: number) => {
+      await apiRequest("DELETE", `/api/events/${eventId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
+      toast({
+        title: "Success",
+        description: "Event deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   if (isLoadingUsers || isLoadingEvents) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -500,12 +522,13 @@ export default function AdminPage() {
                       <TableHead>Type</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Organizer</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {events.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                           No upcoming events found
                         </TableCell>
                       </TableRow>
@@ -518,7 +541,14 @@ export default function AdminPage() {
                           <TableRow
                             key={event.id}
                             className="cursor-pointer transition-colors hover:bg-muted/50"
-                            onClick={() => window.location.href = `/event/${event.id}`}
+                            onClick={(e) => {
+                              // Prevent navigation when clicking action buttons
+                              if ((e.target as HTMLElement).closest('.action-button')) {
+                                e.stopPropagation();
+                                return;
+                              }
+                              window.location.href = `/event/${event.id}`;
+                            }}
                           >
                             <TableCell className="font-medium">
                               {event.title}
@@ -543,6 +573,47 @@ export default function AdminPage() {
                               </Badge>
                             </TableCell>
                             <TableCell>{organizer?.username}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <EditEventDialog event={event} className="action-button" />
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      className="action-button flex items-center gap-1"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Delete
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Event</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete this event? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => deleteEventMutation.mutate(event.id)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        {deleteEventMutation.isPending ? (
+                                          <>
+                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            Deleting...
+                                          </>
+                                        ) : (
+                                          "Delete Event"
+                                        )}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         );
                       })
