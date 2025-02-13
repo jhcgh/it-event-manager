@@ -1,8 +1,8 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
-import { insertEventSchema } from "@shared/schema";
+import { insertEventSchema, insertUserSchema } from "@shared/schema";
 import multer from "multer";
 import { createEvent } from "ics";
 
@@ -13,6 +13,45 @@ const upload = multer({
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Initialize super admin account
+  app.post("/api/admin/init", async (req, res) => {
+    try {
+      // Create initial admin user
+      const adminData = {
+        username: "admin@example.com",
+        password: "Admin@123!",
+        firstName: "System",
+        lastName: "Admin",
+        companyName: "SaaS Platform",
+        title: "Super Administrator",
+        mobile: "+1234567890"
+      };
+
+      // Delete existing admin if any (for clean initialization)
+      const existing = await storage.getUserByUsername(adminData.username);
+      if (existing) {
+        await storage.deleteUser(existing.id);
+      }
+
+      const parsed = insertUserSchema.parse(adminData);
+      const hashedPassword = await hashPassword(parsed.password);
+
+      await storage.adminCreateSuperAdmin({
+        ...parsed,
+        password: hashedPassword
+      });
+
+      res.json({ 
+        message: "Super admin created successfully",
+        username: adminData.username,
+        password: adminData.password
+      });
+    } catch (error) {
+      console.error('Error creating super admin:', error);
+      res.status(500).json({ message: "Failed to create super admin" });
+    }
+  });
 
   // Add profile update endpoint
   app.patch("/api/profile", async (req, res) => {

@@ -146,6 +146,19 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async adminCreateSuperAdmin(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({ 
+        ...insertUser, 
+        isAdmin: true,
+        isSuperAdmin: true,
+        status: 'active'
+      })
+      .returning();
+    return user;
+  }
+
   async adminSuspendUser(id: number): Promise<void> {
     await db.update(users)
       .set({ status: 'suspended', updatedAt: new Date() })
