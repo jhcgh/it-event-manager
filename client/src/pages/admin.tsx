@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { format } from "date-fns";
+import { format, isFuture } from "date-fns";
 import { Redirect } from "wouter";
 import {
   AlertDialog,
@@ -230,9 +230,14 @@ export default function AdminPage() {
     queryKey: ["/api/admin/users"],
   });
 
-  const { data: events = [], isLoading: isLoadingEvents } = useQuery<Event[]>({
+  const { data: allEvents = [], isLoading: isLoadingEvents } = useQuery<Event[]>({
     queryKey: ["/api/admin/events"],
   });
+
+  // Filter and sort upcoming events
+  const events = allEvents
+    .filter(event => isFuture(new Date(event.date)))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
@@ -458,7 +463,10 @@ export default function AdminPage() {
           <TabsContent value="events">
             <Card>
               <CardHeader>
-                <CardTitle>Event Management</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Upcoming Events Management
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -473,43 +481,52 @@ export default function AdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {events.map((event) => {
-                      const organizer = users.find(
-                        (u) => u.id === event.userId
-                      );
-                      return (
-                        <TableRow key={event.id}>
-                          <TableCell className="font-medium">
-                            {event.title}
-                          </TableCell>
-                          <TableCell>
-                            {format(new Date(event.date), "PPP")}
-                          </TableCell>
-                          <TableCell>
-                            {event.isHybrid ? "In Person & Online" :
-                              event.isRemote ? "Online" :
-                                `${event.city}, ${event.country}`}
-                          </TableCell>
-                          <TableCell className="capitalize">
-                            {event.type}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={event.status === "active" ? "default" : "destructive"}
-                              className="capitalize"
-                            >
-                              {event.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{organizer?.username}</TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {events.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          No upcoming events found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      events.map((event) => {
+                        const organizer = users.find(
+                          (u) => u.id === event.userId
+                        );
+                        return (
+                          <TableRow key={event.id}>
+                            <TableCell className="font-medium">
+                              {event.title}
+                            </TableCell>
+                            <TableCell>
+                              {format(new Date(event.date), "PPP 'at' p")}
+                            </TableCell>
+                            <TableCell>
+                              {event.isHybrid ? "In Person & Online" :
+                                event.isRemote ? "Online" :
+                                  `${event.city}, ${event.country}`}
+                            </TableCell>
+                            <TableCell className="capitalize">
+                              {event.type}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={event.status === "active" ? "default" : "destructive"}
+                                className="capitalize"
+                              >
+                                {event.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{organizer?.username}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
           </TabsContent>
+
         </Tabs>
       </main>
     </div>
