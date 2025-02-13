@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Loader2, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -79,23 +79,26 @@ export default function DashboardPage() {
                 Create Event
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create New Event</DialogTitle>
+                <DialogDescription>
+                  Fill in the event details below. All fields marked with * are required.
+                </DialogDescription>
               </DialogHeader>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Title</Label>
+                  <Label htmlFor="title">Title *</Label>
                   <Input id="title" {...form.register("title")} />
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">Description *</Label>
                   <Textarea id="description" {...form.register("description")} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Date</Label>
+                  <Label>Date *</Label>
                   <Calendar
                     mode="single"
                     selected={form.getValues("date")}
@@ -105,7 +108,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
+                  <Label htmlFor="location">Location *</Label>
                   <Input id="location" {...form.register("location")} />
                 </div>
 
@@ -118,7 +121,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Type</Label>
+                  <Label>Type *</Label>
                   <Select
                     value={form.getValues("type")}
                     onValueChange={(value) => form.setValue("type", value)}
@@ -135,12 +138,12 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="contactInfo">Contact Information</Label>
+                  <Label htmlFor="contactInfo">Contact Information *</Label>
                   <Input id="contactInfo" {...form.register("contactInfo")} />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="url">URL</Label>
+                  <Label htmlFor="url">Event URL</Label>
                   <Input id="url" type="url" {...form.register("url")} />
                 </div>
 
@@ -149,7 +152,7 @@ export default function DashboardPage() {
                   <Input id="image" type="file" accept="image/*" {...form.register("image")} />
                 </div>
 
-                <Button type="submit" disabled={createEventMutation.isPending}>
+                <Button type="submit" className="w-full" disabled={createEventMutation.isPending}>
                   Create Event
                 </Button>
               </form>
@@ -161,8 +164,8 @@ export default function DashboardPage() {
           {events.map(event => (
             <Card key={event.id}>
               {event.imageUrl && (
-                <img 
-                  src={event.imageUrl} 
+                <img
+                  src={event.imageUrl}
                   alt={event.title}
                   className="w-full h-48 object-cover"
                 />
