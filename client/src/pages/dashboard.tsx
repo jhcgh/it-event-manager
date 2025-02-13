@@ -2,11 +2,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Plus, UserCircle } from "lucide-react";
+import { Loader2, UserCircle } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function DashboardPage() {
   const { user, logoutMutation } = useAuth();
@@ -54,31 +61,54 @@ export default function DashboardPage() {
           <CreateEventDialog />
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {events.map(event => (
-            <Card key={event.id}>
-              {event.imageUrl && (
-                <img
-                  src={event.imageUrl}
-                  alt={event.title}
-                  className="w-full h-48 object-cover"
-                />
-              )}
-              <CardHeader>
-                <CardTitle>{event.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {event.description}
-                </p>
-                <div className="space-y-2 text-sm">
-                  <div>Date: {format(new Date(event.date), "PPP")}</div>
-                  <div>Location: {event.location}</div>
-                  <div>Type: {event.type}</div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Contact Info</TableHead>
+                <TableHead>URL</TableHead>
+                <TableHead>Remote</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {events.map((event) => (
+                <TableRow key={event.id}>
+                  <TableCell className="font-medium">
+                    {event.title}
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate">
+                    {event.description}
+                  </TableCell>
+                  <TableCell>
+                    {format(new Date(event.date), "PPP")}
+                  </TableCell>
+                  <TableCell>{event.location}</TableCell>
+                  <TableCell className="capitalize">{event.type}</TableCell>
+                  <TableCell>{event.contactInfo}</TableCell>
+                  <TableCell>
+                    {event.url && (
+                      <a 
+                        href={event.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        View
+                      </a>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {event.isRemote ? "Yes" : "No"}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       </main>
     </div>
