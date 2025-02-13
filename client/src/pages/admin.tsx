@@ -474,7 +474,7 @@ export default function AdminPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm" className="w-24">View Events</Button>
+                          <Button variant="outline" size="sm" className="w-[82px]">View Events</Button>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -485,7 +485,7 @@ export default function AdminPage() {
                                 userId: u.id,
                                 status: u.status === "active" ? "suspended" : "active"
                               })}
-                              className="flex items-center gap-1 w-24"
+                              className="flex items-center gap-1 w-[82px]"
                             >
                               {u.status === "active" ? (
                                 <>
@@ -505,7 +505,7 @@ export default function AdminPage() {
                                 <Button
                                   variant="destructive"
                                   size="sm"
-                                  className="flex items-center gap-1 w-24"
+                                  className="flex items-center gap-1 w-[82px]"
                                 >
                                   <UserX className="h-4 w-4" />
                                   Delete
