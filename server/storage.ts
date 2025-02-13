@@ -87,12 +87,7 @@ export class DatabaseStorage implements IStorage {
     const [event] = await db
       .update(events)
       .set({ ...updateData, updatedAt: new Date() })
-      .where(
-        and(
-          eq(events.id, id),
-          eq(events.userId, userId)
-        )
-      )
+      .where(eq(events.id, id))
       .returning();
     return event;
   }
