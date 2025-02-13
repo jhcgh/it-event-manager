@@ -38,7 +38,6 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       country: event.country,
       isRemote: event.isRemote,
       type: event.type,
-      contactInfo: event.contactInfo,
       url: event.url || "",
       imageUrl: event.imageUrl || "",
     }
@@ -211,14 +210,6 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             </Select>
             {form.formState.errors.type && (
               <p className="text-sm text-destructive">{form.formState.errors.type.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="contactInfo">Contact Information *</Label>
-            <Input id="contactInfo" {...form.register("contactInfo")} />
-            {form.formState.errors.contactInfo && (
-              <p className="text-sm text-destructive">{form.formState.errors.contactInfo.message}</p>
             )}
           </div>
 

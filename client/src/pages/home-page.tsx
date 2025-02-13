@@ -152,7 +152,6 @@ export default function HomePage() {
                   <TableHead>Event Date</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Contact Info</TableHead>
                   <TableHead>URL</TableHead>
                   <TableHead>Remote</TableHead>
                 </TableRow>
@@ -173,7 +172,6 @@ export default function HomePage() {
                       {event.isRemote ? "Remote" : `${event.city}, ${event.country}`}
                     </TableCell>
                     <TableCell className="capitalize">{event.type}</TableCell>
-                    <TableCell>{event.contactInfo}</TableCell>
                     <TableCell>
                       {event.url && (
                         <a 

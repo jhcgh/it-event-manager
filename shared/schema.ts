@@ -24,7 +24,6 @@ export const events = pgTable("events", {
   country: text("country").notNull(),
   isRemote: boolean("is_remote").notNull(),
   type: text("type").notNull(), // 'seminar', 'conference', 'workshop'
-  contactInfo: text("contact_info").notNull(),
   url: text("url"),
   imageUrl: text("image_url"),
 });

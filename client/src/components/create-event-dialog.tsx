@@ -34,7 +34,6 @@ export function CreateEventDialog() {
       country: "",
       isRemote: false,
       type: "seminar",
-      contactInfo: "",
       url: "",
       imageUrl: "",
     }
@@ -215,13 +214,6 @@ export function CreateEventDialog() {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="contactInfo">Contact Information *</Label>
-            <Input id="contactInfo" {...form.register("contactInfo")} />
-            {form.formState.errors.contactInfo && (
-              <p className="text-sm text-destructive">{form.formState.errors.contactInfo.message}</p>
-            )}
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="url">Event URL</Label>
