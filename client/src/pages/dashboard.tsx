@@ -68,23 +68,23 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold">My Dashboard</h1>
-          <div className="flex items-center gap-3">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <h1 className="text-lg font-bold">My Dashboard</h1>
+          <div className="flex items-center gap-2">
             <Link href="/">
-              <Button size="sm" variant="ghost">Events List</Button>
+              <Button size="sm" variant="ghost" className="text-sm">Events List</Button>
             </Link>
             <Link href="/profile">
               <Button 
                 size="sm"
                 variant="ghost" 
-                className="flex items-center gap-2 hover:bg-accent text-sm"
+                className="flex items-center gap-1 hover:bg-accent text-sm"
               >
                 <UserCircle className="h-3 w-3" />
                 {user?.username}
               </Button>
             </Link>
-            <Button size="sm" variant="outline" onClick={() => logoutMutation.mutate()}>
+            <Button size="sm" variant="outline" onClick={() => logoutMutation.mutate()} className="text-sm">
               Logout
             </Button>
           </div>
