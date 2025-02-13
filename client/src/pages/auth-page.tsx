@@ -51,7 +51,7 @@ export default function AuthPage() {
   });
 
   if (user) {
-    return <Redirect to="/dashboard" />;
+    return <Redirect to={user.isSuperAdmin ? "/admin" : "/dashboard"} />;
   }
 
   const handleRegister = (data: RegisterFormData) => {
