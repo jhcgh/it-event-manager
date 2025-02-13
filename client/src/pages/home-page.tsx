@@ -77,7 +77,7 @@ export default function HomePage() {
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-            TechEvents.io
+            ITEvents.io
           </h1>
           <div className="flex items-center gap-2">
             {user ? (
