@@ -4,6 +4,12 @@ import { User, Event, UpdateUser } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { insertUserSchema } from "@shared/schema";
 import { 
   Loader2, 
   UserX, 
@@ -12,7 +18,8 @@ import {
   AlertTriangle,
   Shield,
   Ban,
-  CheckCircle
+  CheckCircle,
+  UserPlus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -38,6 +45,177 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+
+// Create Super User Dialog Component
+function CreateSuperUserDialog() {
+  const { toast } = useToast();
+  const form = useForm({
+    resolver: zodResolver(insertUserSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+      firstName: "",
+      lastName: "",
+      companyName: "",
+      title: "",
+      mobile: "",
+    },
+  });
+
+  const createSuperUserMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/admin/users/super", {
+        ...data,
+        isAdmin: true,
+        isSuperAdmin: true,
+        status: "active",
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "Super user created successfully",
+      });
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button className="flex items-center gap-2">
+          <UserPlus className="h-4 w-4" />
+          Create Super User
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Create Super User</DialogTitle>
+          <DialogDescription>
+            Create a new super user with full administrative privileges
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((data) => createSuperUserMutation.mutate(data))} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="email@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="companyName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Job Title</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="mobile"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mobile Number</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="submit" disabled={createSuperUserMutation.isPending}>
+                {createSuperUserMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Super User"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function AdminPage() {
   const { user } = useAuth();
@@ -126,6 +304,10 @@ export default function AdminPage() {
     );
   }
 
+  // Split users into super users and customers
+  const superUsers = users.filter(u => u.isSuperAdmin);
+  const customers = users.filter(u => !u.isSuperAdmin);
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
@@ -151,9 +333,51 @@ export default function AdminPage() {
           </TabsList>
 
           <TabsContent value="users">
+            {/* Super Users Section - Only visible to super admins */}
+            {user?.isSuperAdmin && (
+              <Card className="mb-8">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Super Users</CardTitle>
+                  <CreateSuperUserDialog />
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Username</TableHead>
+                        <TableHead>Company</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {superUsers.map((u) => (
+                        <TableRow key={u.id}>
+                          <TableCell>{u.username}</TableCell>
+                          <TableCell>{u.companyName}</TableCell>
+                          <TableCell>{u.title}</TableCell>
+                          <TableCell>{u.mobile}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={u.status === "active" ? "default" : "destructive"}
+                              className="capitalize"
+                            >
+                              {u.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Customers Section */}
             <Card>
               <CardHeader>
-                <CardTitle>User Management</CardTitle>
+                <CardTitle>Customers</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -169,7 +393,7 @@ export default function AdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users.map((u) => (
+                    {customers.map((u) => (
                       <TableRow key={u.id}>
                         <TableCell>{u.username}</TableCell>
                         <TableCell>{u.companyName}</TableCell>
@@ -184,21 +408,15 @@ export default function AdminPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {u.isSuperAdmin ? (
-                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                              Super Admin
-                            </Badge>
-                          ) : u.isAdmin ? (
+                          {u.isAdmin && (
                             <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                               Admin
                             </Badge>
-                          ) : (
-                            "No"
                           )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            {!u.isSuperAdmin && user?.isSuperAdmin && (
+                            {user?.isSuperAdmin && (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -213,69 +431,65 @@ export default function AdminPage() {
                               </Button>
                             )}
 
-                            {!u.isSuperAdmin && (
-                              <>
+                            <Button
+                              variant={u.status === "active" ? "destructive" : "outline"}
+                              size="sm"
+                              onClick={() => toggleUserStatusMutation.mutate({
+                                userId: u.id,
+                                status: u.status === "active" ? "suspended" : "active"
+                              })}
+                              className="flex items-center gap-1"
+                            >
+                              {u.status === "active" ? (
+                                <>
+                                  <Ban className="h-4 w-4" />
+                                  Suspend
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4" />
+                                  Activate
+                                </>
+                              )}
+                            </Button>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
                                 <Button
-                                  variant={u.status === "active" ? "destructive" : "outline"}
+                                  variant="destructive"
                                   size="sm"
-                                  onClick={() => toggleUserStatusMutation.mutate({
-                                    userId: u.id,
-                                    status: u.status === "active" ? "suspended" : "active"
-                                  })}
                                   className="flex items-center gap-1"
                                 >
-                                  {u.status === "active" ? (
-                                    <>
-                                      <Ban className="h-4 w-4" />
-                                      Suspend
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle className="h-4 w-4" />
-                                      Activate
-                                    </>
-                                  )}
+                                  <UserX className="h-4 w-4" />
+                                  Delete
                                 </Button>
-
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="destructive"
-                                      size="sm"
-                                      className="flex items-center gap-1"
-                                    >
-                                      <UserX className="h-4 w-4" />
-                                      Delete
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete this user? This
-                                        action cannot be undone.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => deleteUserMutation.mutate(u.id)}
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                      >
-                                        {deleteUserMutation.isPending ? (
-                                          <>
-                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                            Deleting...
-                                          </>
-                                        ) : (
-                                          "Delete User"
-                                        )}
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </>
-                            )}
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this user? This
+                                    action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteUserMutation.mutate(u.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    {deleteUserMutation.isPending ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                        Deleting...
+                                      </>
+                                    ) : (
+                                      "Delete User"
+                                    )}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </TableCell>
                       </TableRow>
