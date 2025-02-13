@@ -231,13 +231,14 @@ export default function AdminPage() {
     queryKey: ["/api/admin/users"],
   });
 
-  const { data: allEvents = [], isLoading: isLoadingEvents } = useQuery<Event[]>({
+  const { data: allEvents = [], isLoading: isLoadingEvents, error: eventsError } = useQuery<Event[]>({
     queryKey: ["/api/admin/events"],
+    retry: 3
   });
 
   // Filter and sort upcoming events
   const events = allEvents
-    .filter(event => isFuture(new Date(event.date)))
+    .filter(event => event.status === 'active')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const deleteUserMutation = useMutation({
@@ -288,6 +289,15 @@ export default function AdminPage() {
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
+  }
+
+  if (eventsError) {
+    console.error("Events loading error:", eventsError);
+    toast({
+      title: "Error loading events",
+      description: "There was a problem loading the events. Please try again.",
+      variant: "destructive",
+    });
   }
 
   // Split users into super users and customers

@@ -167,9 +167,19 @@ export function registerRoutes(app: Express): Server {
 
   // Add admin events route
   app.get("/api/admin/events", async (req, res) => {
-    if (!req.user?.isAdmin) return res.sendStatus(403);
-    const events = await storage.adminGetAllEvents();
-    res.json(events);
+    if (!req.user?.isAdmin) {
+      console.log("Unauthorized access to admin events");
+      return res.sendStatus(403);
+    }
+    try {
+      console.log("Fetching admin events for user:", req.user.id);
+      const events = await storage.adminGetAllEvents();
+      console.log("Retrieved events count:", events.length);
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching admin events:", error);
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
   });
 
   app.delete("/api/admin/users/:id", async (req, res) => {
