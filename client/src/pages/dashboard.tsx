@@ -65,9 +65,9 @@ export default function DashboardPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Title</TableHead>
+                <TableHead>Event Name</TableHead>
                 <TableHead>Description</TableHead>
-                <TableHead>Date</TableHead>
+                <TableHead>Event Date</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Contact Info</TableHead>
