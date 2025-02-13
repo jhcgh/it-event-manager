@@ -71,6 +71,17 @@ export function registerRoutes(app: Express): Server {
     res.json(updatedEvent);
   });
 
+  app.delete("/api/events/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    const event = await storage.getEvent(parseInt(req.params.id));
+    if (!event) return res.sendStatus(404);
+    if (event.userId !== req.user.id) return res.sendStatus(403);
+
+    await storage.deleteEvent(parseInt(req.params.id));
+    res.sendStatus(200);
+  });
+
   app.get("/api/events/:id/calendar", async (req, res) => {
     const event = await storage.getEvent(parseInt(req.params.id));
     if (!event) return res.sendStatus(404);
