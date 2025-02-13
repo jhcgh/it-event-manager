@@ -1,0 +1,38 @@
+**Website for IT Seminars, Events, and Conferences**
+**Objective: **
+Create a multi tenant SaaS website where users can post both in-person and remote IT seminars, events, and conferences. The website should include filtering capabilities and a back-end admin console for managing events. Events should be displayed as a list.
+Below are the features
+Website Landing Page
+1.	The Landing page should be the page that all events are posted 
+2.	The landing page should have the company name of TechEvents.io at the top.
+3.	A search bar needs to be available to search items in the list.
+4.	The landing page should contain columns for by date, location, in-person or remote, and type (seminar, conference, workshop
+5.	Filtering Capabilities
+•	Users can filter events by date, location, in-person or remote, and type (seminar, conference, workshop).
+6.	The landing page should have a login button for cusomters to log into the application
+7.	Anyone can be see and open events on the landing page without logging into the website.
+8.	Create a backend database to store all of the data.
+
+9.	User Registration and Login
+•	Customers must create accounts and log in the SaaS Application to create events.
+•	Account usernames should be an email address
+•	Account passwords need to have one number and one special character
+•	 When a customer registers it should ask them for their information  (company name, Title, telephone number, email address
+•	After they log in it should bring them to their customer dashboard where they can see and manage all of their events (delete, edit, copy)
+
+10.	Event Posting:
+•	Users can post new events with details such as title, description, date, time, location (in-person or remote), contact information and URL.
+•	Option to upload images to the event 
+•	The image in the event posting should be at the top of the event post
+•	A visitor to the landing page should be able to click on the event name and see the details of the event.  Including a image that was uploaded by the event organizer
+
+11.	Admin Console
+•	A back-end admin console where SaaS administrators can view, edit, and delete all events for all customers.
+•	Back end SaaS administrators can manage customer accounts and permissions.
+
+12.	 Responsive Design
+•	The website should be mobile-friendly and accessible on various devices.
+•	Ensure compatibility with different browsers
+
+13.	Calendar integration
+•	Users should be able to download an ics file from an event to populate into your calendar
