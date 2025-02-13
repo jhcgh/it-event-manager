@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
@@ -31,9 +32,13 @@ export function HoverUserMenu({ user }: HoverUserMenuProps) {
             {user.firstName} {user.lastName}
           </p>
           <p className="text-xs leading-none text-muted-foreground">
-            {user.username}
+            {user.title} at {user.companyName}
+          </p>
+          <p className="text-xs leading-none text-muted-foreground">
+            {user.username} {/* Username is the email address */}
           </p>
         </div>
+        <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/profile" className="cursor-pointer">
             View Profile
