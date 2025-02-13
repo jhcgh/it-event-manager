@@ -30,8 +30,9 @@ export const events = pgTable("events", {
 
 export const insertUserSchema = createInsertSchema(users)
   .extend({
-    password: z.string().min(8).regex(/[0-9]/).regex(/[!@#$%^&*]/),
-    username: z.string().email()
+    password: z.string().min(8).regex(/[0-9]/, "Password must contain at least one number")
+      .regex(/[!@#$%^&*]/, "Password must contain at least one special character"),
+    username: z.string().email("Must be a valid email address")
   })
   .omit({ id: true, isAdmin: true });
 
