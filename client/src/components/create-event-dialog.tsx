@@ -35,6 +35,7 @@ export function CreateEventDialog() {
       type: "seminar",
       contactInfo: "",
       url: "",
+      imageUrl: "" // Added imageUrl to defaultValues
     }
   });
 
@@ -68,6 +69,8 @@ export function CreateEventDialog() {
   });
 
   const onSubmit = (data: InsertEvent) => {
+    // Log the form data for debugging
+    console.log('Submitting form data:', data);
     createEventMutation.mutate(data);
   };
 
@@ -175,8 +178,8 @@ export function CreateEventDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label>Type *</Label>
-            <Select
+            <Label>Event Type *</Label>
+            <Select 
               value={form.getValues("type")}
               onValueChange={(value) => form.setValue("type", value)}
             >
@@ -209,6 +212,15 @@ export function CreateEventDialog() {
               <p className="text-sm text-destructive">{form.formState.errors.url.message}</p>
             )}
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="imageUrl">Image URL (Optional)</Label>
+            <Input id="imageUrl" type="url" {...form.register("imageUrl")} />
+            {form.formState.errors.imageUrl && (
+              <p className="text-sm text-destructive">{form.formState.errors.imageUrl.message}</p>
+            )}
+          </div>
+
 
           <Button type="submit" className="w-full" disabled={createEventMutation.isPending}>
             {createEventMutation.isPending ? (
