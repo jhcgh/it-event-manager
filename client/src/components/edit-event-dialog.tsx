@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -57,9 +58,10 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       isHybrid: type === "hybrid"
     };
     Object.entries(updates).forEach(([key, value]) => {
-      form.setValue(key as "isRemote" | "isHybrid", value, { 
+      form.setValue(key as "isRemote" | "isHybrid", value, {
         shouldValidate: false,
-        shouldDirty: false
+        shouldDirty: false,
+        shouldTouch: false
       });
     });
   };
@@ -72,7 +74,8 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
         setSelectedImage(reader.result as string);
         form.setValue("imageUrl", reader.result as string, {
           shouldValidate: false,
-          shouldDirty: false
+          shouldDirty: false,
+          shouldTouch: false
         });
       };
       reader.readAsDataURL(file);
@@ -174,22 +177,6 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             <Textarea
               id="description"
               {...form.register("description")}
-              onChange={(e) => {
-                const words = e.target.value.trim().split(/\s+/).length;
-                if (words > 50) {
-                  form.setError("description", {
-                    type: "manual",
-                    message: "Description must not exceed 50 words"
-                  });
-                } else {
-                  form.clearErrors("description");
-                  form.setValue("description", e.target.value, { 
-                    shouldValidate: false,
-                    shouldDirty: true,
-                    shouldTouch: false
-                  });
-                }
-              }}
             />
             {form.formState.errors.description && (
               <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>
@@ -221,7 +208,11 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   onSelect={(newDate) => {
                     if (newDate) {
                       setDate(newDate);
-                      form.setValue("date", newDate);
+                      form.setValue("date", newDate, {
+                        shouldValidate: false,
+                        shouldDirty: false,
+                        shouldTouch: false
+                      });
                     }
                   }}
                   disabled={(date) =>
@@ -331,7 +322,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
               onValueChange={(value) => {
                 form.setValue("type", value, {
                   shouldValidate: false,
-                  shouldDirty: true,
+                  shouldDirty: false,
                   shouldTouch: false
                 });
               }}
