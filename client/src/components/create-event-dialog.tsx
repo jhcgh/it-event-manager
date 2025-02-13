@@ -176,7 +176,7 @@ export function CreateEventDialog() {
           <div className="space-y-2">
             <Label>Event Type *</Label>
             <Select 
-              value={form.getValues("type")}
+              defaultValue={form.getValues("type")}
               onValueChange={(value) => form.setValue("type", value)}
             >
               <SelectTrigger>
@@ -192,11 +192,11 @@ export function CreateEventDialog() {
               <p className="text-sm text-destructive">{form.formState.errors.type.message}</p>
             )}
             <p className="text-sm text-muted-foreground mt-2">
-              {form.getValues("type") === "seminar" && 
+              {form.watch("type") === "seminar" && 
                 "A seminar is a small, focused meeting where experts discuss a specific topic."}
-              {form.getValues("type") === "workshop" && 
+              {form.watch("type") === "workshop" && 
                 "A workshop is a hands-on session where participants learn and practice new skills."}
-              {form.getValues("type") === "conference" && 
+              {form.watch("type") === "conference" && 
                 "A conference is a large event with keynote speakers and breakout sessions on various topics."}
             </p>
           </div>
