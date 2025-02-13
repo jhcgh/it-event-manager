@@ -22,9 +22,11 @@ export default function ProfilePage() {
     ),
     defaultValues: {
       username: user?.username || "",
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
       companyName: user?.companyName || "",
       title: user?.title || "",
-      telephone: user?.telephone || "",
+      mobile: user?.mobile || "",
     },
   });
 
@@ -92,6 +94,34 @@ export default function ProfilePage() {
                 )}
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input
+                    id="firstName"
+                    {...form.register("firstName")}
+                  />
+                  {form.formState.errors.firstName && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.firstName.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    {...form.register("lastName")}
+                  />
+                  {form.formState.errors.lastName && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.lastName.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="companyName">Company Name</Label>
                 <Input
@@ -106,7 +136,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title">Job Title</Label>
                 <Input
                   id="title"
                   {...form.register("title")}
@@ -119,15 +149,15 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="telephone">Telephone</Label>
+                <Label htmlFor="mobile">Mobile Number</Label>
                 <Input
-                  id="telephone"
+                  id="mobile"
                   type="tel"
-                  {...form.register("telephone")}
+                  {...form.register("mobile")}
                 />
-                {form.formState.errors.telephone && (
+                {form.formState.errors.mobile && (
                   <p className="text-sm text-destructive">
-                    {form.formState.errors.telephone.message}
+                    {form.formState.errors.mobile.message}
                   </p>
                 )}
               </div>

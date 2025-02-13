@@ -24,9 +24,11 @@ export default function AuthPage() {
     defaultValues: {
       username: "",
       password: "",
+      firstName: "",
+      lastName: "",
       companyName: "",
       title: "",
-      telephone: "",
+      mobile: "",
     },
   });
 
@@ -98,7 +100,13 @@ export default function AuthPage() {
                       type="email"
                       {...registerForm.register("username")}
                     />
+                    {registerForm.formState.errors.username && (
+                      <p className="text-sm text-destructive">
+                        {registerForm.formState.errors.username.message}
+                      </p>
+                    )}
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="register-password">Password</Label>
                     <Input
@@ -109,29 +117,81 @@ export default function AuthPage() {
                     <p className="text-xs text-muted-foreground">
                       Must contain at least 8 characters, one number and one special character
                     </p>
+                    {registerForm.formState.errors.password && (
+                      <p className="text-sm text-destructive">
+                        {registerForm.formState.errors.password.message}
+                      </p>
+                    )}
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        {...registerForm.register("firstName")}
+                      />
+                      {registerForm.formState.errors.firstName && (
+                        <p className="text-sm text-destructive">
+                          {registerForm.formState.errors.firstName.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        {...registerForm.register("lastName")}
+                      />
+                      {registerForm.formState.errors.lastName && (
+                        <p className="text-sm text-destructive">
+                          {registerForm.formState.errors.lastName.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="company-name">Company Name</Label>
+                    <Label htmlFor="companyName">Company Name</Label>
                     <Input
-                      id="company-name"
+                      id="companyName"
                       {...registerForm.register("companyName")}
                     />
+                    {registerForm.formState.errors.companyName && (
+                      <p className="text-sm text-destructive">
+                        {registerForm.formState.errors.companyName.message}
+                      </p>
+                    )}
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="title">Title</Label>
+                    <Label htmlFor="title">Job Title</Label>
                     <Input
                       id="title"
                       {...registerForm.register("title")}
                     />
+                    {registerForm.formState.errors.title && (
+                      <p className="text-sm text-destructive">
+                        {registerForm.formState.errors.title.message}
+                      </p>
+                    )}
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="telephone">Telephone</Label>
+                    <Label htmlFor="mobile">Mobile Number</Label>
                     <Input
-                      id="telephone"
+                      id="mobile"
                       type="tel"
-                      {...registerForm.register("telephone")}
+                      {...registerForm.register("mobile")}
                     />
+                    {registerForm.formState.errors.mobile && (
+                      <p className="text-sm text-destructive">
+                        {registerForm.formState.errors.mobile.message}
+                      </p>
+                    )}
                   </div>
+
                   <Button
                     type="submit"
                     className="w-full"

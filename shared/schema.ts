@@ -6,9 +6,11 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
   companyName: text("company_name").notNull(),
   title: text("title").notNull(),
-  telephone: text("telephone").notNull(),
+  mobile: text("mobile").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
 });
 
