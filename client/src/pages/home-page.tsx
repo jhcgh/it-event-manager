@@ -4,8 +4,8 @@ import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, LayoutDashboard, LogOut, Settings, UserCircle, Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Search, LayoutDashboard, LogOut, UserCircle, Loader2 } from "lucide-react";
+import { useState } from "react";
 import { Event } from "@shared/schema";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
@@ -25,16 +25,11 @@ export default function HomePage() {
   const [selectedType, setSelectedType] = useState<string>("all");  
   const [selectedLocation, setSelectedLocation] = useState<"online" | "in-person" | "hybrid">();
 
-  useEffect(() => {
-    console.log("HomePage mounted, initializing...");
-  }, []);
-
   const { data: events = [], isLoading, error } = useQuery<Event[]>({
     queryKey: ["/api/events"],
     retry: 3,
-    onError: (error) => {
-      console.error("Failed to fetch events:", error);
-    }
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10 // 10 minutes
   });
 
   if (isLoading) {
@@ -66,9 +61,9 @@ export default function HomePage() {
     );
     const matchesType = selectedType === "all" || event.type === selectedType;
     const matchesLocation = !selectedLocation || 
-                         (selectedLocation === "online" ? (event.isRemote && !event.isHybrid) :
-                          selectedLocation === "in-person" ? (!event.isRemote && !event.isHybrid) :
-                          event.isHybrid);
+                          (selectedLocation === "online" ? (event.isRemote && !event.isHybrid) :
+                           selectedLocation === "in-person" ? (!event.isRemote && !event.isHybrid) :
+                           event.isHybrid);
     return matchesSearch && matchesMonth && matchesType && matchesLocation;
   });
 
@@ -77,8 +72,6 @@ export default function HomePage() {
     date.setMonth(date.getMonth() + i);
     return date;
   });
-
-  console.log("Rendering HomePage with events:", events.length);
 
   return (
     <div className="min-h-screen bg-background">
@@ -218,7 +211,7 @@ export default function HomePage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredEvents.map((event) => (
+                filteredEvents.map((event: Event) => (
                   <TableRow 
                     key={event.id}
                     className="cursor-pointer transition-colors hover:bg-muted/50"

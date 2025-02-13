@@ -7,6 +7,10 @@ import multer from "multer";
 import { createEvent } from "ics";
 import sharp from "sharp";
 
+interface FileRequest extends Request {
+  file?: Express.Multer.File;
+}
+
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
@@ -15,10 +19,8 @@ const upload = multer({
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  // Initialize super admin account
   app.post("/api/admin/init", async (req, res) => {
     try {
-      // Create initial admin user
       const adminData = {
         username: "admin@example.com",
         password: "Admin@123!",
@@ -27,10 +29,9 @@ export function registerRoutes(app: Express): Server {
         companyName: "SaaS Platform",
         title: "Super Administrator",
         mobile: "+1234567890",
-        isSuperAdmin: true // Explicitly set isSuperAdmin flag
+        isSuperAdmin: true 
       };
 
-      // Check if admin already exists
       const existing = await storage.getUserByUsername(adminData.username);
       if (existing) {
         return res.json({ 
@@ -62,7 +63,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add profile update endpoint
   app.patch("/api/profile", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
@@ -72,7 +72,6 @@ export function registerRoutes(app: Express): Server {
     res.json(updatedUser);
   });
 
-  // Public event routes
   app.get("/api/events", async (req, res) => {
     const events = await storage.getAllEvents();
     res.json(events);
@@ -84,8 +83,7 @@ export function registerRoutes(app: Express): Server {
     res.json(event);
   });
 
-  // Protected event routes
-  app.post("/api/events", upload.single("image"), async (req: Request, res) => {
+  app.post("/api/events", upload.single("image"), async (req: FileRequest, res) => {
     if (!req.user) return res.sendStatus(401);
 
     const parsed = insertEventSchema.safeParse(req.body);
@@ -93,40 +91,41 @@ export function registerRoutes(app: Express): Server {
 
     let imageUrl;
     if (req.file) {
-      // Process and optimize the image with memory optimization
-      const resizedImage = await sharp(req.file.buffer, { 
-        limitInputPixels: 1000000000 // Limit max input pixels
-      })
-        .resize(1200, 630, {
-          fit: 'cover',
-          position: 'center',
-          withoutEnlargement: true
+      try {
+        const resizedImage = await sharp(req.file.buffer, { 
+          limitInputPixels: 1000000000 
         })
-        .jpeg({ 
-          quality: 80,
-          progressive: true,
-          force: true,
-          optimizeScans: true
-        })
-        .toBuffer();
+          .resize(1200, 630, {
+            fit: 'cover',
+            position: 'center',
+            withoutEnlargement: true
+          })
+          .jpeg({ 
+            quality: 80,
+            progressive: true,
+            force: true,
+            optimizeScans: true
+          })
+          .toBuffer();
 
-      // Generate unique filename and save
-      const filename = `${Date.now()}-${req.file.originalname.replace(/\.[^/.]+$/, "")}.jpg`;
-      imageUrl = `/uploads/${filename}`;
+        const filename = `${Date.now()}-${req.file.originalname.replace(/\.[^/.]+$/, "")}.jpg`;
+        imageUrl = `/uploads/${filename}`;
+      } catch (error) {
+        console.error('Error processing image:', error);
+        return res.status(500).json({ message: 'Failed to process image' });
+      }
+    }
 
-      // Create event with processed image
+    try {
       const event = await storage.createEvent(req.user.id, {
         ...parsed.data,
         imageUrl
       });
+      res.status(201).json(event);
+    } catch (error) {
+      console.error('Error creating event:', error);
+      res.status(500).json({ message: 'Failed to create event' });
     }
-
-    const event = await storage.createEvent(req.user.id, {
-      ...parsed.data,
-      imageUrl
-    });
-
-    res.status(201).json(event);
   });
 
   app.patch("/api/events/:id", async (req, res) => {
@@ -185,7 +184,7 @@ export function registerRoutes(app: Express): Server {
       description: event.description,
       location: location,
       url: event.url,
-      duration: { hours: 1 } // Default to 1-hour duration
+      duration: { hours: 1 } 
     };
 
     createEvent(icsEvent, (error, value) => {
@@ -196,7 +195,6 @@ export function registerRoutes(app: Express): Server {
     });
   });
 
-  // Admin routes
   app.get("/api/users/:id/events", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
     try {
@@ -214,7 +212,6 @@ export function registerRoutes(app: Express): Server {
     res.json(users);
   });
 
-  // Add admin events route
   app.get("/api/admin/events", async (req, res) => {
     if (!req.user?.isAdmin) {
       console.log("Unauthorized access to admin events");
@@ -237,7 +234,6 @@ export function registerRoutes(app: Express): Server {
     res.sendStatus(200);
   });
 
-  // Add new route for creating super users
   app.post("/api/admin/users/super", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
     try {

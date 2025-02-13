@@ -34,8 +34,8 @@ function Router() {
           path="/admin"
           component={AdminPage}
         />
-        <ProtectedRoute path="/profile" component={ProfilePage} />
-        <Route path="/:rest*" component={NotFound} />
+        <ProtectedRoute path="/profile" component={() => <ProfilePage />} />
+        <Route component={NotFound} />
       </Switch>
     </div>
   );
