@@ -1,15 +1,22 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, Calendar as CalendarIcon, MapPin, Video, Users } from "lucide-react";
+import { Search, Users } from "lucide-react";
 import { useState } from "react";
 import { Event } from "@shared/schema";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -18,7 +25,7 @@ export default function HomePage() {
   const [selectedType, setSelectedType] = useState<string>();
   const [selectedLocation, setSelectedLocation] = useState<"remote" | "in-person">();
 
-  const { data: events = [], isLoading } = useQuery<Event[]>({
+  const { data: events = [] } = useQuery<Event[]>({
     queryKey: ["/api/events"]
   });
 
@@ -123,50 +130,54 @@ export default function HomePage() {
             </Select>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredEvents.map(event => (
-              <Card key={event.id}>
-                {event.imageUrl && (
-                  <img 
-                    src={event.imageUrl} 
-                    alt={event.title}
-                    className="w-full h-48 object-cover"
-                  />
-                )}
-                <CardHeader>
-                  <CardTitle>{event.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <CalendarIcon className="h-4 w-4" />
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Contact Info</TableHead>
+                  <TableHead>URL</TableHead>
+                  <TableHead>Remote</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredEvents.map((event) => (
+                  <TableRow key={event.id}>
+                    <TableCell className="font-medium">
+                      {event.title}
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">
+                      {event.description}
+                    </TableCell>
+                    <TableCell>
                       {format(new Date(event.date), "PPP")}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {event.isRemote ? (
-                        <Video className="h-4 w-4" />
-                      ) : (
-                        <MapPin className="h-4 w-4" />
+                    </TableCell>
+                    <TableCell>{event.location}</TableCell>
+                    <TableCell className="capitalize">{event.type}</TableCell>
+                    <TableCell>{event.contactInfo}</TableCell>
+                    <TableCell>
+                      {event.url && (
+                        <a 
+                          href={event.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          View
+                        </a>
                       )}
-                      {event.location}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      {event.type}
-                    </div>
-                  </div>
-                  <Button
-                    variant="link"
-                    className="mt-4 p-0"
-                    asChild
-                  >
-                    <a href={`/api/events/${event.id}/calendar`} download>
-                      Add to Calendar
-                    </a>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
+                    </TableCell>
+                    <TableCell>
+                      {event.isRemote ? "Yes" : "No"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </div>
       </main>
