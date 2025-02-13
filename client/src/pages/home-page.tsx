@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ export default function HomePage() {
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [selectedType, setSelectedType] = useState<string>("all");  
   const [selectedLocation, setSelectedLocation] = useState<"online" | "in-person" | "hybrid">();
+  const [_, navigate] = useLocation();
 
   const { data: events = [], isLoading, error } = useQuery<Event[]>({
     queryKey: ["/api/events"],
@@ -76,7 +77,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent mx-auto">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent mx-auto">
             ITEvents.io
           </h1>
           <div className="flex items-center gap-2">
@@ -197,23 +198,23 @@ export default function HomePage() {
                     key={event.id}
                     className="cursor-pointer transition-colors hover:bg-muted/50"
                   >
-                    <TableCell className="font-medium">
-                      <Link href={`/event/${event.id}`}>
-                        {event.title}
-                      </Link>
+                    <TableCell className="font-medium" onClick={() => navigate(`/event/${event.id}`)}>
+                      {event.title}
                     </TableCell>
-                    <TableCell className="max-w-xs truncate">
+                    <TableCell className="max-w-xs truncate" onClick={() => navigate(`/event/${event.id}`)}>
                       {event.description}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={() => navigate(`/event/${event.id}`)}>
                       {format(new Date(event.date), "PPP")}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={() => navigate(`/event/${event.id}`)}>
                       {event.isHybrid ? "In Person & Online" : 
                        event.isRemote ? "Online" : 
                        `${event.city}, ${event.country}`}
                     </TableCell>
-                    <TableCell className="capitalize">{event.type}</TableCell>
+                    <TableCell className="capitalize" onClick={() => navigate(`/event/${event.id}`)}>
+                      {event.type}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
