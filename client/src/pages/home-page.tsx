@@ -107,7 +107,7 @@ export default function HomePage() {
                   }}
                   onClick={() => navigate('/auth?mode=register')}
                 >
-                  Post Events for Free
+                  Post Your Event for Free
                 </Button>
                 <Button 
                   size="sm" 
