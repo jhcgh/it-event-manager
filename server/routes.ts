@@ -241,8 +241,21 @@ export function registerRoutes(app: Express): Server {
   app.post("/api/admin/users/super", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
     try {
-      const userData = { ...req.body, isSuperAdmin: true }; // Ensure isSuperAdmin is set
-      const newUser = await storage.createUser(userData);
+      const parsed = insertUserSchema.parse({
+        ...req.body,
+        isSuperAdmin: true,
+        isAdmin: true,
+        status: "active"
+      });
+
+      const hashedPassword = await hashPassword(parsed.password);
+      const newUser = await storage.adminCreateSuperAdmin({
+        ...parsed,
+        password: hashedPassword,
+        username: parsed.username.toLowerCase()
+      });
+
+      console.log("Created super user:", { ...newUser, password: undefined });
       res.status(201).json(newUser);
     } catch (error) {
       console.error("Error creating super user:", error);

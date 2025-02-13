@@ -31,7 +31,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
+    console.log("Creating user with data:", { ...insertUser, password: "[REDACTED]" });
     const [user] = await db.insert(users).values(insertUser).returning();
+    console.log("Created user:", { ...user, password: "[REDACTED]" });
     return user;
   }
 
@@ -45,11 +47,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllUsers(): Promise<User[]> {
-    return await db.select()
+    const allUsers = await db.select()
       .from(users)
       .where(ne(users.status, 'deleted'))
-      .limit(100)
       .orderBy(desc(users.createdAt));
+
+    console.log("Retrieved users count:", allUsers.length);
+    console.log("Super users count:", allUsers.filter(u => u.isSuperAdmin).length);
+    return allUsers;
   }
 
   async deleteUser(id: number): Promise<void> {

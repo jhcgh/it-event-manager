@@ -67,12 +67,7 @@ function CreateSuperUserDialog() {
 
   const createSuperUserMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/admin/users/super", {
-        ...data,
-        isAdmin: true,
-        isSuperAdmin: true,
-        status: "active",
-      });
+      return await apiRequest("POST", "/api/admin/users/super", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
@@ -323,7 +318,6 @@ export default function AdminPage() {
     },
   });
 
-
   const deleteEventMutation = useMutation({
     mutationFn: async (eventId: number) => {
       await apiRequest("DELETE", `/api/events/${eventId}`);
@@ -361,9 +355,9 @@ export default function AdminPage() {
     });
   }
 
-  // Split users into super users and customers
+  // Filter super users correctly in the render section
   const superUsers = users.filter(u => u.isSuperAdmin === true);
-  const customers = users.filter(u => !u.isSuperAdmin || u.isSuperAdmin === null);
+  const customers = users.filter(u => !u.isSuperAdmin);
 
   return (
     <div className="min-h-screen bg-background">

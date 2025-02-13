@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -13,15 +13,18 @@ import EventDetailsPage from "@/pages/event-details";
 import { ProtectedRoute } from "./lib/protected-route";
 import { useAuth } from './hooks/use-auth';
 import { AdminBar } from "@/components/admin-bar";
+import { useEffect } from "react";
 
 function Router() {
   const { user } = useAuth();
 
-  return (
-    <div>
-      {/* Show AdminBar if user is admin or superadmin */}
-      {user && (user.isAdmin || user.isSuperAdmin) && <AdminBar />}
+  useEffect(() => {
+    console.log("Router mounted, user state:", user ? "authenticated" : "unauthenticated");
+  }, [user]);
 
+  return (
+    <div className="min-h-screen bg-background">
+      {user && (user.isAdmin || user.isSuperAdmin) && <AdminBar />}
       <Switch>
         <Route path="/" component={HomePage} />
         <Route path="/event/:id" component={EventDetailsPage} />
@@ -29,21 +32,20 @@ function Router() {
         <ProtectedRoute path="/dashboard" component={DashboardPage} />
         <ProtectedRoute
           path="/admin"
-          component={() => {
-            if (!user?.isAdmin && !user?.isSuperAdmin) {
-              return <Redirect to="/" />;
-            }
-            return <AdminPage />;
-          }}
+          component={AdminPage}
         />
         <ProtectedRoute path="/profile" component={ProfilePage} />
-        <Route component={NotFound} />
+        <Route path="/:rest*" component={NotFound} />
       </Switch>
     </div>
   );
 }
 
 function App() {
+  useEffect(() => {
+    console.log("App component mounted");
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
