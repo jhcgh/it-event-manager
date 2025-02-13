@@ -156,8 +156,6 @@ export default function HomePage() {
                   <TableHead>Event Date</TableHead>
                   <TableHead>Location</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>URL</TableHead>
-                  <TableHead>Remote</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -182,22 +180,6 @@ export default function HomePage() {
                        `${event.city}, ${event.country}`}
                     </TableCell>
                     <TableCell className="capitalize">{event.type}</TableCell>
-                    <TableCell>
-                      {event.url && (
-                        <a 
-                          href={event.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          View
-                        </a>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {event.isRemote ? "Yes" : "No"}
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
