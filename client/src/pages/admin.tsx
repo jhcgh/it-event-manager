@@ -220,6 +220,38 @@ function CreateSuperUserDialog() {
   );
 }
 
+function UserEventsDialog({ user }: { user: User }) {
+  const { data: userEvents = [], isLoading } = useQuery<Event[]>({
+    queryKey: [`/api/users/${user.id}/events`],
+    enabled: !!user.id, // Only fetch if user.id is available
+  });
+
+  if (isLoading) return <p>Loading events...</p>;
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button>View Events</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{user.username}'s Upcoming Events</DialogTitle>
+        </DialogHeader>
+        <div>
+          {userEvents.map(event => (
+            <div key={event.id}>
+              <h3>{event.title}</h3>
+              <p>{format(new Date(event.date), "PPP 'at' p")}</p>
+            </div>
+          ))}
+          {userEvents.length === 0 && <p>No upcoming events found.</p>}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 export default function AdminPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -415,6 +447,7 @@ export default function AdminPage() {
                       <TableHead>Title</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Events</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -432,6 +465,9 @@ export default function AdminPage() {
                           >
                             {u.status}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <UserEventsDialog user={u} />
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
