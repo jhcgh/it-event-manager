@@ -303,7 +303,7 @@ export default function AdminPage() {
               <Link href="/">
                 <Button variant="ghost" size="sm" className="text-xs h-7 px-2 gap-2">
                   <ArrowLeft className="h-4 w-4" />
-                  Home
+                  Events List
                 </Button>
               </Link>
             </div>
