@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, UserCircle } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
@@ -33,7 +33,13 @@ export default function DashboardPage() {
               <Button variant="ghost">Events List</Button>
             </Link>
             <Link href="/profile">
-              <Button variant="ghost">{user?.username}</Button>
+              <Button 
+                variant="ghost" 
+                className="flex items-center gap-2 hover:bg-accent"
+              >
+                <UserCircle className="h-4 w-4" />
+                {user?.username}
+              </Button>
             </Link>
             <Button variant="outline" onClick={() => logoutMutation.mutate()}>
               Logout
