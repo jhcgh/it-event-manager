@@ -49,7 +49,7 @@ export function setupAuth(app: Express) {
     new LocalStrategy(async (username, password, done) => {
       try {
         console.log("Attempting login for username:", username);
-        const user = await storage.getUserByUsername(username);
+        const user = await storage.getUserByUsername(username.toLowerCase());
 
         if (!user) {
           console.log("User not found");
@@ -94,7 +94,7 @@ export function setupAuth(app: Express) {
   app.post("/api/register", async (req, res, next) => {
     try {
       console.log("Registration attempt for:", req.body.username);
-      const existingUser = await storage.getUserByUsername(req.body.username);
+      const existingUser = await storage.getUserByUsername(req.body.username.toLowerCase());
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
       }
@@ -102,6 +102,7 @@ export function setupAuth(app: Express) {
       const hashedPassword = await hashPassword(req.body.password);
       const user = await storage.createUser({
         ...req.body,
+        username: req.body.username.toLowerCase(),
         password: hashedPassword,
       });
 
