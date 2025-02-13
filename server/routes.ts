@@ -92,8 +92,10 @@ export function registerRoutes(app: Express): Server {
 
     let imageUrl;
     if (req.file) {
-      // Process and optimize the image
-      const resizedImage = await sharp(req.file.buffer)
+      // Process and optimize the image with memory optimization
+      const resizedImage = await sharp(req.file.buffer, { 
+        limitInputPixels: 1000000000 // Limit max input pixels
+      })
         .resize(1200, 630, {
           fit: 'cover',
           position: 'center',
@@ -102,7 +104,8 @@ export function registerRoutes(app: Express): Server {
         .jpeg({ 
           quality: 80,
           progressive: true,
-          force: true // Convert all images to JPEG
+          force: true,
+          optimizeScans: true
         })
         .toBuffer();
       
