@@ -50,16 +50,16 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
 
   const handleLocationTypeChange = (type: "in-person" | "online" | "hybrid") => {
     setLocationType(type);
-    if (type === "in-person") {
-      form.setValue("isRemote", false);
-      form.setValue("isHybrid", false);
-    } else if (type === "online") {
-      form.setValue("isRemote", true);
-      form.setValue("isHybrid", false);
-    } else if (type === "hybrid") {
-      form.setValue("isRemote", true);
-      form.setValue("isHybrid", true);
-    }
+    const updates = {
+      isRemote: type === "online" || type === "hybrid",
+      isHybrid: type === "hybrid"
+    };
+    Object.entries(updates).forEach(([key, value]) => {
+      form.setValue(key as "isRemote" | "isHybrid", value, { 
+        shouldDirty: true,
+        shouldValidate: true 
+      });
+    });
   };
 
   const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,7 +68,10 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
-        form.setValue("imageUrl", reader.result as string);
+        form.setValue("imageUrl", reader.result as string, {
+          shouldDirty: true,
+          shouldValidate: true
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -178,7 +181,10 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   });
                 } else {
                   form.clearErrors("description");
-                  form.register("description").onChange(e);
+                  form.setValue("description", e.target.value, {
+                    shouldDirty: true,
+                    shouldValidate: true
+                  });
                 }
               }}
             />
@@ -212,7 +218,10 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   onSelect={(newDate) => {
                     if (newDate) {
                       setDate(newDate);
-                      form.setValue("date", newDate);
+                      form.setValue("date", newDate, {
+                        shouldDirty: true,
+                        shouldValidate: true
+                      });
                     }
                   }}
                   disabled={(date) =>
@@ -230,10 +239,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => {
-                      form.setValue("date", date);
-                      setCalendarOpen(false);
-                    }}
+                    onClick={() => setCalendarOpen(false)}
                   >
                     OK
                   </Button>
@@ -322,7 +328,12 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             <Label>Event Type *</Label>
             <Select
               value={form.getValues("type")}
-              onValueChange={(value) => form.setValue("type", value)}
+              onValueChange={(value) => {
+                form.setValue("type", value, {
+                  shouldDirty: true,
+                  shouldValidate: true
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select type" />
@@ -340,7 +351,11 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
 
           <div className="space-y-2">
             <Label htmlFor="url">Event URL</Label>
-            <Input id="url" type="url" {...form.register("url")} />
+            <Input 
+              id="url" 
+              type="url" 
+              {...form.register("url")} 
+            />
             {form.formState.errors.url && (
               <p className="text-sm text-destructive">{form.formState.errors.url.message}</p>
             )}
