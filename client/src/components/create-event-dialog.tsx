@@ -114,11 +114,18 @@ export function CreateEventDialog() {
                 <Calendar
                   mode="single"
                   selected={form.getValues("date")}
-                  onSelect={(date) => form.setValue("date", date || new Date())}
+                  onSelect={(date) => {
+                    if (date) {
+                      form.setValue("date", date);
+                    }
+                  }}
                   initialFocus
-                  disabled={(date) =>
-                    date < new Date(new Date().setHours(0, 0, 0, 0))
-                  }
+                  disabled={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date < today;
+                  }}
+                  fromDate={new Date()}
                 />
               </PopoverContent>
             </Popover>
