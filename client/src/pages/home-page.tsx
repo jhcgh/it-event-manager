@@ -8,8 +8,10 @@ import { Search, Calendar as CalendarIcon, MapPin, Video, Users } from "lucide-r
 import { useState } from "react";
 import { Event } from "@shared/schema";
 import { format, startOfMonth, endOfMonth } from "date-fns";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function HomePage() {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [selectedType, setSelectedType] = useState<string>();
@@ -47,11 +49,21 @@ export default function HomePage() {
           <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
             TechEvents.io
           </h1>
-          <Link href="/auth">
-            <Button className="cursor-pointer hover:opacity-90">
-              Login
-            </Button>
-          </Link>
+          <div className="flex items-center gap-4">
+            {user ? (
+              <Link href="/dashboard">
+                <Button className="cursor-pointer hover:opacity-90">
+                  Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/auth">
+                <Button className="cursor-pointer hover:opacity-90">
+                  Login
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
