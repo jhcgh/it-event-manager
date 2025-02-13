@@ -6,7 +6,6 @@ import { insertEventSchema, insertUserSchema } from "@shared/schema";
 import multer from "multer";
 import { createEvent } from "ics";
 import sharp from "sharp";
-import fs from 'fs';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -106,24 +105,18 @@ export function registerRoutes(app: Express): Server {
           force: true // Convert all images to JPEG
         })
         .toBuffer();
-
+      
       // Generate unique filename and save
       const filename = `${Date.now()}-${req.file.originalname.replace(/\.[^/.]+$/, "")}.jpg`;
       imageUrl = `/uploads/${filename}`;
-
-      const uploadPath = `./uploads/${filename}`; // Construct the full path
-
-      // Save the image to disk
-      fs.writeFileSync(uploadPath, resizedImage);
-
-
+      
       // Create event with processed image
       const event = await storage.createEvent(req.user.id, {
         ...parsed.data,
         imageUrl
       });
     }
-
+    
     const event = await storage.createEvent(req.user.id, {
       ...parsed.data,
       imageUrl
