@@ -156,7 +156,9 @@ export default function HomePage() {
                     <TableCell>
                       {format(new Date(event.date), "PPP")}
                     </TableCell>
-                    <TableCell>{event.location}</TableCell>
+                    <TableCell>
+                      {event.isRemote ? "Remote" : `${event.city}, ${event.country}`}
+                    </TableCell>
                     <TableCell className="capitalize">{event.type}</TableCell>
                     <TableCell>{event.contactInfo}</TableCell>
                     <TableCell>

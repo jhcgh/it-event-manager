@@ -35,7 +35,9 @@ export function CreateEventDialog() {
       type: "seminar",
       contactInfo: "",
       url: "",
-      imageUrl: "" 
+      imageUrl: "",
+      city: "",
+      country: ""
     }
   });
 
@@ -158,11 +160,35 @@ export function CreateEventDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="location">Location *</Label>
-            <Input id="location" {...form.register("location")} />
-            {form.formState.errors.location && (
-              <p className="text-sm text-destructive">{form.formState.errors.location.message}</p>
-            )}
+            <Label>Location *</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input
+                  id="city"
+                  placeholder="Enter city"
+                  {...form.register("city")}
+                />
+                {form.formState.errors.city && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.city.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <Input
+                  id="country"
+                  placeholder="Enter country"
+                  {...form.register("country")}
+                />
+                {form.formState.errors.country && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.country.message}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -175,7 +201,7 @@ export function CreateEventDialog() {
 
           <div className="space-y-2">
             <Label>Event Type *</Label>
-            <Select 
+            <Select
               defaultValue={form.getValues("type")}
               onValueChange={(value) => form.setValue("type", value)}
             >
@@ -192,11 +218,11 @@ export function CreateEventDialog() {
               <p className="text-sm text-destructive">{form.formState.errors.type.message}</p>
             )}
             <p className="text-sm text-muted-foreground mt-2">
-              {form.watch("type") === "seminar" && 
+              {form.watch("type") === "seminar" &&
                 "A seminar is a small, focused meeting where experts discuss a specific topic."}
-              {form.watch("type") === "workshop" && 
+              {form.watch("type") === "workshop" &&
                 "A workshop is a hands-on session where participants learn and practice new skills."}
-              {form.watch("type") === "conference" && 
+              {form.watch("type") === "conference" &&
                 "A conference is a large event with keynote speakers and breakout sessions on various topics."}
             </p>
           </div>

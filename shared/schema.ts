@@ -20,7 +20,8 @@ export const events = pgTable("events", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   date: timestamp("date").notNull(),
-  location: text("location").notNull(),
+  city: text("city").notNull(),
+  country: text("country").notNull(),
   isRemote: boolean("is_remote").notNull(),
   type: text("type").notNull(), // 'seminar', 'conference', 'workshop'
   contactInfo: text("contact_info").notNull(),
@@ -36,7 +37,6 @@ export const insertUserSchema = createInsertSchema(users)
   })
   .omit({ id: true, isAdmin: true });
 
-// Modify the event schema to handle date properly
 export const insertEventSchema = createInsertSchema(events)
   .extend({
     date: z.coerce.date()
