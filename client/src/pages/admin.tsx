@@ -382,17 +382,7 @@ export default function AdminPage() {
               <AlertTriangle className="h-6 w-6 text-destructive" />
               Admin Dashboard
             </h1>
-            <div className="w-32 flex justify-end">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-xs h-7 px-2 gap-2"
-                onClick={() => logoutMutation.mutate()}
-              >
-                <LogOut className="h-4 w-4" />
-                Logout
-              </Button>
-            </div>
+            <div className="w-32"></div>
           </div>
         </div>
       </header>
