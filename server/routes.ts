@@ -103,7 +103,7 @@ export function registerRoutes(app: Express): Server {
 
     const event = await storage.getEvent(parseInt(req.params.id));
     if (!event) return res.sendStatus(404);
-    if (event.userId !== req.user.id) return res.sendStatus(403);
+    if (event.userId !== req.user.id && !req.user.isAdmin) return res.sendStatus(403);
 
     const parsed = insertEventSchema.partial().safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error);
