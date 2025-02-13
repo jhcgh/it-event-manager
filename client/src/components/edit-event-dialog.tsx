@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -346,7 +345,15 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             <Input 
               id="url" 
               type="url" 
-              {...form.register("url")} 
+              {...form.register("url", {
+                  onChange: (e) => {
+                    form.setValue("url", e.target.value, {
+                      shouldValidate: false,
+                      shouldDirty: false,
+                      shouldTouch: false
+                    });
+                  }
+                })} 
             />
             {form.formState.errors.url && (
               <p className="text-sm text-destructive">{form.formState.errors.url.message}</p>
