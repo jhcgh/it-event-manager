@@ -82,10 +82,18 @@ export default function EventDetailsPage() {
             <div className="space-y-2">
               <h2 className="text-xl font-semibold">Location</h2>
               <p className="flex items-center gap-2 text-muted-foreground">
-                {event.isRemote ? (
+                {event.isHybrid ? (
                   <>
                     <Globe className="h-4 w-4" />
-                    Remote Event
+                    In Person & Online
+                    <br />
+                    <MapPin className="h-4 w-4" />
+                    {event.city}, {event.country}
+                  </>
+                ) : event.isRemote ? (
+                  <>
+                    <Globe className="h-4 w-4" />
+                    Online Event
                   </>
                 ) : (
                   <>

@@ -22,8 +22,8 @@ export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
-  const [selectedType, setSelectedType] = useState<string>("all");  // Set default to "all"
-  const [selectedLocation, setSelectedLocation] = useState<"remote" | "in-person">();
+  const [selectedType, setSelectedType] = useState<string>("all");  
+  const [selectedLocation, setSelectedLocation] = useState<"online" | "in-person" | "hybrid">();
 
   const { data: events = [] } = useQuery<Event[]>({
     queryKey: ["/api/events"]
@@ -39,7 +39,9 @@ export default function HomePage() {
     );
     const matchesType = selectedType === "all" || event.type === selectedType;
     const matchesLocation = !selectedLocation || 
-                           (selectedLocation === "remote" ? event.isRemote : !event.isRemote);
+                          (selectedLocation === "online" ? (event.isRemote && !event.isHybrid) :
+                           selectedLocation === "in-person" ? (!event.isRemote && !event.isHybrid) :
+                           event.isHybrid);
     return matchesSearch && matchesMonth && matchesType && matchesLocation;
   });
 
@@ -132,14 +134,15 @@ export default function HomePage() {
 
             <Select 
               value={selectedLocation} 
-              onValueChange={(val: "remote" | "in-person") => setSelectedLocation(val)}
+              onValueChange={(val: "online" | "in-person" | "hybrid") => setSelectedLocation(val)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Location type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="remote">Remote</SelectItem>
+                <SelectItem value="online">Online</SelectItem>
                 <SelectItem value="in-person">In Person</SelectItem>
+                <SelectItem value="hybrid">In Person & Online</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -174,7 +177,9 @@ export default function HomePage() {
                       {format(new Date(event.date), "PPP")}
                     </TableCell>
                     <TableCell>
-                      {event.isRemote ? "Remote" : `${event.city}, ${event.country}`}
+                      {event.isHybrid ? "In Person & Online" : 
+                       event.isRemote ? "Online" : 
+                       `${event.city}, ${event.country}`}
                     </TableCell>
                     <TableCell className="capitalize">{event.type}</TableCell>
                     <TableCell>

@@ -36,6 +36,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       city: event.city,
       country: event.country,
       isRemote: event.isRemote,
+      isHybrid: false, // Added isHybrid default value
       type: event.type,
       url: event.url || "",
       imageUrl: event.imageUrl || "",
@@ -211,19 +212,38 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   id="inPerson"
                   className="h-4 w-4"
                   checked={!form.getValues("isRemote")}
-                  onChange={() => form.setValue("isRemote", false)}
+                  onChange={() => {
+                    form.setValue("isRemote", false);
+                    form.setValue("isHybrid", false);
+                  }}
                 />
                 <Label htmlFor="inPerson">In Person</Label>
               </div>
               <div className="flex items-center gap-2">
                 <input
                   type="radio"
-                  id="remote"
+                  id="online"
                   className="h-4 w-4"
-                  checked={form.getValues("isRemote")}
-                  onChange={() => form.setValue("isRemote", true)}
+                  checked={form.getValues("isRemote") && !form.getValues("isHybrid")}
+                  onChange={() => {
+                    form.setValue("isRemote", true);
+                    form.setValue("isHybrid", false);
+                  }}
                 />
-                <Label htmlFor="remote">Remote</Label>
+                <Label htmlFor="online">Online</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  id="hybrid"
+                  className="h-4 w-4"
+                  checked={form.getValues("isHybrid")}
+                  onChange={() => {
+                    form.setValue("isRemote", true);
+                    form.setValue("isHybrid", true);
+                  }}
+                />
+                <Label htmlFor="hybrid">In Person & Online</Label>
               </div>
             </div>
           </div>
