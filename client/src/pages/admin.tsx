@@ -361,8 +361,8 @@ export default function AdminPage() {
     });
   }
 
-  // Split users into super users and customers, excluding current user
-  const superUsers = users.filter(u => u.isSuperAdmin && u.id !== user?.id);
+  // Split users into super users and customers
+  const superUsers = users.filter(u => u.isSuperAdmin);
   const customers = users.filter(u => !u.isSuperAdmin);
 
   return (
