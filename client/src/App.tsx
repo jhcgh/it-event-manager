@@ -9,12 +9,14 @@ import AuthPage from "@/pages/auth-page";
 import DashboardPage from "@/pages/dashboard";
 import AdminPage from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
+import EventDetailsPage from "@/pages/event-details";
 import { ProtectedRoute } from "./lib/protected-route";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={HomePage} />
+      <Route path="/event/:id" component={EventDetailsPage} />
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/dashboard" component={DashboardPage} />
       <ProtectedRoute path="/admin" component={AdminPage} />

@@ -159,7 +159,11 @@ export default function HomePage() {
               </TableHeader>
               <TableBody>
                 {filteredEvents.map((event) => (
-                  <TableRow key={event.id}>
+                  <TableRow 
+                    key={event.id}
+                    className="cursor-pointer hover:bg-accent/50"
+                    onClick={() => window.location.href = `/event/${event.id}`}
+                  >
                     <TableCell className="font-medium">
                       {event.title}
                     </TableCell>
@@ -180,6 +184,7 @@ export default function HomePage() {
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           View
                         </a>
