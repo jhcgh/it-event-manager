@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { insertEventSchema, insertUserSchema } from "@shared/schema";
 import multer from "multer";
 import { createEvent } from "ics";
+import sharp from "sharp";
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -89,7 +90,26 @@ export function registerRoutes(app: Express): Server {
     const parsed = insertEventSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error);
 
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+    let imageUrl;
+    if (req.file) {
+      // Resize image to 1200x630 (16:9 aspect ratio)
+      const resizedImage = await sharp(req.file.buffer)
+        .resize(1200, 630, {
+          fit: 'cover',
+          position: 'center'
+        })
+        .jpeg({ quality: 80 })
+        .toBuffer();
+      
+      // Save the resized image
+      const filename = `${Date.now()}-${req.file.originalname}`;
+      imageUrl = `/uploads/${filename}`;
+      await storage.createEvent(req.user.id, {
+        ...parsed.data,
+        imageUrl
+      });
+    }
+    
     const event = await storage.createEvent(req.user.id, {
       ...parsed.data,
       imageUrl
