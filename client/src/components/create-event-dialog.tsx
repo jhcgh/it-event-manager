@@ -40,7 +40,12 @@ export function CreateEventDialog() {
 
   const createEventMutation = useMutation({
     mutationFn: async (data: InsertEvent) => {
-      const res = await apiRequest("POST", "/api/events", data);
+      // Convert the date to an ISO string before sending
+      const formattedData = {
+        ...data,
+        date: data.date.toISOString(),
+      };
+      const res = await apiRequest("POST", "/api/events", formattedData);
       return res.json();
     },
     onSuccess: () => {
@@ -50,6 +55,7 @@ export function CreateEventDialog() {
         description: "Event created successfully",
       });
       form.reset();
+      setDate(new Date());
       setOpen(false);
     },
     onError: (error: Error) => {
