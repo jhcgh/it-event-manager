@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,17 +46,21 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       url: event.url || "",
       imageUrl: event.imageUrl || "",
     },
-    mode: 'onSubmit'
+    mode: 'onSubmit' // Only validate on form submission
   });
 
   const handleLocationTypeChange = (type: "in-person" | "online" | "hybrid") => {
     setLocationType(type);
-    const updates = {
+    // Update form values without triggering validation or submission
+    const formUpdates = {
       isRemote: type === "online" || type === "hybrid",
       isHybrid: type === "hybrid"
     };
-    Object.entries(updates).forEach(([key, value]) => {
-      form.setValue(key as "isRemote" | "isHybrid", value);
+    Object.entries(formUpdates).forEach(([key, value]) => {
+      form.setValue(key as "isRemote" | "isHybrid", value, { 
+        shouldDirty: true,
+        shouldValidate: false // Prevent validation on change
+      });
     });
   };
 
@@ -65,8 +69,13 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
-        form.setValue("imageUrl", reader.result as string);
+        const imageUrl = reader.result as string;
+        setSelectedImage(imageUrl);
+        // Update form value without triggering validation or submission
+        form.setValue("imageUrl", imageUrl, { 
+          shouldDirty: true,
+          shouldValidate: false
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -96,6 +105,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
   });
 
   const onSubmit = (data: InsertEvent) => {
+    // Only submit all form data when the update button is clicked
     updateEventMutation.mutate(data);
   };
 
@@ -114,6 +124,9 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Event</DialogTitle>
+          <DialogDescription>
+            Make changes to your event. All changes will be saved when you click the Update Event button.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
@@ -189,7 +202,8 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   onSelect={(newDate) => {
                     if (newDate) {
                       setDate(newDate);
-                      form.setValue("date", newDate);
+                      // Update form value without triggering submission
+                      form.setValue("date", newDate, { shouldDirty: true, shouldValidate: false });
                     }
                   }}
                   disabled={(date) =>
@@ -284,7 +298,8 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             <Select
               value={form.getValues("type")}
               onValueChange={(value) => {
-                form.setValue("type", value);
+                // Update form value without triggering submission
+                form.setValue("type", value, { shouldDirty: true, shouldValidate: false });
               }}
             >
               <SelectTrigger>
