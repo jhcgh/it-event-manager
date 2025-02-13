@@ -77,7 +77,7 @@ export default function DashboardPage() {
               </Button>
             </Link>
           </div>
-          <h1 className="text-base font-bold flex-1 text-center">My Dashboard</h1>
+          <h1 className="text-2xl font-bold flex-1 text-center">My Dashboard</h1>
           <div className="flex items-center gap-1.5 w-32 justify-end">
             <Link href="/profile">
               <Button 
