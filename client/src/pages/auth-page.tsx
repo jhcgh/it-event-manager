@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema, InsertUser } from "@shared/schema";
-import { Redirect } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import { z } from "zod";
 
 // Extend the schema to include password confirmation
@@ -27,6 +27,9 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
+  const [location] = useLocation();
+  const searchParams = new URLSearchParams(location.split('?')[1]);
+  const defaultTab = searchParams.get('mode') === 'register' ? 'register' : 'login';
 
   const loginForm = useForm({
     defaultValues: {
@@ -47,7 +50,7 @@ export default function AuthPage() {
       title: "",
       mobile: "",
     },
-    mode: "onBlur", // This enables validation on blur
+    mode: "onBlur",
   });
 
   if (user) {
@@ -55,7 +58,6 @@ export default function AuthPage() {
   }
 
   const handleRegister = (data: RegisterFormData) => {
-    // Remove confirmPassword before sending to API
     const { confirmPassword, ...registrationData } = data;
     registerMutation.mutate(registrationData);
   };
@@ -71,7 +73,7 @@ export default function AuthPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login">
+            <Tabs defaultValue={defaultTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="register">Register</TabsTrigger>
