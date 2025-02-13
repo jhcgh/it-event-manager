@@ -77,7 +77,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent mx-auto">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
             ITEvents.io
           </h1>
           <div className="flex items-center gap-2">
@@ -97,9 +97,22 @@ export default function HomePage() {
                 <HoverUserMenu user={user} />
               </>
             ) : (
-              <Link href="/auth">
-                <Button size="sm" className="text-sm font-medium">Login</Button>
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link href="/auth?mode=register">
+                  <span 
+                    className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600 font-semibold transition-all duration-200 hover:scale-105 hover:opacity-90 cursor-pointer" 
+                    style={{ 
+                      fontSize: '1.09375rem',
+                      filter: 'drop-shadow(0 0 2px rgba(var(--primary), 0.1))',
+                    }}
+                  >
+                    Post Events for Free
+                  </span>
+                </Link>
+                <Link href="/auth">
+                  <Button size="sm" className="text-sm font-medium">Login</Button>
+                </Link>
+              </div>
             )}
           </div>
         </div>
@@ -113,9 +126,7 @@ export default function HomePage() {
           <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
             Find and join the best technology events, conferences, and workshops happening around the world.
             Connect with industry experts and grow your network.
-            <span className="block mt-2 text-primary font-semibold">Post Events for Free</span>
           </p>
-
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
