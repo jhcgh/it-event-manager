@@ -372,9 +372,8 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div className="w-32">
               <Link href="/">
-                <Button variant="ghost" size="sm" className="text-xs h-7 px-2 gap-2">
+                <Button variant="ghost" size="sm" className="flex items-center hover:bg-accent h-7 w-7 p-0">
                   <ArrowLeft className="h-4 w-4" />
-                  Events List
                 </Button>
               </Link>
             </div>

@@ -85,10 +85,9 @@ export default function DashboardPage() {
               <Button 
                 size="sm"
                 variant="ghost" 
-                className="flex items-center gap-1 hover:bg-accent text-xs h-7 px-2"
+                className="flex items-center hover:bg-accent h-7 w-7 p-0"
               >
-                <UserCircle className="h-3 w-3" />
-                {user?.username}
+                <UserCircle className="h-4 w-4" />
               </Button>
             </Link>
             <Button 
