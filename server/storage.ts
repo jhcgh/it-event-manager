@@ -1,76 +1,70 @@
 import { IStorage } from "./storage";
-import { Event, InsertEvent, User, InsertUser } from "@shared/schema";
-import createMemoryStore from "memorystore";
+import { User, Event, InsertUser, InsertEvent, users, events } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import connectPg from "connect-pg-simple";
 import session from "express-session";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private events: Map<number, Event>;
-  private currentUserId: number;
-  private currentEventId: number;
+export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.events = new Map();
-    this.currentUserId = 1;
-    this.currentEventId = 1;
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000 
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id, isAdmin: false };
-    this.users.set(id, user);
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
   async getAllUsers(): Promise<User[]> {
-    return Array.from(this.users.values());
+    return await db.select().from(users);
   }
 
   async deleteUser(id: number): Promise<void> {
-    this.users.delete(id);
+    await db.delete(users).where(eq(users.id, id));
   }
 
   async createEvent(userId: number, insertEvent: InsertEvent): Promise<Event> {
-    const id = this.currentEventId++;
-    const event: Event = { ...insertEvent, id, userId };
-    this.events.set(id, event);
+    const [event] = await db
+      .insert(events)
+      .values({ ...insertEvent, userId })
+      .returning();
     return event;
   }
 
   async getEvent(id: number): Promise<Event | undefined> {
-    return this.events.get(id);
+    const [event] = await db.select().from(events).where(eq(events.id, id));
+    return event;
   }
 
   async getAllEvents(): Promise<Event[]> {
-    return Array.from(this.events.values());
+    return await db.select().from(events);
   }
 
   async getUserEvents(userId: number): Promise<Event[]> {
-    return Array.from(this.events.values()).filter(
-      (event) => event.userId === userId
-    );
+    return await db.select().from(events).where(eq(events.userId, userId));
   }
 
   async deleteEvent(id: number): Promise<void> {
-    this.events.delete(id);
+    await db.delete(events).where(eq(events.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
