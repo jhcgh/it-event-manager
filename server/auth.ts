@@ -6,6 +6,8 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
+import { sendVerificationCode, generateVerificationCode } from "./utils/email";
+import { verificationStore } from "./utils/verification-store";
 
 declare global {
   namespace Express {
@@ -117,12 +119,17 @@ export function setupAuth(app: Express) {
         ...req.body,
         username: req.body.username.toLowerCase(),
         password: hashedPassword,
-        status: 'active' // Added status field
+        status: 'active'
       });
+
+      // Send verification code immediately after registration
+      const verificationCode = generateVerificationCode();
+      verificationStore.setVerificationCode(user.username, verificationCode);
+      await sendVerificationCode(user.username, verificationCode);
 
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json(user);
+        res.status(201).json({ user, requiresVerification: true });
       });
     } catch (err) {
       console.error("Registration error:", err);
@@ -131,7 +138,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: any, info: any) => {
+    passport.authenticate("local", async (err: any, user: any, info: any) => {
       if (err) {
         console.error("Authentication error:", err);
         return next(err);
@@ -140,15 +147,43 @@ export function setupAuth(app: Express) {
         console.log("Authentication failed:", info?.message);
         return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Login error:", err);
-          return next(err);
-        }
-        console.log("Login successful for user:", user.username);
-        res.json(user);
-      });
+
+      // Generate and send verification code
+      const verificationCode = generateVerificationCode();
+      verificationStore.setVerificationCode(user.username, verificationCode);
+      const emailSent = await sendVerificationCode(user.username, verificationCode);
+
+      if (!emailSent) {
+        return res.status(500).json({ message: "Failed to send verification code" });
+      }
+
+      // Don't log in the user yet, wait for verification
+      res.json({ message: "Verification code sent", requiresVerification: true });
     })(req, res, next);
+  });
+
+  app.post("/api/verify", async (req, res, next) => {
+    const { username, code } = req.body;
+
+    if (!username || !code) {
+      return res.status(400).json({ message: "Username and verification code are required" });
+    }
+
+    const user = await storage.getUserByUsername(username.toLowerCase());
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    const isValid = verificationStore.verifyCode(username, code);
+    if (!isValid) {
+      return res.status(400).json({ message: "Invalid or expired verification code" });
+    }
+
+    // Log the user in after successful verification
+    req.login(user, (err) => {
+      if (err) return next(err);
+      res.json(user);
+    });
   });
 
   app.post("/api/logout", (req, res, next) => {
