@@ -38,7 +38,12 @@ export const insertUserSchema = createInsertSchema(users)
 
 export const insertEventSchema = createInsertSchema(events)
   .extend({
-    date: z.coerce.date()
+    date: z.coerce.date(),
+    description: z.string()
+      .refine(
+        (val) => val.trim().split(/\s+/).length <= 50,
+        "Description must not exceed 50 words"
+      )
   })
   .omit({ 
     id: true,

@@ -22,7 +22,7 @@ export default function HomePage() {
   const { user, logoutMutation } = useAuth();
   const [search, setSearch] = useState("");
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
-  const [selectedType, setSelectedType] = useState<string>();
+  const [selectedType, setSelectedType] = useState<string>("all");  // Set default to "all"
   const [selectedLocation, setSelectedLocation] = useState<"remote" | "in-person">();
 
   const { data: events = [] } = useQuery<Event[]>({
@@ -37,7 +37,7 @@ export default function HomePage() {
       eventDate >= startOfMonth(selectedMonth) &&
       eventDate <= endOfMonth(selectedMonth)
     );
-    const matchesType = !selectedType || event.type === selectedType;
+    const matchesType = selectedType === "all" || event.type === selectedType;
     const matchesLocation = !selectedLocation || 
                            (selectedLocation === "remote" ? event.isRemote : !event.isRemote);
     return matchesSearch && matchesMonth && matchesType && matchesLocation;
@@ -123,6 +123,7 @@ export default function HomePage() {
                 <SelectValue placeholder="Event type" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All</SelectItem>
                 <SelectItem value="seminar">Seminar</SelectItem>
                 <SelectItem value="conference">Conference</SelectItem>
                 <SelectItem value="workshop">Workshop</SelectItem>

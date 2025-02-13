@@ -91,11 +91,29 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
-            <Textarea id="description" {...form.register("description")} />
+            <Label htmlFor="description">Description * (Max 50 words)</Label>
+            <Textarea 
+              id="description" 
+              {...form.register("description")} 
+              onChange={(e) => {
+                const words = e.target.value.trim().split(/\s+/).length;
+                if (words > 50) {
+                  form.setError("description", {
+                    type: "manual",
+                    message: "Description must not exceed 50 words"
+                  });
+                } else {
+                  form.clearErrors("description");
+                }
+                form.register("description").onChange(e);
+              }}
+            />
             {form.formState.errors.description && (
               <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>
             )}
+            <p className="text-xs text-muted-foreground">
+              Words: {form.getValues("description")?.trim().split(/\s+/).length || 0}/50
+            </p>
           </div>
 
           <div className="space-y-2">
