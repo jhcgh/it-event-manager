@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Event, insertEventSchema } from "@shared/schema";
+import { Event, insertEventSchema, InsertEvent } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,11 +15,23 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
   const { user, logoutMutation } = useAuth();
-  const form = useForm({
-    resolver: zodResolver(insertEventSchema)
+  const { toast } = useToast();
+  const form = useForm<InsertEvent>({
+    resolver: zodResolver(insertEventSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      date: new Date(),
+      location: "",
+      isRemote: false,
+      type: "seminar",
+      contactInfo: "",
+      url: "",
+    }
   });
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
@@ -27,24 +39,29 @@ export default function DashboardPage() {
   });
 
   const createEventMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      const res = await apiRequest("POST", "/api/events", formData);
+    mutationFn: async (data: InsertEvent) => {
+      const res = await apiRequest("POST", "/api/events", data);
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+      toast({
+        title: "Success",
+        description: "Event created successfully",
+      });
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   });
 
-  const onSubmit = (data: any) => {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      formData.append(key, value as string);
-    });
-    if (data.image?.[0]) {
-      formData.append("image", data.image[0]);
-    }
-    createEventMutation.mutate(formData);
+  const onSubmit = (data: InsertEvent) => {
+    createEventMutation.mutate(data);
   };
 
   if (isLoading) {
@@ -90,11 +107,17 @@ export default function DashboardPage() {
                 <div className="space-y-2">
                   <Label htmlFor="title">Title *</Label>
                   <Input id="title" {...form.register("title")} />
+                  {form.formState.errors.title && (
+                    <p className="text-sm text-destructive">{form.formState.errors.title.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="description">Description *</Label>
                   <Textarea id="description" {...form.register("description")} />
+                  {form.formState.errors.description && (
+                    <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -102,22 +125,29 @@ export default function DashboardPage() {
                   <Calendar
                     mode="single"
                     selected={form.getValues("date")}
-                    onSelect={(date) => form.setValue("date", date)}
+                    onSelect={(date) => form.setValue("date", date || new Date())}
                     className="rounded-md border"
                   />
+                  {form.formState.errors.date && (
+                    <p className="text-sm text-destructive">{form.formState.errors.date.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="location">Location *</Label>
                   <Input id="location" {...form.register("location")} />
+                  {form.formState.errors.location && (
+                    <p className="text-sm text-destructive">{form.formState.errors.location.message}</p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Switch
+                    id="isRemote"
                     checked={form.getValues("isRemote")}
                     onCheckedChange={(checked) => form.setValue("isRemote", checked)}
                   />
-                  <Label>Remote Event</Label>
+                  <Label htmlFor="isRemote">Remote Event</Label>
                 </div>
 
                 <div className="space-y-2">
@@ -135,24 +165,33 @@ export default function DashboardPage() {
                       <SelectItem value="workshop">Workshop</SelectItem>
                     </SelectContent>
                   </Select>
+                  {form.formState.errors.type && (
+                    <p className="text-sm text-destructive">{form.formState.errors.type.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="contactInfo">Contact Information *</Label>
                   <Input id="contactInfo" {...form.register("contactInfo")} />
+                  {form.formState.errors.contactInfo && (
+                    <p className="text-sm text-destructive">{form.formState.errors.contactInfo.message}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="url">Event URL</Label>
                   <Input id="url" type="url" {...form.register("url")} />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="image">Event Image</Label>
-                  <Input id="image" type="file" accept="image/*" {...form.register("image")} />
+                  {form.formState.errors.url && (
+                    <p className="text-sm text-destructive">{form.formState.errors.url.message}</p>
+                  )}
                 </div>
 
                 <Button type="submit" className="w-full" disabled={createEventMutation.isPending}>
+                  {createEventMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
+                  )}
                   Create Event
                 </Button>
               </form>
