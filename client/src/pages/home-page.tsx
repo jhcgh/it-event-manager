@@ -33,8 +33,8 @@ export default function HomePage() {
     return matchesSearch && matchesMonth && matchesType && matchesLocation;
   });
 
-  // Get next 12 months for the month picker
-  const months = Array.from({ length: 12 }, (_, i) => {
+  // Get next 24 months for the month picker
+  const months = Array.from({ length: 24 }, (_, i) => {
     const date = new Date();
     date.setMonth(date.getMonth() + i);
     return date;
