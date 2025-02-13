@@ -49,6 +49,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { EditEventDialog } from "@/components/edit-event-dialog";
 import { Trash2 } from "lucide-react";
+import { HoverUserMenu } from "@/components/hover-user-menu";
 
 // Create Super User Dialog Component
 function CreateSuperUserDialog() {
@@ -438,6 +439,7 @@ function AdminPage() {
               Admin Dashboard
             </h1>
             <div className="w-32 flex justify-end items-center gap-1.5">
+              {user && <HoverUserMenu user={user} />}
               <Button 
                 size="sm" 
                 variant="outline" 

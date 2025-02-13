@@ -9,12 +9,15 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
 
 interface HoverUserMenuProps {
   user: User;
 }
 
 export function HoverUserMenu({ user }: HoverUserMenuProps) {
+  const { logoutMutation } = useAuth();
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -43,6 +46,14 @@ export function HoverUserMenu({ user }: HoverUserMenuProps) {
           <Link href="/profile" className="cursor-pointer">
             View Profile
           </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="cursor-pointer text-destructive focus:text-destructive"
+          onClick={() => logoutMutation.mutate()}
+          disabled={logoutMutation.isPending}
+        >
+          {logoutMutation.isPending ? "Logging out..." : "Logout"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

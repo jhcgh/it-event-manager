@@ -1,5 +1,4 @@
-import { IStorage } from "./storage";
-import { User, Event, InsertUser, InsertEvent, UpdateUser, users, events } from "@shared/schema";
+import { users, events, type User, type Event, type InsertUser, type InsertEvent, type UpdateUser } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, ne } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
@@ -7,6 +6,36 @@ import session from "express-session";
 import { pool } from "./db";
 
 const PostgresSessionStore = connectPg(session);
+
+export interface IStorage {
+  sessionStore: session.Store;
+  // User Management Methods
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(insertUser: InsertUser): Promise<User>;
+  updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
+  deleteUser(id: number): Promise<void>;
+
+  // Event Management Methods
+  createEvent(userId: number, insertEvent: InsertEvent): Promise<Event>;
+  getEvent(id: number): Promise<Event | undefined>;
+  getAllEvents(): Promise<Event[]>;
+  getUserEvents(userId: number): Promise<Event[]>;
+  updateEvent(id: number, userId: number, updateData: Partial<InsertEvent>): Promise<Event | undefined>;
+  deleteEvent(id: number): Promise<void>;
+
+  // Admin Methods
+  adminGetAllUsers(includeDeleted?: boolean): Promise<User[]>;
+  adminUpdateUser(id: number, updateData: UpdateUser): Promise<User | undefined>;
+  adminGetAllEvents(includeDeleted?: boolean): Promise<Event[]>;
+  adminCreateAdmin(insertUser: InsertUser): Promise<User>;
+  adminCreateSuperAdmin(insertUser: InsertUser): Promise<User>;
+  adminUpdateEvent(id: number, updateData: Partial<InsertEvent>): Promise<Event | undefined>;
+  adminSuspendUser(id: number): Promise<void>;
+  adminReactivateUser(id: number): Promise<void>;
+  getEventsByUserId(userId: number): Promise<Event[]>;
+}
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
@@ -21,48 +50,34 @@ export class DatabaseStorage implements IStorage {
 
   // User Management Methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result[0];
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    console.log("Creating user with data:", { ...insertUser, password: "[REDACTED]" });
-    const [user] = await db.insert(users).values(insertUser).returning();
-    console.log("Created user:", { ...user, password: "[REDACTED]" });
-    return user;
+    const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
   }
 
   async updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined> {
-    const [user] = await db
+    const result = await db
       .update(users)
       .set({ ...updateData, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
-    return user;
+    return result[0];
   }
 
   async getAllUsers(): Promise<User[]> {
-    const allUsers = await db.select()
-      .from(users)
-      .where(ne(users.status, 'deleted'))
-      .orderBy(desc(users.createdAt));
-
-    console.log("Retrieved users count:", allUsers.length);
-    console.log("Super users count:", allUsers.filter(u => u.isSuperAdmin).length);
-    return allUsers;
+    return await db.select().from(users).where(ne(users.status, 'deleted')).orderBy(desc(users.createdAt));
   }
 
   async deleteUser(id: number): Promise<void> {
-    // First delete all events associated with the user
-    await db.delete(events)
-      .where(eq(events.userId, id));
-
-    // Then delete the user
     await db.update(users)
       .set({ status: 'deleted', updatedAt: new Date() })
       .where(eq(users.id, id));
@@ -70,22 +85,20 @@ export class DatabaseStorage implements IStorage {
 
   // Event Management Methods
   async createEvent(userId: number, insertEvent: InsertEvent): Promise<Event> {
-    const [event] = await db
+    const result = await db
       .insert(events)
       .values({ ...insertEvent, userId })
       .returning();
-    return event;
+    return result[0];
   }
 
   async getEvent(id: number): Promise<Event | undefined> {
-    const [event] = await db.select().from(events).where(eq(events.id, id));
-    return event;
+    const result = await db.select().from(events).where(eq(events.id, id));
+    return result[0];
   }
 
   async getAllEvents(): Promise<Event[]> {
-    return await db.select()
-      .from(events)
-      .orderBy(desc(events.createdAt));
+    return await db.select().from(events).orderBy(desc(events.createdAt));
   }
 
   async getUserEvents(userId: number): Promise<Event[]> {
@@ -96,78 +109,65 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateEvent(id: number, userId: number, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
-    const [event] = await db
+    const result = await db
       .update(events)
       .set({ ...updateData, updatedAt: new Date() })
-      .where(eq(events.id, id))
+      .where(and(eq(events.id, id), eq(events.userId, userId)))
       .returning();
-    return event;
+    return result[0];
   }
 
   async deleteEvent(id: number): Promise<void> {
-    const result = await db.delete(events)
-      .where(eq(events.id, id))
-      .returning();
-
-    if (!result.length) {
-      throw new Error('Event not found or already deleted');
-    }
+    await db.delete(events).where(eq(events.id, id));
   }
 
-  // Admin-specific Methods
+  // Admin Methods
   async adminGetAllUsers(includeDeleted: boolean = false): Promise<User[]> {
-    let query = db.select().from(users);
-    if (!includeDeleted) {
-      query = query.where(eq(users.status, 'active'));
-    }
+    const query = includeDeleted 
+      ? db.select().from(users)
+      : db.select().from(users).where(ne(users.status, 'deleted'));
     return await query.orderBy(desc(users.createdAt));
   }
 
   async adminUpdateUser(id: number, updateData: UpdateUser): Promise<User | undefined> {
-    const [user] = await db
+    const result = await db
       .update(users)
       .set({ ...updateData, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
-    return user;
+    return result[0];
   }
 
   async adminGetAllEvents(includeDeleted: boolean = false): Promise<Event[]> {
-    let query = db.select().from(events);
-    if (!includeDeleted) {
-      query = query.where(eq(events.status, 'active'));
-    }
-    return await query.limit(100).orderBy(desc(events.createdAt));
+    const query = includeDeleted
+      ? db.select().from(events)
+      : db.select().from(events).where(ne(events.status, 'deleted'));
+    return await query.orderBy(desc(events.createdAt));
+  }
+
+  async adminCreateAdmin(insertUser: InsertUser): Promise<User> {
+    const result = await db
+      .insert(users)
+      .values({ ...insertUser, isAdmin: true })
+      .returning();
+    return result[0];
+  }
+
+  async adminCreateSuperAdmin(insertUser: InsertUser): Promise<User> {
+    const result = await db
+      .insert(users)
+      .values({ ...insertUser, isAdmin: true, isSuperAdmin: true })
+      .returning();
+    return result[0];
   }
 
   async adminUpdateEvent(id: number, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
-    const [event] = await db
+    const result = await db
       .update(events)
       .set({ ...updateData, updatedAt: new Date() })
       .where(eq(events.id, id))
       .returning();
-    return event;
-  }
-
-  async adminCreateAdmin(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values({ ...insertUser, isAdmin: true })
-      .returning();
-    return user;
-  }
-
-  async adminCreateSuperAdmin(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values({ 
-        ...insertUser, 
-        isAdmin: true,
-        isSuperAdmin: true,
-        status: 'active'
-      })
-      .returning();
-    return user;
+    return result[0];
   }
 
   async adminSuspendUser(id: number): Promise<void> {
@@ -183,7 +183,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEventsByUserId(userId: number): Promise<Event[]> {
-    return await db.select().from(events).where(eq(events.userId, userId));
+    return await db.select()
+      .from(events)
+      .where(eq(events.userId, userId))
+      .orderBy(desc(events.createdAt));
   }
 }
 

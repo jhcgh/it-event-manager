@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserCircle, Trash2, ArrowLeft } from "lucide-react";
+import { Loader2,  Trash2, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { HoverUserMenu } from "@/components/hover-user-menu";
 
 export default function DashboardPage() {
   const { user, logoutMutation } = useAuth();
@@ -45,10 +46,8 @@ export default function DashboardPage() {
       }
     },
     onSuccess: () => {
-      // Invalidate both regular and admin event queries
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
-      // Also invalidate any user-specific event queries
       if (user?.id) {
         queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/events`] });
       }
@@ -90,15 +89,7 @@ export default function DashboardPage() {
             My Dashboard
           </h1>
           <div className="flex items-center gap-1.5 w-32 justify-end">
-            <Link href="/profile">
-              <Button 
-                size="sm"
-                variant="ghost" 
-                className="flex items-center hover:bg-accent h-7 w-7 p-0"
-              >
-                <UserCircle className="h-4 w-4" />
-              </Button>
-            </Link>
+            {user && <HoverUserMenu user={user} />}
             <Button 
               size="sm" 
               variant="outline" 
