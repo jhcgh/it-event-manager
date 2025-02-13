@@ -6,13 +6,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
-import { Loader2, Plus } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Loader2, Plus, CalendarIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { InsertEvent, insertEventSchema } from "@shared/schema";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export function CreateEventDialog() {
   const { toast } = useToast();
@@ -90,14 +93,35 @@ export function CreateEventDialog() {
 
           <div className="space-y-2">
             <Label>Date *</Label>
-            <Calendar
-              mode="single"
-              selected={form.getValues("date")}
-              onSelect={(date) => form.setValue("date", date || new Date())}
-              className="rounded-md border"
-              fromDate={new Date()}
-              initialFocus
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !form.getValues("date") && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {form.getValues("date") ? (
+                    format(form.getValues("date"), "PPP")
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={form.getValues("date")}
+                  onSelect={(date) => form.setValue("date", date || new Date())}
+                  initialFocus
+                  disabled={(date) =>
+                    date < new Date(new Date().setHours(0, 0, 0, 0))
+                  }
+                />
+              </PopoverContent>
+            </Popover>
             {form.formState.errors.date && (
               <p className="text-sm text-destructive">{form.formState.errors.date.message}</p>
             )}
