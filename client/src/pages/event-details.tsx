@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Event } from "@shared/schema";
 import { useParams } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, Globe, MapPin } from "lucide-react";
+import { ArrowLeft, Calendar, Globe, MapPin, Link as LinkIcon } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,6 +75,11 @@ export default function EventDetailsPage() {
             </div>
 
             <div className="space-y-2">
+              <h2 className="text-xl font-semibold">Event Type</h2>
+              <p className="text-muted-foreground capitalize">{event.type}</p>
+            </div>
+
+            <div className="space-y-2">
               <h2 className="text-xl font-semibold">Location</h2>
               <p className="flex items-center gap-2 text-muted-foreground">
                 {event.isRemote ? (
@@ -98,10 +103,22 @@ export default function EventDetailsPage() {
                   href={event.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:underline inline-block"
+                  className="flex items-center gap-2 text-primary hover:underline"
                 >
+                  <LinkIcon className="h-4 w-4" />
                   Visit Event Website
                 </a>
+              </div>
+            )}
+
+            {event.imageUrl && (
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold">Event Image</h2>
+                <img
+                  src={event.imageUrl}
+                  alt={event.title}
+                  className="rounded-lg max-w-full h-auto"
+                />
               </div>
             )}
           </CardContent>
