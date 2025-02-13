@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, LayoutDashboard, LogOut } from "lucide-react";
+import { Search, Plus, LayoutDashboard, LogOut, Settings } from "lucide-react";
 import { useState } from "react";
 import { Event } from "@shared/schema";
 import { format, startOfMonth, endOfMonth } from "date-fns";
@@ -63,6 +63,14 @@ export default function HomePage() {
             {user ? (
               <>
                 <CreateEventDialog />
+                {(user.isAdmin || user.isSuperAdmin) && (
+                  <Link href="/admin">
+                    <Button size="sm" variant="outline" className="flex items-center gap-1.5 text-xs">
+                      <Settings className="h-3.5 w-3.5" />
+                      Admin Panel
+                    </Button>
+                  </Link>
+                )}
                 <Link href="/dashboard">
                   <Button size="sm" variant="outline" className="flex items-center gap-1.5 text-xs">
                     <LayoutDashboard className="h-3.5 w-3.5" />
