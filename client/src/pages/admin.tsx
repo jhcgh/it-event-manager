@@ -10,11 +10,11 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema } from "@shared/schema";
-import { 
-  Loader2, 
-  UserX, 
-  Calendar, 
-  Users, 
+import {
+  Loader2,
+  UserX,
+  Calendar,
+  Users,
   AlertTriangle,
   Shield,
   Ban,
@@ -275,26 +275,6 @@ export default function AdminPage() {
     },
   });
 
-  const toggleAdminStatusMutation = useMutation({
-    mutationFn: async ({ userId, isAdmin }: { userId: number; isAdmin: boolean }) => {
-      const updateData: UpdateUser = { isAdmin };
-      await apiRequest("PATCH", `/api/admin/users/${userId}`, updateData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      toast({
-        title: "Success",
-        description: "Admin status updated successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   if (isLoadingUsers || isLoadingEvents) {
     return (
@@ -333,7 +313,6 @@ export default function AdminPage() {
           </TabsList>
 
           <TabsContent value="users">
-            {/* Super Users Section - Only visible to super admins */}
             {user?.isSuperAdmin && (
               <Card className="mb-8">
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -374,7 +353,6 @@ export default function AdminPage() {
               </Card>
             )}
 
-            {/* Customers Section */}
             <Card>
               <CardHeader>
                 <CardTitle>Customers</CardTitle>
@@ -388,7 +366,6 @@ export default function AdminPage() {
                       <TableHead>Title</TableHead>
                       <TableHead>Phone</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Admin</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -408,29 +385,7 @@ export default function AdminPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {u.isAdmin && (
-                            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                              Admin
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
                           <div className="flex items-center gap-2">
-                            {user?.isSuperAdmin && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => toggleAdminStatusMutation.mutate({
-                                  userId: u.id,
-                                  isAdmin: !u.isAdmin
-                                })}
-                                className="flex items-center gap-1"
-                              >
-                                <Shield className="h-4 w-4" />
-                                {u.isAdmin ? "Remove Admin" : "Make Admin"}
-                              </Button>
-                            )}
-
                             <Button
                               variant={u.status === "active" ? "destructive" : "outline"}
                               size="sm"
@@ -532,8 +487,8 @@ export default function AdminPage() {
                           </TableCell>
                           <TableCell>
                             {event.isHybrid ? "In Person & Online" :
-                             event.isRemote ? "Online" :
-                             `${event.city}, ${event.country}`}
+                              event.isRemote ? "Online" :
+                                `${event.city}, ${event.country}`}
                           </TableCell>
                           <TableCell className="capitalize">
                             {event.type}
