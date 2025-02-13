@@ -46,8 +46,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       url: event.url || "",
       imageUrl: event.imageUrl || "",
     },
-    mode: 'onSubmit',
-    reValidateMode: 'onSubmit'
+    mode: 'onSubmit'
   });
 
   const handleLocationTypeChange = (type: "in-person" | "online" | "hybrid") => {
@@ -57,11 +56,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       isHybrid: type === "hybrid"
     };
     Object.entries(updates).forEach(([key, value]) => {
-      form.setValue(key as "isRemote" | "isHybrid", value, {
-        shouldValidate: false,
-        shouldDirty: false,
-        shouldTouch: false
-      });
+      form.setValue(key as "isRemote" | "isHybrid", value);
     });
   };
 
@@ -71,11 +66,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
-        form.setValue("imageUrl", reader.result as string, {
-          shouldValidate: false,
-          shouldDirty: false,
-          shouldTouch: false
-        });
+        form.setValue("imageUrl", reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -166,23 +157,14 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
           <div className="space-y-2">
             <Label htmlFor="title">Event Name *</Label>
             <Input id="title" {...form.register("title")} />
-            {form.formState.errors.title && (
-              <p className="text-sm text-destructive">{form.formState.errors.title.message}</p>
-            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description * (Max 50 words)</Label>
+            <Label htmlFor="description">Description *</Label>
             <Textarea
               id="description"
               {...form.register("description")}
             />
-            {form.formState.errors.description && (
-              <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Words: {form.getValues("description")?.trim().split(/\s+/).length || 0}/50
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -207,11 +189,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   onSelect={(newDate) => {
                     if (newDate) {
                       setDate(newDate);
-                      form.setValue("date", newDate, {
-                        shouldValidate: false,
-                        shouldDirty: false,
-                        shouldTouch: false
-                      });
+                      form.setValue("date", newDate);
                     }
                   }}
                   disabled={(date) =>
@@ -236,9 +214,6 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                 </div>
               </PopoverContent>
             </Popover>
-            {form.formState.errors.date && (
-              <p className="text-sm text-destructive">{form.formState.errors.date.message}</p>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -291,11 +266,6 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                     placeholder="Enter city"
                     {...form.register("city")}
                   />
-                  {form.formState.errors.city && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.city.message}
-                    </p>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="country">Country</Label>
@@ -304,11 +274,6 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                     placeholder="Enter country"
                     {...form.register("country")}
                   />
-                  {form.formState.errors.country && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.country.message}
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
@@ -319,11 +284,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             <Select
               value={form.getValues("type")}
               onValueChange={(value) => {
-                form.setValue("type", value, {
-                  shouldValidate: false,
-                  shouldDirty: false,
-                  shouldTouch: false
-                });
+                form.setValue("type", value);
               }}
             >
               <SelectTrigger>
@@ -335,9 +296,6 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                 <SelectItem value="workshop">Workshop</SelectItem>
               </SelectContent>
             </Select>
-            {form.formState.errors.type && (
-              <p className="text-sm text-destructive">{form.formState.errors.type.message}</p>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -345,19 +303,8 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             <Input 
               id="url" 
               type="url" 
-              {...form.register("url", {
-                  onChange: (e) => {
-                    form.setValue("url", e.target.value, {
-                      shouldValidate: false,
-                      shouldDirty: false,
-                      shouldTouch: false
-                    });
-                  }
-                })} 
+              {...form.register("url")} 
             />
-            {form.formState.errors.url && (
-              <p className="text-sm text-destructive">{form.formState.errors.url.message}</p>
-            )}
           </div>
 
           <Button type="submit" className="w-full" disabled={updateEventMutation.isPending}>
