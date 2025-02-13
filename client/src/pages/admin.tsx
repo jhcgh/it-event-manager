@@ -473,7 +473,7 @@ export default function AdminPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm" className="w-[82px]">View Events</Button>
+                          <UserEventsDialog user={u} /> {/* Added user prop here */}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
