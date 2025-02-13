@@ -155,6 +155,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async adminSuspendUser(id: number): Promise<void> {
+    await this.terminateUserSessions(id); // Added session termination
     await db.update(users)
       .set({ status: 'suspended', updatedAt: new Date() })
       .where(eq(users.id, id));
@@ -168,6 +169,10 @@ export class DatabaseStorage implements IStorage {
 
   async getEventsByUserId(userId: number): Promise<Event[]> {
     return await db.select().from(events).where(eq(events.userId, userId));
+  }
+
+  async terminateUserSessions(userId: number) {
+    await this.sessionStore.destroy(`user:${userId}`);
   }
 }
 

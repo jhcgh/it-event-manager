@@ -64,6 +64,11 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid username or password" });
         }
 
+        if (user.status === 'suspended') {
+          console.log("User account is suspended");
+          return done(null, false, { message: "Account is suspended" });
+        }
+
         if (user.status !== 'active') {
           console.log("User account is not active");
           return done(null, false, { message: "Account is not active" });

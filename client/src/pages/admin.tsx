@@ -481,10 +481,15 @@ export default function AdminPage() {
                             <Button
                               variant={u.status === "active" ? "destructive" : "outline"}
                               size="sm"
-                              onClick={() => toggleUserStatusMutation.mutate({
-                                userId: u.id,
-                                status: u.status === "active" ? "suspended" : "active"
-                              })}
+                              onClick={async () => {
+                                if (u.status === "active") {
+                                  await apiRequest("POST", `/api/admin/users/${u.id}/terminate`);
+                                }
+                                toggleUserStatusMutation.mutate({
+                                  userId: u.id,
+                                  status: u.status === "active" ? "suspended" : "active"
+                                });
+                              }}
                               className="flex items-center gap-1 w-[82px]"
                             >
                               {u.status === "active" ? (
