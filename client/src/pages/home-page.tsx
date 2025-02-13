@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,10 @@ export default function HomePage() {
     return date;
   });
 
+  const handleRowClick = (eventId: number) => {
+    navigate(`/event/${eventId}`);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
@@ -98,24 +102,18 @@ export default function HomePage() {
               </>
             ) : (
               <div className="flex items-center gap-3">
-                <Button
-                  variant="ghost"
-                  className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600 font-semibold transition-all duration-200 hover:scale-105 hover:opacity-90"
-                  style={{ 
-                    fontSize: '1.09375rem',
-                    filter: 'drop-shadow(0 0 2px rgba(var(--primary), 0.1))',
-                  }}
-                  onClick={() => navigate('/auth?mode=register')}
-                >
-                  Post Events for Free
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="text-sm font-medium"
-                  onClick={() => navigate('/auth?mode=login')}
-                >
-                  Login
-                </Button>
+                <Link href="/auth?mode=register">
+                  <Button
+                    variant="ghost"
+                    className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-600 font-semibold transition-all duration-200 hover:scale-105 hover:opacity-90"
+                    style={{ 
+                      fontSize: '1.09375rem',
+                      filter: 'drop-shadow(0 0 2px rgba(var(--primary), 0.1))',
+                    }}
+                  >
+                    Post Events for Free
+                  </Button>
+                </Link>
               </div>
             )}
           </div>
@@ -213,7 +211,7 @@ export default function HomePage() {
                   <TableRow 
                     key={event.id}
                     className="cursor-pointer transition-colors hover:bg-muted/50"
-                    onClick={() => navigate(`/event/${event.id}`)}
+                    onClick={() => handleRowClick(event.id)}
                   >
                     <TableCell className="font-medium">
                       {event.title}
