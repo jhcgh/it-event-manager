@@ -68,49 +68,34 @@ export default function EventDetailsPage() {
 
       <main className="container mx-auto px-4 py-8">
         <Card className="overflow-hidden">
-          {event.imageUrl && (
-            <div className="relative w-full aspect-video">
+          <div className="relative w-full aspect-video bg-muted">
+            {event.imageUrl ? (
               <img
                 src={event.imageUrl}
                 alt={event.title}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
-                <h1 className="text-4xl font-bold text-white">{event.title}</h1>
-                <div className="flex items-center gap-3 mt-2">
-                  <Badge variant="outline" className="bg-white/10 text-white border-white/20">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {format(new Date(event.date), "PPP")}
-                  </Badge>
-                  <Badge variant="outline" className="bg-white/10 text-white border-white/20 capitalize">
-                    <Tag className="h-3 w-3 mr-1" />
-                    {event.type}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <CardContent className={cn(
-            "grid gap-8 p-6",
-            event.imageUrl ? "mt-0" : "mt-6"
-          )}>
-            {!event.imageUrl && (
-              <div>
-                <h1 className="text-4xl font-bold">{event.title}</h1>
-                <div className="flex items-center gap-3 mt-3">
-                  <Badge variant="outline">
-                    <Calendar className="h-3 w-3 mr-1" />
-                    {format(new Date(event.date), "PPP")}
-                  </Badge>
-                  <Badge variant="outline" className="capitalize">
-                    <Tag className="h-3 w-3 mr-1" />
-                    {event.type}
-                  </Badge>
-                </div>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <p className="text-muted-foreground">No image available</p>
               </div>
             )}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
+              <h1 className="text-4xl font-bold text-white">{event.title}</h1>
+              <div className="flex items-center gap-3 mt-2">
+                <Badge variant="outline" className="bg-white/10 text-white border-white/20">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  {format(new Date(event.date), "PPP")}
+                </Badge>
+                <Badge variant="outline" className="bg-white/10 text-white border-white/20 capitalize">
+                  <Tag className="h-3 w-3 mr-1" />
+                  {event.type}
+                </Badge>
+              </div>
+            </div>
+          </div>
 
+          <CardContent className="grid gap-8 p-6">
             <div className="space-y-2">
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <Info className="h-5 w-5" />
