@@ -170,25 +170,7 @@ export default function DashboardPage() {
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
-                                onClick={() => {
-                                  deleteEventMutation.mutate(event.id, {
-                                    onSuccess: () => {
-                                      toast({
-                                        title: "Event Deleted",
-                                        description: "The event has been successfully removed.",
-                                      });
-                                      // Force refresh the events list
-                                      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-                                    },
-                                    onError: (error: Error) => {
-                                      toast({
-                                        title: "Error",
-                                        description: "Failed to delete event. Please try again.",
-                                        variant: "destructive",
-                                      });
-                                    },
-                                  });
-                                }}
+                                onClick={() => deleteEventMutation.mutate(event.id)}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                               >
                                 {deleteEventMutation.isPending ? (
