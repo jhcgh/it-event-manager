@@ -165,6 +165,10 @@ export class DatabaseStorage implements IStorage {
       .set({ status: 'active', updatedAt: new Date() })
       .where(eq(users.id, id));
   }
+
+  async getEventsByUserId(userId: number): Promise<Event[]> {
+    return await db.select().from(events).where(eq(events.userId, userId));
+  }
 }
 
 export const storage = new DatabaseStorage();

@@ -159,6 +159,17 @@ export function registerRoutes(app: Express): Server {
   });
 
   // Admin routes
+  app.get("/api/users/:id/events", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+    try {
+      const events = await storage.getEventsByUserId(parseInt(req.params.id));
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching user events:", error);
+      res.status(500).json({ message: "Failed to fetch events" });
+    }
+  });
+
   app.get("/api/admin/users", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
     const users = await storage.getAllUsers();
