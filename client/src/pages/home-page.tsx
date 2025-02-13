@@ -76,7 +76,11 @@ export default function HomePage() {
                     variant="ghost" 
                     className="flex items-center hover:bg-accent h-7 w-7 p-0"
                   >
-                    <UserCircle className="h-4 w-4" />
+                    <Avatar className="h-7 w-7">
+                      <AvatarFallback className="text-xs">
+                        {user.firstName?.[0]}{user.lastName?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
                   </Button>
                 </Link>
                 <Button 

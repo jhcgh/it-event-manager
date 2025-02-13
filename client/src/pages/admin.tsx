@@ -48,6 +48,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { EditEventDialog } from "@/components/edit-event-dialog";
 import { Trash2 } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"; // Assuming Avatar component is available
+
 
 // Create Super User Dialog Component
 function CreateSuperUserDialog() {
@@ -381,7 +383,17 @@ export default function AdminPage() {
               <AlertTriangle className="h-6 w-6 text-destructive" />
               Admin Dashboard
             </h1>
-            <div className="w-32"></div>
+            <div className="w-32">
+              <Button variant="ghost" size="sm" className="flex items-center hover:bg-accent h-7 w-7 p-0">
+                {user && (
+                  <Avatar className="h-7 w-7">
+                    <AvatarFallback className="text-xs">
+                      {user?.firstName?.[0]}{user?.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </header>

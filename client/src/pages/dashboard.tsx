@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Loader2, UserCircle, Trash2, ArrowLeft } from "lucide-react";
+import { Loader2,  Trash2, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
@@ -28,6 +28,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
 
 export default function DashboardPage() {
   const { user, logoutMutation } = useAuth();
@@ -87,7 +89,11 @@ export default function DashboardPage() {
                 variant="ghost" 
                 className="flex items-center hover:bg-accent h-7 w-7 p-0"
               >
-                <UserCircle className="h-4 w-4" />
+                <Avatar className="h-7 w-7">
+                  <AvatarFallback className="text-xs">
+                    {user?.firstName?.[0]}{user?.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
               </Button>
             </Link>
             <Button 
