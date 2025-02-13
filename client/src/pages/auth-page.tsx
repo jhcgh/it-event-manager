@@ -250,7 +250,6 @@ export default function AuthPage() {
           <ul className="space-y-4 text-lg">
             <li>✓ Post and manage your tech events</li>
             <li>✓ Reach a global audience</li>
-            <li>✓ Track event performance</li>
             <li>✓ Connect with tech enthusiasts</li>
           </ul>
         </div>
