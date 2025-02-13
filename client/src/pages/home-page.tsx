@@ -193,28 +193,25 @@ export default function HomePage() {
                 </TableRow>
               ) : (
                 filteredEvents.map((event: Event) => (
-                  <TableRow 
-                    key={event.id}
-                    className="cursor-pointer transition-colors hover:bg-muted/50"
-                  >
-                    <TableCell className="font-medium">
-                      <Link href={`/event/${event.id}`}>
+                  <Link href={`/event/${event.id}`} key={event.id}>
+                    <TableRow className="cursor-pointer transition-colors hover:bg-muted/50">
+                      <TableCell className="font-medium">
                         {event.title}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">
-                      {event.description}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(event.date), "PPP")}
-                    </TableCell>
-                    <TableCell>
-                      {event.isHybrid ? "In Person & Online" : 
-                       event.isRemote ? "Online" : 
-                       `${event.city}, ${event.country}`}
-                    </TableCell>
-                    <TableCell className="capitalize">{event.type}</TableCell>
-                  </TableRow>
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {event.description}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(event.date), "PPP")}
+                      </TableCell>
+                      <TableCell>
+                        {event.isHybrid ? "In Person & Online" : 
+                         event.isRemote ? "Online" : 
+                         `${event.city}, ${event.country}`}
+                      </TableCell>
+                      <TableCell className="capitalize">{event.type}</TableCell>
+                    </TableRow>
+                  </Link>
                 ))
               )}
             </TableBody>
