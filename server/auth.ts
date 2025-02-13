@@ -22,10 +22,18 @@ export async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  const [hashed, salt] = stored.split(".");
-  const hashedBuf = Buffer.from(hashed, "hex");
-  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  try {
+    const [hashedPassword, salt] = stored.split(".");
+    if (!hashedPassword || !salt) return false;
+
+    const hashedBuf = Buffer.from(hashedPassword, "hex");
+    const suppliedBuf = await scryptAsync(supplied, salt, 64) as Buffer;
+
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    console.error("Password comparison error:", error);
+    return false;
+  }
 }
 
 export function setupAuth(app: Express) {
@@ -54,6 +62,11 @@ export function setupAuth(app: Express) {
         if (!user) {
           console.log("User not found");
           return done(null, false, { message: "Invalid username or password" });
+        }
+
+        if (user.status !== 'active') {
+          console.log("User account is not active");
+          return done(null, false, { message: "Account is not active" });
         }
 
         const isValid = await comparePasswords(password, user.password);
@@ -104,6 +117,7 @@ export function setupAuth(app: Express) {
         ...req.body,
         username: req.body.username.toLowerCase(),
         password: hashedPassword,
+        status: 'active' // Added status field
       });
 
       req.login(user, (err) => {
