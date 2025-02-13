@@ -133,12 +133,8 @@ export default function DashboardPage() {
                     selected={form.getValues("date")}
                     onSelect={(date) => form.setValue("date", date || new Date())}
                     className="rounded-md border"
-                    disabled={false}
-                    modifiers={{
-                      disabled: {
-                        before: new Date()
-                      }
-                    }}
+                    fromDate={new Date()}
+                    initialFocus
                   />
                   {form.formState.errors.date && (
                     <p className="text-sm text-destructive">{form.formState.errors.date.message}</p>
