@@ -46,7 +46,8 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       url: event.url || "",
       imageUrl: event.imageUrl || "",
     },
-    mode: 'onSubmit'
+    mode: 'onSubmit',
+    reValidateMode: 'onSubmit'
   });
 
   const handleLocationTypeChange = (type: "in-person" | "online" | "hybrid") => {
@@ -328,7 +329,11 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             <Select
               value={form.getValues("type")}
               onValueChange={(value) => {
-                form.setValue("type", value);
+                form.setValue("type", value, {
+                  shouldValidate: false,
+                  shouldDirty: true,
+                  shouldTouch: false
+                });
               }}
             >
               <SelectTrigger>
