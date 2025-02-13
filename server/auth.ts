@@ -89,18 +89,25 @@ export function setupAuth(app: Express) {
     done(null, user.id);
   });
 
+  // Simple in-memory cache for deserialized users
+  const userCache = new Map<number, Express.User>();
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
   passport.deserializeUser(async (id: number, done) => {
     try {
-      console.log("Deserializing user:", id);
+      const cachedUser = userCache.get(id);
+      if (cachedUser) {
+        return done(null, cachedUser);
+      }
+
       const user = await storage.getUser(id);
-      if (!user) {
-        console.log("User not found during deserialization");
-        return done(null, false);
+      if (user) {
+        userCache.set(id, user);
+        setTimeout(() => userCache.delete(id), CACHE_TTL);
       }
       done(null, user);
-    } catch (err) {
-      console.error("Deserialization error:", err);
-      done(err);
+    } catch (error) {
+      done(error);
     }
   });
 

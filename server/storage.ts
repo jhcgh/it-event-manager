@@ -1,7 +1,7 @@
 import { IStorage } from "./storage";
 import { User, Event, InsertUser, InsertEvent, UpdateUser, users, events } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, notEq } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import session from "express-session";
 import { pool } from "./db";
@@ -47,6 +47,8 @@ export class DatabaseStorage implements IStorage {
   async getAllUsers(): Promise<User[]> {
     return await db.select()
       .from(users)
+      .where(notEq(users.status, 'deleted'))
+      .limit(100)
       .orderBy(desc(users.createdAt));
   }
 
@@ -54,7 +56,7 @@ export class DatabaseStorage implements IStorage {
     // First delete all events associated with the user
     await db.delete(events)
       .where(eq(events.userId, id));
-    
+
     // Then delete the user
     await db.update(users)
       .set({ status: 'deleted', updatedAt: new Date() })
@@ -101,7 +103,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(events)
       .where(eq(events.id, id))
       .returning();
-    
+
     if (!result.length) {
       throw new Error('Event not found or already deleted');
     }
@@ -130,7 +132,7 @@ export class DatabaseStorage implements IStorage {
     if (!includeDeleted) {
       query = query.where(eq(events.status, 'active'));
     }
-    return await query.orderBy(desc(events.createdAt));
+    return await query.limit(100).orderBy(desc(events.createdAt));
   }
 
   async adminUpdateEvent(id: number, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
