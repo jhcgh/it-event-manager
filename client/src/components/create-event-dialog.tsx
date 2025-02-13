@@ -30,20 +30,18 @@ export function CreateEventDialog() {
       title: "",
       description: "",
       date: new Date(),
-      location: "",
+      city: "",
+      country: "",
       isRemote: false,
       type: "seminar",
       contactInfo: "",
       url: "",
       imageUrl: "",
-      city: "",
-      country: ""
     }
   });
 
   const createEventMutation = useMutation({
     mutationFn: async (data: InsertEvent) => {
-      // No need to convert date to ISO string as it's handled by the schema
       const res = await apiRequest("POST", "/api/events", data);
       return await res.json();
     },
@@ -67,8 +65,6 @@ export function CreateEventDialog() {
   });
 
   const onSubmit = (data: InsertEvent) => {
-    // Log the form data for debugging
-    console.log('Submitting form data:', data);
     createEventMutation.mutate(data);
   };
 
@@ -89,7 +85,7 @@ export function CreateEventDialog() {
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
+            <Label htmlFor="title">Event Name *</Label>
             <Input id="title" {...form.register("title")} />
             {form.formState.errors.title && (
               <p className="text-sm text-destructive">{form.formState.errors.title.message}</p>
@@ -105,7 +101,7 @@ export function CreateEventDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label>Date *</Label>
+            <Label>Event Date *</Label>
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -217,14 +213,6 @@ export function CreateEventDialog() {
             {form.formState.errors.type && (
               <p className="text-sm text-destructive">{form.formState.errors.type.message}</p>
             )}
-            <p className="text-sm text-muted-foreground mt-2">
-              {form.watch("type") === "seminar" &&
-                "A seminar is a small, focused meeting where experts discuss a specific topic."}
-              {form.watch("type") === "workshop" &&
-                "A workshop is a hands-on session where participants learn and practice new skills."}
-              {form.watch("type") === "conference" &&
-                "A conference is a large event with keynote speakers and breakout sessions on various topics."}
-            </p>
           </div>
 
           <div className="space-y-2">
@@ -250,7 +238,6 @@ export function CreateEventDialog() {
               <p className="text-sm text-destructive">{form.formState.errors.imageUrl.message}</p>
             )}
           </div>
-
 
           <Button type="submit" className="w-full" disabled={createEventMutation.isPending}>
             {createEventMutation.isPending ? (

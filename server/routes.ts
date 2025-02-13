@@ -76,11 +76,19 @@ export function registerRoutes(app: Express): Server {
     if (!event) return res.sendStatus(404);
 
     const eventDate = new Date(event.date);
+    const location = event.isRemote ? "Remote Event" : `${event.city}, ${event.country}`;
+
     const icsEvent = {
-      start: [eventDate.getFullYear(), eventDate.getMonth() + 1, eventDate.getDate()],
+      start: [
+        eventDate.getFullYear(),
+        eventDate.getMonth() + 1,
+        eventDate.getDate(),
+        eventDate.getHours(),
+        eventDate.getMinutes()
+      ],
       title: event.title,
       description: event.description,
-      location: event.location,
+      location: location,
       url: event.url,
       duration: { hours: 1 } // Default to 1-hour duration
     };
