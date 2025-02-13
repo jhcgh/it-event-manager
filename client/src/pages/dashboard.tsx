@@ -83,7 +83,7 @@ export default function DashboardPage() {
               <Button variant="ghost">Events List</Button>
             </Link>
             <Link href="/profile">
-              <Button variant="ghost">Profile</Button>
+              <Button variant="ghost">{user?.username}</Button>
             </Link>
             <Button variant="outline" onClick={() => logoutMutation.mutate()}>
               Logout
