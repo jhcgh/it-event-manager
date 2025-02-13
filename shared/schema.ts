@@ -23,6 +23,7 @@ export const events = pgTable("events", {
   city: text("city").notNull(),
   country: text("country").notNull(),
   isRemote: boolean("is_remote").notNull(),
+  isHybrid: boolean("is_hybrid").default(false).notNull(),
   type: text("type").notNull(), // 'seminar', 'conference', 'workshop'
   url: text("url"),
   imageUrl: text("image_url"),
