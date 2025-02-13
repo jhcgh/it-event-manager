@@ -67,7 +67,7 @@ export default function AuthPage() {
           <CardHeader>
             <CardTitle className="text-2xl">Welcome to ITEvents.io</CardTitle>
             <CardDescription>
-              Manage and discover tech events worldwide
+              <strong>Manage</strong> and <strong>discover</strong> tech events <strong>worldwide</strong>
             </CardDescription>
           </CardHeader>
           <CardContent>
