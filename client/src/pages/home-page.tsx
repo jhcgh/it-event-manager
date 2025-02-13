@@ -68,8 +68,8 @@ export default function HomePage() {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        <div className="flex flex-col gap-6 md:flex-row md:items-start">
-          <div className="w-full md:w-64 space-y-4">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -84,7 +84,7 @@ export default function HomePage() {
               value={selectedMonth?.toISOString()} 
               onValueChange={(value) => setSelectedMonth(new Date(value))}
             >
-              <SelectTrigger className="w-full">
+              <SelectTrigger>
                 <SelectValue>
                   {selectedMonth ? format(selectedMonth, "MMMM yyyy") : "Select month"}
                 </SelectValue>
@@ -123,7 +123,7 @@ export default function HomePage() {
             </Select>
           </div>
 
-          <div className="flex-1 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredEvents.map(event => (
               <Card key={event.id}>
                 {event.imageUrl && (
