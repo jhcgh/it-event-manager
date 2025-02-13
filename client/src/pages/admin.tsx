@@ -19,12 +19,13 @@ import {
   Shield,
   Ban,
   CheckCircle,
-  UserPlus
+  UserPlus,
+  ArrowLeft
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format, isFuture } from "date-fns";
-import { Redirect } from "wouter";
+import { Redirect, Link } from "wouter";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -296,11 +297,22 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <AlertTriangle className="h-6 w-6 text-destructive" />
-            Admin Dashboard
-          </h1>
+        <div className="container mx-auto px-4 py-2">
+          <div className="flex items-center justify-between">
+            <div className="w-32">
+              <Link href="/">
+                <Button variant="ghost" size="sm" className="text-xs h-7 px-2 gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Home
+                </Button>
+              </Link>
+            </div>
+            <h1 className="text-2xl font-bold flex items-center gap-2 flex-1 justify-center">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+              Admin Dashboard
+            </h1>
+            <div className="w-32"></div>
+          </div>
         </div>
       </header>
 
