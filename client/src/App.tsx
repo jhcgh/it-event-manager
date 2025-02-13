@@ -13,14 +13,9 @@ import EventDetailsPage from "@/pages/event-details";
 import { ProtectedRoute } from "./lib/protected-route";
 import { useAuth } from './hooks/use-auth';
 import { AdminBar } from "@/components/admin-bar";
-import { useEffect } from "react";
 
 function Router() {
   const { user } = useAuth();
-
-  useEffect(() => {
-    console.log("Router mounted, user state:", user ? "authenticated" : "unauthenticated");
-  }, [user]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -30,22 +25,19 @@ function Router() {
         <Route path="/event/:id" component={EventDetailsPage} />
         <Route path="/auth" component={AuthPage} />
         <ProtectedRoute path="/dashboard" component={DashboardPage} />
-        <ProtectedRoute
-          path="/admin"
-          component={AdminPage}
-        />
-        <ProtectedRoute path="/profile" component={() => <ProfilePage />} />
-        <Route component={NotFound} />
+        <ProtectedRoute path="/admin" component={AdminPage} />
+        <ProtectedRoute path="/profile">
+          {() => <ProfilePage />}
+        </ProtectedRoute>
+        <Route>
+          {() => <NotFound />}
+        </Route>
       </Switch>
     </div>
   );
 }
 
 function App() {
-  useEffect(() => {
-    console.log("App component mounted");
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

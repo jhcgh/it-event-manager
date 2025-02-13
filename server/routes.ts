@@ -11,7 +11,7 @@ interface FileRequest extends Request {
   file?: Express.Multer.File;
 }
 
-const upload = multer({ 
+const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
@@ -29,12 +29,12 @@ export function registerRoutes(app: Express): Server {
         companyName: "SaaS Platform",
         title: "Super Administrator",
         mobile: "+1234567890",
-        isSuperAdmin: true 
+        isSuperAdmin: true
       };
 
       const existing = await storage.getUserByUsername(adminData.username);
       if (existing) {
-        return res.json({ 
+        return res.json({
           message: "Admin account already exists",
           username: adminData.username,
           password: adminData.password
@@ -49,14 +49,14 @@ export function registerRoutes(app: Express): Server {
         password: hashedPassword
       });
 
-      res.json({ 
+      res.json({
         message: "Super admin created successfully",
         username: adminData.username,
         password: adminData.password
       });
     } catch (error) {
       console.error('Error creating super admin:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to create super admin",
         error: error instanceof Error ? error.message : String(error)
       });
@@ -92,15 +92,15 @@ export function registerRoutes(app: Express): Server {
     let imageUrl;
     if (req.file) {
       try {
-        const resizedImage = await sharp(req.file.buffer, { 
-          limitInputPixels: 1000000000 
+        const resizedImage = await sharp(req.file.buffer, {
+          limitInputPixels: 1000000000
         })
           .resize(1200, 630, {
             fit: 'cover',
             position: 'center',
             withoutEnlargement: true
           })
-          .jpeg({ 
+          .jpeg({
             quality: 80,
             progressive: true,
             force: true,
@@ -174,21 +174,24 @@ export function registerRoutes(app: Express): Server {
 
     const icsEvent = {
       start: [
-        eventDate.getFullYear(),
-        eventDate.getMonth() + 1,
-        eventDate.getDate(),
-        eventDate.getHours(),
-        eventDate.getMinutes()
-      ],
+        eventDate.getUTCFullYear(),
+        eventDate.getUTCMonth() + 1,
+        eventDate.getUTCDate(),
+        eventDate.getUTCHours(),
+        eventDate.getUTCMinutes()
+      ] as [number, number, number, number, number],
+      duration: { hours: 1 },
       title: event.title,
       description: event.description,
       location: location,
-      url: event.url,
-      duration: { hours: 1 } 
+      url: event.url || undefined
     };
 
     createEvent(icsEvent, (error, value) => {
-      if (error) return res.sendStatus(500);
+      if (error) {
+        console.error('Error creating ICS event:', error);
+        return res.sendStatus(500);
+      }
       res.setHeader("Content-Type", "text/calendar");
       res.setHeader("Content-Disposition", `attachment; filename=${event.title}.ics`);
       res.send(value);

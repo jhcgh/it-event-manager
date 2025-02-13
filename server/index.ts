@@ -6,6 +6,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Add request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
@@ -41,6 +42,7 @@ app.use((req, res, next) => {
     log("Starting server setup...");
     const server = registerRoutes(app);
 
+    // Global error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       console.error("Server error:", err);
       const status = err.status || err.statusCode || 500;
@@ -57,10 +59,45 @@ app.use((req, res, next) => {
       serveStatic(app);
     }
 
-    const PORT = 5000;
-    server.listen(PORT, "0.0.0.0", () => {
-      log(`Server is running at http://0.0.0.0:${PORT}`);
+    const PORT = parseInt(process.env.PORT || "5000", 10);
+
+    // Create a Promise to handle server startup
+    const startServer = new Promise<void>((resolve, reject) => {
+      const onError = (error: Error) => {
+        console.error('Failed to start server:', error);
+        reject(error);
+      };
+
+      try {
+        server.listen(PORT, "0.0.0.0", () => {
+          console.log(`Server is listening on port ${PORT}`);
+          log(`Server is running at http://0.0.0.0:${PORT}`);
+          // Signal that the server is ready
+          if (process.send) {
+            process.send('ready');
+          }
+          resolve();
+        }).on('error', onError);
+      } catch (error) {
+        onError(error as Error);
+      }
     });
+
+    // Wait for server to start
+    await startServer;
+    log('Server started successfully');
+
+    // Handle graceful shutdown
+    const signals = ['SIGTERM', 'SIGINT'] as const;
+    for (const signal of signals) {
+      process.on(signal, () => {
+        log(`Received ${signal}, shutting down...`);
+        server.close(() => {
+          log('Server closed');
+          process.exit(0);
+        });
+      });
+    }
   } catch (error) {
     console.error("Failed to start server:", error);
     process.exit(1);

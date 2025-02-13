@@ -33,7 +33,6 @@ export default function HomePage() {
   });
 
   if (isLoading) {
-    console.log("Events are loading...");
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -42,7 +41,6 @@ export default function HomePage() {
   }
 
   if (error) {
-    console.error("Error loading events:", error);
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <p className="text-destructive">Failed to load events. Please try again later.</p>
@@ -61,9 +59,9 @@ export default function HomePage() {
     );
     const matchesType = selectedType === "all" || event.type === selectedType;
     const matchesLocation = !selectedLocation || 
-                          (selectedLocation === "online" ? (event.isRemote && !event.isHybrid) :
-                           selectedLocation === "in-person" ? (!event.isRemote && !event.isHybrid) :
-                           event.isHybrid);
+                           (selectedLocation === "online" ? (event.isRemote && !event.isHybrid) :
+                            selectedLocation === "in-person" ? (!event.isRemote && !event.isHybrid) :
+                            event.isHybrid);
     return matchesSearch && matchesMonth && matchesType && matchesLocation;
   });
 
@@ -215,10 +213,11 @@ export default function HomePage() {
                   <TableRow 
                     key={event.id}
                     className="cursor-pointer transition-colors hover:bg-muted/50"
-                    onClick={() => window.location.href = `/event/${event.id}`}
                   >
                     <TableCell className="font-medium">
-                      {event.title}
+                      <Link href={`/event/${event.id}`}>
+                        {event.title}
+                      </Link>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
                       {event.description}
