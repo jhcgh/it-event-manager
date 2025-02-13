@@ -516,7 +516,7 @@ export default function AdminPage() {
                         );
                         return (
                           <TableRow key={event.id}>
-                            <TableCell className="font-medium">
+                            <TableCell className="font-medium cursor-pointer" onClick={() => window.location.href = `/event/${event.id}`}>
                               {event.title}
                             </TableCell>
                             <TableCell>
