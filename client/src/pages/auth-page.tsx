@@ -13,9 +13,14 @@ import { z } from "zod";
 // Extend the schema to include password confirmation
 const registerSchema = insertUserSchema.extend({
   confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
+}).superRefine((data, ctx) => {
+  if (data.confirmPassword !== data.password) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Passwords don't match",
+      path: ["confirmPassword"],
+    });
+  }
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -42,6 +47,7 @@ export default function AuthPage() {
       title: "",
       mobile: "",
     },
+    mode: "onBlur", // This enables validation on blur
   });
 
   if (user) {
