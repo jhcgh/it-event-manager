@@ -51,6 +51,13 @@ import { EditEventDialog } from "@/components/edit-event-dialog";
 import { Trash2 } from "lucide-react";
 import { HoverUserMenu } from "@/components/hover-user-menu";
 import { UploadEventsDialog } from "@/components/upload-events-dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Building2, ChevronRight } from "lucide-react";
 
 // Create Super User Dialog Component
 function CreateSuperUserDialog() {
@@ -316,9 +323,177 @@ function UserEventsDialog({ user }: { user: User }) {
   );
 }
 
+function CustomerSection({ customers }: { customers: User[] }) {
+  const { toast } = useToast();
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      await apiRequest("DELETE", `/api/admin/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const customersByCompany = customers.reduce((acc, customer) => {
+    const company = customer.companyName || 'Other';
+    if (!acc[company]) {
+      acc[company] = [];
+    }
+    acc[company].push(customer);
+    return acc;
+  }, {} as Record<string, User[]>);
+
+  const sortedCompanies = Object.keys(customersByCompany).sort();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Building2 className="h-5 w-5" />
+          Companies & Customers
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Accordion type="single" collapsible className="space-y-4">
+          {sortedCompanies.map((company) => (
+            <AccordionItem key={company} value={company} className="border rounded-lg px-4 hover:bg-accent/50 transition-colors">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  <span>{company}</span>
+                  <Badge variant="outline" className="ml-2">
+                    {customersByCompany[company].length} {customersByCompany[company].length === 1 ? 'user' : 'users'}
+                  </Badge>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Username</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Events</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customersByCompany[company].map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell className="font-medium">{u.username}</TableCell>
+                        <TableCell>{u.title}</TableCell>
+                        <TableCell>{u.mobile}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={u.status === "active" ? "default" : "destructive"}
+                            className="capitalize flex w-fit items-center gap-1"
+                          >
+                            {u.status === "active" ? (
+                              <>
+                                <CheckCircle className="h-3 w-3" />
+                                Active
+                              </>
+                            ) : (
+                              <>
+                                <Ban className="h-3 w-3" />
+                                Deleted
+                              </>
+                            )}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <UserEventsDialog user={u} />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="flex items-center gap-1 w-[82px]"
+                                >
+                                  <UserX className="h-4 w-4" />
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this user? This
+                                    action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteUserMutation.mutate(u.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    {deleteUserMutation.isPending ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                        Deleting...
+                                      </>
+                                    ) : (
+                                      "Delete User"
+                                    )}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </CardContent>
+    </Card>
+  );
+}
+
 function AdminPage() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
+
+  // Add this mutation for super user deletion
+  const superUserDeleteMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      await apiRequest("DELETE", `/api/admin/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "Super user deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   // Redirect non-admin users
   if (!user?.isAdmin && !user?.isSuperAdmin) {
@@ -339,25 +514,6 @@ function AdminPage() {
     .filter(event => event.status === 'active')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      await apiRequest("DELETE", `/api/admin/users/${userId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      toast({
-        title: "Success",
-        description: "User deleted successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   const deleteEventMutationAdmin = useMutation({
     mutationFn: async (eventId: number) => {
@@ -442,7 +598,10 @@ function AdminPage() {
             {user?.isSuperAdmin && (
               <Card className="mb-8">
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Super Users</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Super Users
+                  </CardTitle>
                   <CreateSuperUserDialog />
                 </CardHeader>
                 <CardContent>
@@ -466,9 +625,19 @@ function AdminPage() {
                           <TableCell className="flex items-center gap-2">
                             <Badge
                               variant={u.status === "active" ? "default" : "destructive"}
-                              className="capitalize"
+                              className="capitalize flex w-fit items-center gap-1"
                             >
-                              {u.status === "active" ? "Active" : "Deleted"}
+                              {u.status === "active" ? (
+                                <>
+                                  <CheckCircle className="h-3 w-3" />
+                                  Active
+                                </>
+                              ) : (
+                                <>
+                                  <Ban className="h-3 w-3" />
+                                  Deleted
+                                </>
+                              )}
                             </Badge>
                             {user?.id !== u.id && (
                               <AlertDialog>
@@ -492,10 +661,10 @@ function AdminPage() {
                                   <AlertDialogFooter>
                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                                     <AlertDialogAction
-                                      onClick={() => deleteUserMutation.mutate(u.id)}
+                                      onClick={() => superUserDeleteMutation.mutate(u.id)}
                                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                     >
-                                      {deleteUserMutation.isPending ? (
+                                      {superUserDeleteMutation.isPending ? (
                                         <>
                                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                           Deleting...
@@ -516,89 +685,7 @@ function AdminPage() {
                 </CardContent>
               </Card>
             )}
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Customers</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Username</TableHead>
-                      <TableHead>Company</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Phone</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Events</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {customers.map((u) => (
-                      <TableRow key={u.id}>
-                        <TableCell>{u.username}</TableCell>
-                        <TableCell>{u.companyName}</TableCell>
-                        <TableCell>{u.title}</TableCell>
-                        <TableCell>{u.mobile}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={u.status === "active" ? "default" : "destructive"}
-                            className="capitalize"
-                          >
-                            {u.status === "active" ? "Active" : "Deleted"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <UserEventsDialog user={u} />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  className="flex items-center gap-1 w-[82px]"
-                                >
-                                  <UserX className="h-4 w-4" />
-                                  Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete this user? This
-                                    action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteUserMutation.mutate(u.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    {deleteUserMutation.isPending ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        Deleting...
-                                      </>
-                                    ) : (
-                                      "Delete User"
-                                    )}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <CustomerSection customers={customers} />
           </TabsContent>
 
           <TabsContent value="events">
