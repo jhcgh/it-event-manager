@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import type { Company } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
@@ -103,112 +103,125 @@ export default function CompanySettingsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Company Settings</h1>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="maxUsers"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Maximum Users</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
-                  </FormControl>
-                  <FormDescription>
-                    Maximum number of users allowed in your company
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="maxEvents"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Maximum Events</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
-                  </FormControl>
-                  <FormDescription>
-                    Maximum number of events your company can create
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="requireEventApproval"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      Require Event Approval
-                    </FormLabel>
-                    <FormDescription>
-                      Events will need approval before being published
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="allowedEventTypes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Allowed Event Types</FormLabel>
-                  <div className="flex flex-wrap gap-2">
-                    {EVENT_TYPES.map(type => (
-                      <Badge
-                        key={type}
-                        variant={field.value.includes(type) ? "default" : "outline"}
-                        className="cursor-pointer"
-                        onClick={() => toggleEventType(type)}
-                      >
-                        {type}
-                        {field.value.includes(type) && (
-                          <X className="w-3 h-3 ml-1" />
-                        )}
-                      </Badge>
-                    ))}
-                  </div>
-                  <FormDescription>
-                    Select the types of events that can be created
-                  </FormDescription>
-                </FormItem>
-              )}
-            />
-
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={updateSettings.isPending}
-            >
-              {updateSettings.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                "Save Settings"
-              )}
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <Link href="/">
+            <Button variant="ghost" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
             </Button>
-          </form>
-        </Form>
-      </div>
+          </Link>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-3xl font-bold mb-8">Company Settings</h1>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="maxUsers"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Maximum Users</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                    </FormControl>
+                    <FormDescription>
+                      Maximum number of users allowed in your company
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="maxEvents"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Maximum Events</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
+                    </FormControl>
+                    <FormDescription>
+                      Maximum number of events your company can create
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="requireEventApproval"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">
+                        Require Event Approval
+                      </FormLabel>
+                      <FormDescription>
+                        Events will need approval before being published
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="allowedEventTypes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Allowed Event Types</FormLabel>
+                    <div className="flex flex-wrap gap-2">
+                      {EVENT_TYPES.map(type => (
+                        <Badge
+                          key={type}
+                          variant={field.value.includes(type) ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() => toggleEventType(type)}
+                        >
+                          {type}
+                          {field.value.includes(type) && (
+                            <X className="w-3 h-3 ml-1" />
+                          )}
+                        </Badge>
+                      ))}
+                    </div>
+                    <FormDescription>
+                      Select the types of events that can be created
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={updateSettings.isPending}
+              >
+                {updateSettings.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Save Settings"
+                )}
+              </Button>
+            </form>
+          </Form>
+        </div>
+      </main>
     </div>
   );
 }

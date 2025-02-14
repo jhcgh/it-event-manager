@@ -180,7 +180,7 @@ function CustomerSection({ customers }: { customers: User[] }) {
   });
 
   const customersByCompany = customers.reduce((acc, customer) => {
-    const company = companies.find(c => c.id === customer.companyId);
+    const company = companies.find((c: Company) => c.id === customer.companyId);
     const companyName = company?.name || 'Other';
     if (!acc[companyName]) {
       acc[companyName] = {
