@@ -64,8 +64,9 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid username or password" });
         }
 
+        // Check user status before validating password
         if (user.status !== 'active') {
-          console.log("User account is suspended");
+          console.log("User account is suspended:", user.id);
           return done(null, false, { message: "Your account has been suspended. Please contact support." });
         }
 
@@ -94,7 +95,8 @@ export function setupAuth(app: Express) {
       console.log("Deserializing user:", id);
       const user = await storage.getUser(id);
 
-      // Check if user exists and is active during session verification
+      // If user doesn't exist or is suspended, fail the deserialization
+      // This will cause the session to be destroyed
       if (!user || user.status !== 'active') {
         console.log(`User ${id} is no longer active or does not exist`);
         return done(null, false);
@@ -117,6 +119,11 @@ export function setupAuth(app: Express) {
       if (!user) {
         console.log("Authentication failed:", info?.message);
         return res.status(401).json({ message: info?.message || "Authentication failed" });
+      }
+
+      if (user.status !== 'active') {
+        console.log("User account is suspended:", user.id);
+        return res.status(401).json({ message: "Your account has been suspended. Please contact support." });
       }
 
       req.login(user, (err) => {

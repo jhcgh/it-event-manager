@@ -483,13 +483,51 @@ function AdminPage() {
                           <TableCell>{u.companyName}</TableCell>
                           <TableCell>{u.title}</TableCell>
                           <TableCell>{u.mobile}</TableCell>
-                          <TableCell>
+                          <TableCell className="flex items-center gap-2">
                             <Badge
                               variant={u.status === "active" ? "default" : "destructive"}
                               className="capitalize"
                             >
                               {u.status}
                             </Badge>
+                            {user?.id !== u.id && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="flex items-center gap-1 w-[82px]"
+                                  >
+                                    <UserX className="h-4 w-4" />
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Super User</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete this super user? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteUserMutation.mutate(u.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      {deleteUserMutation.isPending ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                          Deleting...
+                                        </>
+                                      ) : (
+                                        "Delete Super User"
+                                      )}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -528,7 +566,7 @@ function AdminPage() {
                             variant={u.status === "active" ? "default" : "destructive"}
                             className="capitalize"
                           >
-                            {u.status}
+                            {u.status === "active" ? "Enabled" : "Suspended"}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -730,4 +768,5 @@ function AdminPage() {
     </div>
   );
 }
+
 export default AdminPage;
