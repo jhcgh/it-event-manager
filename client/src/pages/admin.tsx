@@ -488,7 +488,7 @@ function AdminPage() {
                               variant={u.status === "active" ? "default" : "destructive"}
                               className="capitalize"
                             >
-                              {u.status}
+                              {u.status === "active" ? "Enabled" : "Suspended"}
                             </Badge>
                             {user?.id !== u.id && (
                               <AlertDialog>
