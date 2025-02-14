@@ -50,6 +50,7 @@ import { Badge } from "@/components/ui/badge";
 import { EditEventDialog } from "@/components/edit-event-dialog";
 import { Trash2 } from "lucide-react";
 import { HoverUserMenu } from "@/components/hover-user-menu";
+import { UploadEventsDialog } from "@/components/upload-events-dialog";
 
 // Create Super User Dialog Component
 function CreateSuperUserDialog() {
@@ -603,10 +604,13 @@ function AdminPage() {
           <TabsContent value="events">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Upcoming Events Management
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Upcoming Events Management
+                  </CardTitle>
+                  <UploadEventsDialog />
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>

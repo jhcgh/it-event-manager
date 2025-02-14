@@ -6,9 +6,31 @@ import { insertEventSchema, insertUserSchema } from "@shared/schema";
 import multer from "multer";
 import { createEvent } from "ics";
 import sharp from "sharp";
+import { parse } from 'csv-parse';
+import { Readable } from 'stream';
 
 interface FileRequest extends Request {
   file?: Express.Multer.File;
+}
+
+interface CSVEventRow {
+  title: string;
+  description: string;
+  date: string;
+  city: string;
+  country: string;
+  isRemote: string;
+  isHybrid: string;
+  type: string;
+  url?: string;
+  imageUrl?: string;
+}
+
+interface CSVUploadResponse {
+  message: string;
+  successCount: number;
+  failedCount: number;
+  events: Event[];
 }
 
 const upload = multer({
@@ -276,6 +298,76 @@ export function registerRoutes(app: Express): Server {
     res.json(updatedUser);
   });
 
+
+  app.post("/api/events/upload-csv", upload.single('file'), async (req: FileRequest, res) => {
+    if (!req.user) return res.sendStatus(401);
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+
+    try {
+      const results: CSVEventRow[] = [];
+      const parser = parse({
+        columns: true,
+        skip_empty_lines: true
+      });
+
+      parser.on('readable', function() {
+        let record: CSVEventRow;
+        while ((record = parser.read()) !== null) {
+          results.push(record);
+        }
+      });
+
+      const processCSV = new Promise<CSVEventRow[]>((resolve, reject) => {
+        parser.on('end', () => resolve(results));
+        parser.on('error', reject);
+      });
+
+      const bufferStream = new Readable();
+      bufferStream.push(req.file.buffer);
+      bufferStream.push(null);
+      bufferStream.pipe(parser);
+
+      const csvData = await processCSV;
+
+      const events = await Promise.all(csvData.map(async (row: CSVEventRow) => {
+        try {
+          const eventData = {
+            title: row.title,
+            description: row.description,
+            date: new Date(row.date),
+            city: row.city,
+            country: row.country,
+            isRemote: row.isRemote === 'true',
+            isHybrid: row.isHybrid === 'true',
+            type: row.type,
+            url: row.url || null,
+            imageUrl: row.imageUrl || null,
+          };
+
+          const parsed = insertEventSchema.parse(eventData);
+          return await storage.createEvent(req.user!.id, parsed);
+        } catch (error) {
+          console.error('Error processing row:', row, error);
+          return null;
+        }
+      }));
+
+      const successfulEvents = events.filter((event): event is Event => event !== null);
+      const failedCount = events.length - successfulEvents.length;
+
+      const response: CSVUploadResponse = {
+        message: `Successfully imported ${successfulEvents.length} events. Failed to import ${failedCount} events.`,
+        successCount: successfulEvents.length,
+        failedCount,
+        events: successfulEvents
+      };
+
+      res.json(response);
+    } catch (error) {
+      console.error('CSV processing error:', error);
+      res.status(500).json({ message: "Failed to process CSV file" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
