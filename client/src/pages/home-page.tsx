@@ -83,11 +83,14 @@ export default function HomePage() {
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <Link href="/">
-            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-primary via-purple-500 to-purple-600 bg-clip-text text-transparent relative group transition-all duration-300 hover:scale-[1.02]">
-              <span className="inline-flex items-center gap-2">
-                <Calendar className="w-8 h-8 text-primary" />
-                ITEvents.io
-                <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
+            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-primary via-purple-500 to-purple-600 bg-clip-text text-transparent relative group cursor-pointer">
+              <span className="inline-flex items-center gap-2 transition-all duration-300 hover:scale-105">
+                <Calendar className="w-8 h-8 text-primary transform transition-transform group-hover:rotate-12" />
+                <span className="relative">
+                  ITEvents.io
+                  <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 rounded-full shadow-lg" />
+                  <span className="absolute -top-1 right-0 w-2 h-2 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse" />
+                </span>
               </span>
             </h1>
           </Link>
@@ -228,7 +231,7 @@ export default function HomePage() {
                     onClick={() => handleEventClick(event.id)}
                   >
                     <TableCell className="font-medium">
-                      {event.title}
+                      #{event.eventNumber} - {event.title}
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
                       {event.description}

@@ -25,6 +25,7 @@ export const userRelations = relations(users, ({ many }) => ({
 
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
+  eventNumber: serial("event_number").notNull(),
   userId: serial("user_id").references(() => users.id),
   title: text("title").notNull(),
   description: text("description").notNull(),
@@ -74,6 +75,7 @@ export const insertEventSchema = createInsertSchema(events)
   })
   .omit({ 
     id: true,
+    eventNumber: true,
     userId: true,
     status: true,
     createdAt: true,

@@ -217,7 +217,8 @@ function CreateSuperUserDialog() {
   );
 }
 
-function UserEventsDialog({ user }: { user: User }) {
+// Update user events dialog
+export const UserEventsDialog = ({ user }: { user: User }) => {
   const { data: userEvents = [], isLoading, error } = useQuery<Event[]>({
     queryKey: [`/api/users/${user.id}/events`],
     enabled: !!user.id,
@@ -267,7 +268,9 @@ function UserEventsDialog({ user }: { user: User }) {
             <div key={event.id} className="border rounded-lg p-4">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-lg font-semibold mb-2">{event.title}</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    #{event.eventNumber} - {event.title}
+                  </h3>
                   <div className="text-sm text-muted-foreground">
                     <p>Date: {format(new Date(event.date), "PPP 'at' p")}</p>
                     <p>Location: {event.isRemote ? "Online" : `${event.city}, ${event.country}`}</p>
@@ -652,7 +655,7 @@ function AdminPage() {
                             }}
                           >
                             <TableCell className="font-medium">
-                              {event.title}
+                              #{event.eventNumber} - {event.title}
                             </TableCell>
                             <TableCell>
                               {format(new Date(event.date), "PPP 'at' p")}

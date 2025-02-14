@@ -127,7 +127,7 @@ export default function DashboardPage() {
                 events.map((event) => (
                   <TableRow key={event.id} className="transition-colors hover:bg-muted/50">
                     <TableCell className="font-medium">
-                      {event.title}
+                      #{event.eventNumber} - {event.title}
                     </TableCell>
                     <TableCell className="max-w-xs truncate">
                       {event.description}
