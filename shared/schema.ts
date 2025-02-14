@@ -14,7 +14,7 @@ export const users = pgTable("users", {
   mobile: text("mobile").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
-  status: text("status").default("active").notNull(), // active, suspended, deleted
+  status: text("status").default("active").notNull(), // active, deleted
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -84,7 +84,7 @@ export const insertEventSchema = createInsertSchema(events)
 export const updateUserSchema = createInsertSchema(users)
   .partial()
   .extend({
-    status: z.enum(["active", "suspended", "deleted"]).optional(),
+    status: z.enum(["active", "deleted"]).optional(),
     isAdmin: z.boolean().optional(),
   })
   .omit({ 

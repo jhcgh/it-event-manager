@@ -49,8 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (user.status !== 'active') {
         // If user is not active, handle as an error
         toast({
-          title: "Account Suspended",
-          description: "Your account has been suspended. Please contact support.",
+          title: "Account Deleted",
+          description: "This account has been deleted. Please contact support.",
           variant: "destructive",
         });
         // Clear the user data

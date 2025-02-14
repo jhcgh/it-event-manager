@@ -358,27 +358,6 @@ function AdminPage() {
     },
   });
 
-  const toggleUserStatusMutation = useMutation({
-    mutationFn: async ({ userId, status }: { userId: number; status: "active" | "suspended" }) => {
-      const updateData: UpdateUser = { status };
-      await apiRequest("PATCH", `/api/admin/users/${userId}`, updateData);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      toast({
-        title: "Success",
-        description: "User status updated successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const deleteEventMutationAdmin = useMutation({
     mutationFn: async (eventId: number) => {
       await apiRequest("DELETE", `/api/events/${eventId}`);
@@ -488,7 +467,7 @@ function AdminPage() {
                               variant={u.status === "active" ? "default" : "destructive"}
                               className="capitalize"
                             >
-                              {u.status === "active" ? "Enabled" : "Suspended"}
+                              {u.status === "active" ? "Active" : "Deleted"}
                             </Badge>
                             {user?.id !== u.id && (
                               <AlertDialog>
@@ -566,36 +545,14 @@ function AdminPage() {
                             variant={u.status === "active" ? "default" : "destructive"}
                             className="capitalize"
                           >
-                            {u.status === "active" ? "Enabled" : "Suspended"}
+                            {u.status === "active" ? "Active" : "Deleted"}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <UserEventsDialog user={u} /> {/* Added user prop here */}
+                          <UserEventsDialog user={u} />
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button
-                              variant={u.status === "active" ? "destructive" : "outline"}
-                              size="sm"
-                              onClick={() => toggleUserStatusMutation.mutate({
-                                userId: u.id,
-                                status: u.status === "active" ? "suspended" : "active"
-                              })}
-                              className="flex items-center gap-1 w-[82px]"
-                            >
-                              {u.status === "active" ? (
-                                <>
-                                  <Ban className="h-4 w-4" />
-                                  Suspend
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="h-4 w-4" />
-                                  Activate
-                                </>
-                              )}
-                            </Button>
-
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button
@@ -681,7 +638,6 @@ function AdminPage() {
                             key={event.id}
                             className="cursor-pointer transition-colors hover:bg-muted/50"
                             onClick={(e) => {
-                              // Prevent navigation when clicking action buttons
                               if ((e.target as HTMLElement).closest('.action-button')) {
                                 e.stopPropagation();
                                 return;
@@ -762,7 +718,6 @@ function AdminPage() {
               </CardContent>
             </Card>
           </TabsContent>
-
         </Tabs>
       </main>
     </div>

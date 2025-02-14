@@ -66,8 +66,8 @@ export function setupAuth(app: Express) {
 
         // Check user status before validating password
         if (user.status !== 'active') {
-          console.log("User account is suspended:", user.id);
-          return done(null, false, { message: "Your account has been suspended. Please contact support." });
+          console.log("User account is deleted:", user.id);
+          return done(null, false, { message: "This account has been deleted. Please contact support." });
         }
 
         const isValid = await comparePasswords(password, user.password);
@@ -95,10 +95,9 @@ export function setupAuth(app: Express) {
       console.log("Deserializing user:", id);
       const user = await storage.getUser(id);
 
-      // If user doesn't exist or is suspended, fail the deserialization
-      // This will cause the session to be destroyed
+      // If user doesn't exist or is deleted, fail the deserialization
       if (!user || user.status !== 'active') {
-        console.log(`User ${id} is no longer active or does not exist`);
+        console.log(`User ${id} is deleted or does not exist`);
         return done(null, false);
       }
 
@@ -122,8 +121,8 @@ export function setupAuth(app: Express) {
       }
 
       if (user.status !== 'active') {
-        console.log("User account is suspended:", user.id);
-        return res.status(401).json({ message: "Your account has been suspended. Please contact support." });
+        console.log("User account is deleted:", user.id);
+        return res.status(401).json({ message: "This account has been deleted. Please contact support." });
       }
 
       req.login(user, (err) => {

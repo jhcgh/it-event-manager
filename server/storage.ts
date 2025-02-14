@@ -32,8 +32,6 @@ export interface IStorage {
   adminCreateAdmin(insertUser: InsertUser): Promise<User>;
   adminCreateSuperAdmin(insertUser: InsertUser): Promise<User>;
   adminUpdateEvent(id: number, updateData: Partial<InsertEvent>): Promise<Event | undefined>;
-  adminSuspendUser(id: number): Promise<void>;
-  adminReactivateUser(id: number): Promise<void>;
   getEventsByUserId(userId: number): Promise<Event[]>;
 }
 
@@ -168,18 +166,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(events.id, id))
       .returning();
     return result[0];
-  }
-
-  async adminSuspendUser(id: number): Promise<void> {
-    await db.update(users)
-      .set({ status: 'suspended', updatedAt: new Date() })
-      .where(eq(users.id, id));
-  }
-
-  async adminReactivateUser(id: number): Promise<void> {
-    await db.update(users)
-      .set({ status: 'active', updatedAt: new Date() })
-      .where(eq(users.id, id));
   }
 
   async getEventsByUserId(userId: number): Promise<Event[]> {
