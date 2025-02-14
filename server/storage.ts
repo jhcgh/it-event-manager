@@ -1,4 +1,4 @@
-import { users, events, type User, type Event, type InsertUser, type InsertEvent, type UpdateUser } from "@shared/schema";
+import { users, events, companies, companyRoles, type User, type Event, type InsertUser, type InsertEvent, type UpdateUser, type Company, type InsertCompany, type CompanyRole, type InsertCompanyRole } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, ne } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
@@ -9,13 +9,27 @@ const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   sessionStore: session.Store;
-  // User Management Methods
+
+  // Company Management Methods
+  createCompany(insertCompany: InsertCompany): Promise<Company>;
+  getCompany(id: number): Promise<Company | undefined>;
+  updateCompanySettings(id: number, settings: Partial<Company['settings']>): Promise<Company | undefined>;
+  getAllCompanies(): Promise<Company[]>;
+
+  // Company Role Management Methods
+  createCompanyRole(insertRole: InsertCompanyRole): Promise<CompanyRole>;
+  getCompanyRole(id: number): Promise<CompanyRole | undefined>;
+  updateCompanyRole(id: number, updateData: Partial<InsertCompanyRole>): Promise<CompanyRole | undefined>;
+  getCompanyRoles(companyId: number): Promise<CompanyRole[]>;
+
+  // User Management Methods with Company Context
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(insertUser: InsertUser): Promise<User>;
+  createUser(insertUser: InsertUser & { companyId: number, companyRoleId?: number }): Promise<User>;
   updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   deleteUser(id: number): Promise<void>;
+  getUsersByCompany(companyId: number): Promise<User[]>;
 
   // Event Management Methods
   createEvent(userId: number, insertEvent: InsertEvent): Promise<Event>;
@@ -46,7 +60,76 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  // User Management Methods
+  // Company Management Methods
+  async createCompany(insertCompany: InsertCompany): Promise<Company> {
+    const result = await db.insert(companies).values(insertCompany).returning();
+    return result[0];
+  }
+
+  async getCompany(id: number): Promise<Company | undefined> {
+    const result = await db.select().from(companies).where(eq(companies.id, id));
+    return result[0];
+  }
+
+  async updateCompanySettings(id: number, settings: Partial<Company['settings']>): Promise<Company | undefined> {
+    const company = await this.getCompany(id);
+    if (!company) return undefined;
+
+    const updatedSettings = { ...company.settings, ...settings };
+    const result = await db
+      .update(companies)
+      .set({ settings: updatedSettings, updatedAt: new Date() })
+      .where(eq(companies.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getAllCompanies(): Promise<Company[]> {
+    return await db.select().from(companies).where(eq(companies.status, 'active')).orderBy(desc(companies.createdAt));
+  }
+
+  // Company Role Management Methods
+  async createCompanyRole(insertRole: InsertCompanyRole): Promise<CompanyRole> {
+    const result = await db.insert(companyRoles).values(insertRole).returning();
+    return result[0];
+  }
+
+  async getCompanyRole(id: number): Promise<CompanyRole | undefined> {
+    const result = await db.select().from(companyRoles).where(eq(companyRoles.id, id));
+    return result[0];
+  }
+
+  async updateCompanyRole(id: number, updateData: Partial<InsertCompanyRole>): Promise<CompanyRole | undefined> {
+    const result = await db
+      .update(companyRoles)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(companyRoles.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getCompanyRoles(companyId: number): Promise<CompanyRole[]> {
+    return await db
+      .select()
+      .from(companyRoles)
+      .where(eq(companyRoles.companyId, companyId))
+      .orderBy(desc(companyRoles.createdAt));
+  }
+
+  // Modified User Management Methods
+  async createUser(insertUser: InsertUser & { companyId: number, companyRoleId?: number }): Promise<User> {
+    const result = await db.insert(users).values(insertUser).returning();
+    return result[0];
+  }
+
+  async getUsersByCompany(companyId: number): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(and(eq(users.companyId, companyId), ne(users.status, 'deleted')))
+      .orderBy(desc(users.createdAt));
+  }
+
   async getUser(id: number): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.id, id));
     return result[0];
@@ -54,11 +137,6 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.username, username));
-    return result[0];
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const result = await db.insert(users).values(insertUser).returning();
     return result[0];
   }
 
@@ -81,7 +159,6 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id));
   }
 
-  // Event Management Methods
   async createEvent(userId: number, insertEvent: InsertEvent): Promise<Event> {
     const result = await db
       .insert(events)
@@ -119,9 +196,8 @@ export class DatabaseStorage implements IStorage {
     await db.delete(events).where(eq(events.id, id));
   }
 
-  // Admin Methods
   async adminGetAllUsers(includeDeleted: boolean = false): Promise<User[]> {
-    const query = includeDeleted 
+    const query = includeDeleted
       ? db.select().from(users)
       : db.select().from(users).where(ne(users.status, 'deleted'));
     return await query.orderBy(desc(users.createdAt));

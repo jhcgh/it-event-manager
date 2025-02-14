@@ -299,6 +299,57 @@ export function registerRoutes(app: Express): Server {
   });
 
 
+  app.get("/api/admin/companies", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+    try {
+      const companies = await storage.getAllCompanies();
+      res.json(companies);
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      res.status(500).json({ message: "Failed to fetch companies" });
+    }
+  });
+
+  app.patch("/api/companies/:id/settings", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+
+    try {
+      const companyId = parseInt(req.params.id);
+      const company = await storage.getCompany(companyId);
+
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      const updatedCompany = await storage.updateCompanySettings(companyId, req.body);
+      if (!updatedCompany) {
+        return res.status(404).json({ message: "Failed to update company settings" });
+      }
+
+      console.log("Updated company settings:", {
+        companyId,
+        settings: updatedCompany.settings
+      });
+
+      res.json(updatedCompany);
+    } catch (error) {
+      console.error("Error updating company settings:", error);
+      res.status(500).json({ message: "Failed to update company settings" });
+    }
+  });
+
+  app.get("/api/companies/:id/roles", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+
+    try {
+      const roles = await storage.getCompanyRoles(parseInt(req.params.id));
+      res.json(roles);
+    } catch (error) {
+      console.error("Error fetching company roles:", error);
+      res.status(500).json({ message: "Failed to fetch company roles" });
+    }
+  });
+
   app.post("/api/events/upload-csv", upload.single('file'), async (req: FileRequest, res) => {
     if (!req.user) return res.sendStatus(401);
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });

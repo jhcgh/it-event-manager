@@ -1,7 +1,48 @@
-import { pgTable, text, serial, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, boolean, jsonb, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
+
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  settings: jsonb("settings").$type<{
+    maxUsers?: number;
+    maxEvents?: number;
+    allowedEventTypes?: string[];
+    requireEventApproval?: boolean;
+  }>().notNull().default({}),
+  status: text("status", { enum: ['active', 'inactive'] }).default("active").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const companyRelations = relations(companies, ({ many }) => ({
+  users: many(users),
+  roles: many(companyRoles),
+}));
+
+export const companyRoles = pgTable("company_roles", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  name: text("name").notNull(),
+  permissions: jsonb("permissions").$type<{
+    canManageUsers?: boolean;
+    canCreateEvents?: boolean;
+    canDeleteEvents?: boolean;
+    canManageSettings?: boolean;
+  }>().notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const companyRoleRelations = relations(companyRoles, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [companyRoles.companyId],
+    references: [companies.id],
+  }),
+  users: many(users),
+}));
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -9,7 +50,8 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
-  companyName: text("company_name").notNull(),
+  companyId: integer("company_id").references(() => companies.id),
+  companyRoleId: integer("company_role_id").references(() => companyRoles.id),
   title: text("title").notNull(),
   mobile: text("mobile").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
@@ -19,8 +61,16 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const userRelations = relations(users, ({ many }) => ({
+export const userRelations = relations(users, ({ many, one }) => ({
   events: many(events),
+  company: one(companies, {
+    fields: [users.companyId],
+    references: [companies.id],
+  }),
+  companyRole: one(companyRoles, {
+    fields: [users.companyRoleId],
+    references: [companyRoles.id],
+  }),
 }));
 
 export const events = pgTable("events", {
@@ -33,10 +83,10 @@ export const events = pgTable("events", {
   country: text("country").notNull(),
   isRemote: boolean("is_remote").notNull(),
   isHybrid: boolean("is_hybrid").default(false).notNull(),
-  type: text("type").notNull(), // 'seminar', 'conference', 'workshop'
+  type: text("type").notNull(),
   url: text("url"),
   imageUrl: text("image_url"),
-  status: text("status").default("active").notNull(), // active, cancelled, deleted
+  status: text("status").default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -47,6 +97,21 @@ export const eventRelations = relations(events, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const insertCompanySchema = createInsertSchema(companies)
+  .omit({ 
+    id: true,
+    status: true,
+    createdAt: true,
+    updatedAt: true 
+  });
+
+export const insertCompanyRoleSchema = createInsertSchema(companyRoles)
+  .omit({ 
+    id: true,
+    createdAt: true,
+    updatedAt: true 
+  });
 
 export const insertUserSchema = createInsertSchema(users)
   .extend({
@@ -60,7 +125,9 @@ export const insertUserSchema = createInsertSchema(users)
     isSuperAdmin: true,
     status: true,
     createdAt: true,
-    updatedAt: true 
+    updatedAt: true,
+    companyId: true,
+    companyRoleId: true
   });
 
 export const insertEventSchema = createInsertSchema(events)
@@ -80,7 +147,6 @@ export const insertEventSchema = createInsertSchema(events)
     updatedAt: true
   });
 
-// Admin schemas
 export const updateUserSchema = createInsertSchema(users)
   .partial()
   .extend({
@@ -100,3 +166,7 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
+export type Company = typeof companies.$inferSelect;
+export type InsertCompany = z.infer<typeof insertCompanySchema>;
+export type CompanyRole = typeof companyRoles.$inferSelect;
+export type InsertCompanyRole = z.infer<typeof insertCompanyRoleSchema>;
