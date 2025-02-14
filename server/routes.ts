@@ -431,7 +431,8 @@ export function registerRoutes(app: Express): Server {
           const parsed = insertEventSchema.parse(eventData);
           const event = await storage.createEvent(req.user.id, parsed);
           if (event) {
-            successfulEvents.push(event);
+            // Type assertion to handle the mismatch between DB Event type and DOM Event
+            successfulEvents.push(event as any);
           }
         } catch (error) {
           console.error('Error processing row:', row, error);
