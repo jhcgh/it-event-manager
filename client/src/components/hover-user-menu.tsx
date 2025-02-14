@@ -1,4 +1,4 @@
-import { UserCircle } from "lucide-react";
+import { UserCircle, Settings } from "lucide-react";
 import { User } from "@shared/schema";
 import { Link } from "wouter";
 import {
@@ -35,10 +35,10 @@ export function HoverUserMenu({ user }: HoverUserMenuProps) {
             {user.firstName} {user.lastName}
           </p>
           <p className="text-xs leading-none text-muted-foreground">
-            {user.title} at {user.companyName}
+            {user.title}
           </p>
           <p className="text-xs leading-none text-muted-foreground">
-            {user.username} {/* Username is the email address */}
+            {user.username}
           </p>
         </div>
         <DropdownMenuSeparator />
@@ -47,6 +47,15 @@ export function HoverUserMenu({ user }: HoverUserMenuProps) {
             View Profile
           </Link>
         </DropdownMenuItem>
+        {/* Only show Company Settings for non-super-admin users */}
+        {!user.isSuperAdmin && (
+          <DropdownMenuItem asChild>
+            <Link href="/company-settings" className="cursor-pointer">
+              <Settings className="mr-2 h-4 w-4" />
+              Company Settings
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer text-destructive focus:text-destructive"

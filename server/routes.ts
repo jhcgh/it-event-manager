@@ -292,26 +292,14 @@ export function registerRoutes(app: Express): Server {
       return res.status(400).json({ message: "Invalid status. Must be 'active' or 'deleted'" });
     }
 
-    const updatedUser = await storage.updateUser(parseInt(req.params.id), { status });
+    const updatedUser = await storage.adminUpdateUser(parseInt(req.params.id), { status });
     if (!updatedUser) return res.sendStatus(404);
 
     res.json(updatedUser);
   });
 
-
-  app.get("/api/admin/companies", async (req, res) => {
-    if (!req.user?.isAdmin) return res.sendStatus(403);
-    try {
-      const companies = await storage.getAllCompanies();
-      res.json(companies);
-    } catch (error) {
-      console.error("Error fetching companies:", error);
-      res.status(500).json({ message: "Failed to fetch companies" });
-    }
-  });
-
-  app.patch("/api/companies/:id/settings", async (req, res) => {
-    if (!req.user?.isAdmin) return res.sendStatus(403);
+  app.get("/api/companies/:id", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
 
     try {
       const companyId = parseInt(req.params.id);
@@ -319,6 +307,34 @@ export function registerRoutes(app: Express): Server {
 
       if (!company) {
         return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Only allow users to access their own company's data
+      if (company.id !== req.user.companyId && !req.user.isAdmin) {
+        return res.sendStatus(403);
+      }
+
+      res.json(company);
+    } catch (error) {
+      console.error("Error fetching company:", error);
+      res.status(500).json({ message: "Failed to fetch company" });
+    }
+  });
+
+  app.patch("/api/companies/:id/settings", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const companyId = parseInt(req.params.id);
+      const company = await storage.getCompany(companyId);
+
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Only allow users to update their own company's settings
+      if (company.id !== req.user.companyId && !req.user.isAdmin) {
+        return res.sendStatus(403);
       }
 
       const updatedCompany = await storage.updateCompanySettings(companyId, req.body);
@@ -380,7 +396,10 @@ export function registerRoutes(app: Express): Server {
 
       const csvData = await processCSV;
 
-      const events = await Promise.all(csvData.map(async (row: CSVEventRow) => {
+      const successfulEvents: Event[] = [];
+      const failedCount = csvData.length;
+
+      for (const row of csvData) {
         try {
           const eventData = {
             title: row.title,
@@ -396,20 +415,19 @@ export function registerRoutes(app: Express): Server {
           };
 
           const parsed = insertEventSchema.parse(eventData);
-          return await storage.createEvent(req.user!.id, parsed);
+          const event = await storage.createEvent(req.user.id, parsed);
+          if (event) {
+            successfulEvents.push(event);
+          }
         } catch (error) {
           console.error('Error processing row:', row, error);
-          return null;
         }
-      }));
-
-      const successfulEvents = events.filter((event): event is Event => event !== null);
-      const failedCount = events.length - successfulEvents.length;
+      }
 
       const response: CSVUploadResponse = {
-        message: `Successfully imported ${successfulEvents.length} events. Failed to import ${failedCount} events.`,
+        message: `Successfully imported ${successfulEvents.length} events. Failed to import ${failedCount - successfulEvents.length} events.`,
         successCount: successfulEvents.length,
-        failedCount,
+        failedCount: failedCount - successfulEvents.length,
         events: successfulEvents
       };
 

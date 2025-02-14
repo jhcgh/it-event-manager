@@ -4,19 +4,11 @@ import { Link, useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, LayoutDashboard, UserCircle, Loader2, Calendar } from "lucide-react";
+import { Search, LayoutDashboard, Loader2, Calendar } from "lucide-react";
 import { useState } from "react";
 import { Event } from "@shared/schema";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { HoverUserMenu } from "@/components/hover-user-menu";
 
 export default function HomePage() {

@@ -62,7 +62,13 @@ export class DatabaseStorage implements IStorage {
 
   // Company Management Methods
   async createCompany(insertCompany: InsertCompany): Promise<Company> {
-    const result = await db.insert(companies).values(insertCompany).returning();
+    const values = {
+      ...insertCompany,
+      status: 'active' as const,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const result = await db.insert(companies).values(values).returning();
     return result[0];
   }
 
@@ -90,7 +96,12 @@ export class DatabaseStorage implements IStorage {
 
   // Company Role Management Methods
   async createCompanyRole(insertRole: InsertCompanyRole): Promise<CompanyRole> {
-    const result = await db.insert(companyRoles).values(insertRole).returning();
+    const values = {
+      ...insertRole,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const result = await db.insert(companyRoles).values(values).returning();
     return result[0];
   }
 
@@ -100,9 +111,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateCompanyRole(id: number, updateData: Partial<InsertCompanyRole>): Promise<CompanyRole | undefined> {
+    const values = {
+      ...updateData,
+      updatedAt: new Date(),
+    };
     const result = await db
       .update(companyRoles)
-      .set({ ...updateData, updatedAt: new Date() })
+      .set(values)
       .where(eq(companyRoles.id, id))
       .returning();
     return result[0];
@@ -116,7 +131,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(companyRoles.createdAt));
   }
 
-  // Modified User Management Methods
+  // User Management Methods with Company Context
   async createUser(insertUser: InsertUser & { companyId: number, companyRoleId?: number }): Promise<User> {
     const result = await db.insert(users).values(insertUser).returning();
     return result[0];
