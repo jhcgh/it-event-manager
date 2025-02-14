@@ -334,7 +334,8 @@ function AdminPage() {
   });
 
   // Filter and sort upcoming events
-  const events = allEvents.filter(event => isFuture(new Date(event.date)))
+  const events = allEvents
+    .filter(event => event.status === 'active')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const deleteUserMutation = useMutation({
@@ -346,6 +347,27 @@ function AdminPage() {
       toast({
         title: "Success",
         description: "User deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const toggleUserStatusMutation = useMutation({
+    mutationFn: async ({ userId, status }: { userId: number; status: "active" | "suspended" }) => {
+      const updateData: UpdateUser = { status };
+      await apiRequest("PATCH", `/api/admin/users/${userId}`, updateData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User status updated successfully",
       });
     },
     onError: (error: Error) => {
@@ -451,7 +473,7 @@ function AdminPage() {
                         <TableHead>Company</TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Phone</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -461,7 +483,13 @@ function AdminPage() {
                           <TableCell>{u.companyName}</TableCell>
                           <TableCell>{u.title}</TableCell>
                           <TableCell>{u.mobile}</TableCell>
-                          <TableCell>
+                          <TableCell className="flex items-center gap-2">
+                            <Badge
+                              variant={u.status === "active" ? "default" : "destructive"}
+                              className="capitalize"
+                            >
+                              {u.status === "active" ? "Enabled" : "Suspended"}
+                            </Badge>
                             {user?.id !== u.id && (
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
@@ -521,6 +549,7 @@ function AdminPage() {
                       <TableHead>Company</TableHead>
                       <TableHead>Title</TableHead>
                       <TableHead>Phone</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Events</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -533,45 +562,78 @@ function AdminPage() {
                         <TableCell>{u.title}</TableCell>
                         <TableCell>{u.mobile}</TableCell>
                         <TableCell>
-                          <UserEventsDialog user={u} />
+                          <Badge
+                            variant={u.status === "active" ? "default" : "destructive"}
+                            className="capitalize"
+                          >
+                            {u.status === "active" ? "Enabled" : "Suspended"}
+                          </Badge>
                         </TableCell>
                         <TableCell>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                className="flex items-center gap-1 w-[82px]"
-                              >
-                                <UserX className="h-4 w-4" />
-                                Delete
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete this user? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteUserMutation.mutate(u.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          <UserEventsDialog user={u} /> {/* Added user prop here */}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant={u.status === "active" ? "destructive" : "outline"}
+                              size="sm"
+                              onClick={() => toggleUserStatusMutation.mutate({
+                                userId: u.id,
+                                status: u.status === "active" ? "suspended" : "active"
+                              })}
+                              className="flex items-center gap-1 w-[82px]"
+                            >
+                              {u.status === "active" ? (
+                                <>
+                                  <Ban className="h-4 w-4" />
+                                  Suspend
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-4 w-4" />
+                                  Activate
+                                </>
+                              )}
+                            </Button>
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="flex items-center gap-1 w-[82px]"
                                 >
-                                  {deleteUserMutation.isPending ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                      Deleting...
-                                    </>
-                                  ) : (
-                                    "Delete User"
-                                  )}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                                  <UserX className="h-4 w-4" />
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this user? This
+                                    action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteUserMutation.mutate(u.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    {deleteUserMutation.isPending ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                        Deleting...
+                                      </>
+                                    ) : (
+                                      "Delete User"
+                                    )}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -597,6 +659,7 @@ function AdminPage() {
                       <TableHead>Date</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Organizer</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -604,7 +667,7 @@ function AdminPage() {
                   <TableBody>
                     {events.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                           No upcoming events found
                         </TableCell>
                       </TableRow>
@@ -618,6 +681,7 @@ function AdminPage() {
                             key={event.id}
                             className="cursor-pointer transition-colors hover:bg-muted/50"
                             onClick={(e) => {
+                              // Prevent navigation when clicking action buttons
                               if ((e.target as HTMLElement).closest('.action-button')) {
                                 e.stopPropagation();
                                 return;
@@ -638,6 +702,14 @@ function AdminPage() {
                             </TableCell>
                             <TableCell className="capitalize">
                               {event.type}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={event.status === "active" ? "default" : "destructive"}
+                                className="capitalize"
+                              >
+                                {event.status}
+                              </Badge>
                             </TableCell>
                             <TableCell>{organizer?.username}</TableCell>
                             <TableCell>
@@ -690,6 +762,7 @@ function AdminPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
         </Tabs>
       </main>
     </div>

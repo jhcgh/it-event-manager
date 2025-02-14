@@ -64,6 +64,12 @@ export function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid username or password" });
         }
 
+        // Check user status before validating password
+        if (user.status !== 'active') {
+          console.log("User account is suspended:", user.id);
+          return done(null, false, { message: "Your account has been suspended. Please contact support." });
+        }
+
         const isValid = await comparePasswords(password, user.password);
         console.log("Password validation:", isValid);
 
@@ -89,8 +95,10 @@ export function setupAuth(app: Express) {
       console.log("Deserializing user:", id);
       const user = await storage.getUser(id);
 
-      if (!user) {
-        console.log(`User ${id} does not exist`);
+      // If user doesn't exist or is suspended, fail the deserialization
+      // This will cause the session to be destroyed
+      if (!user || user.status !== 'active') {
+        console.log(`User ${id} is no longer active or does not exist`);
         return done(null, false);
       }
 
@@ -111,6 +119,11 @@ export function setupAuth(app: Express) {
       if (!user) {
         console.log("Authentication failed:", info?.message);
         return res.status(401).json({ message: info?.message || "Authentication failed" });
+      }
+
+      if (user.status !== 'active') {
+        console.log("User account is suspended:", user.id);
+        return res.status(401).json({ message: "Your account has been suspended. Please contact support." });
       }
 
       req.login(user, (err) => {
@@ -136,7 +149,8 @@ export function setupAuth(app: Express) {
       const user = await storage.createUser({
         ...req.body,
         username: req.body.username.toLowerCase(),
-        password: hashedPassword
+        password: hashedPassword,
+        status: 'active'
       });
 
       req.login(user, (err) => {
@@ -161,6 +175,16 @@ export function setupAuth(app: Express) {
       console.log("Unauthorized access attempt");
       return res.sendStatus(401);
     }
+
+    // Double check user status before sending response
+    if (req.user.status !== 'active') {
+      console.log("Suspended user attempted to access protected route:", req.user.id);
+      req.logout((err) => {
+        if (err) console.error("Error logging out suspended user:", err);
+      });
+      return res.sendStatus(401);
+    }
+
     res.json(req.user);
   });
 }
