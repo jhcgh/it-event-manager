@@ -177,9 +177,9 @@ export function setupAuth(app: Express) {
 
     // Double check user status before sending response
     if (req.user.status !== 'active') {
-      console.log("Suspended user attempted to access protected route:", req.user.id);
+      console.log("Deleted user attempted to access protected route:", req.user.id);
       req.logout((err) => {
-        if (err) console.error("Error logging out suspended user:", err);
+        if (err) console.error("Error logging out deleted user:", err);
       });
       return res.sendStatus(401);
     }

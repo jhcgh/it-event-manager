@@ -14,7 +14,7 @@ export const users = pgTable("users", {
   mobile: text("mobile").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
-  status: text("status").default("active").notNull(), // active, deleted
+  status: text("status", { enum: ['active', 'deleted'] }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

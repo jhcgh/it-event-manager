@@ -262,6 +262,20 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.patch("/api/admin/users/:id/status", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+
+    const { status } = req.body;
+    if (status !== "active" && status !== "deleted") {
+      return res.status(400).json({ message: "Invalid status. Must be 'active' or 'deleted'" });
+    }
+
+    const updatedUser = await storage.updateUser(parseInt(req.params.id), { status });
+    if (!updatedUser) return res.sendStatus(404);
+
+    res.json(updatedUser);
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;
