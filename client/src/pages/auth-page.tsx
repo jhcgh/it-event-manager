@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema, InsertUser } from "@shared/schema";
 import { Redirect, useLocation } from "wouter";
 import { z } from "zod";
+import { useEffect, useState } from "react";
 
 // Extend the schema to include password confirmation
 const registerSchema = insertUserSchema.extend({
@@ -28,8 +29,18 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [location] = useLocation();
-  const searchParams = new URLSearchParams(location.split('?')[1]);
-  const defaultTab = searchParams.get('mode') === 'register' ? 'register' : 'login';
+  const [activeTab, setActiveTab] = useState<string>("login");
+
+  // Set the active tab based on the URL parameter when component mounts
+  // and when the location changes
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const mode = searchParams.get('mode');
+    console.log('URL mode parameter:', mode); // Debug log
+    if (mode === 'register' || mode === 'login') {
+      setActiveTab(mode);
+    }
+  }, [location]); // Re-run when location changes
 
   const loginForm = useForm({
     defaultValues: {
@@ -73,7 +84,7 @@ export default function AuthPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue={defaultTab}>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="register">Register</TabsTrigger>
