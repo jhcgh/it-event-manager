@@ -88,10 +88,39 @@ export function registerRoutes(app: Express): Server {
   app.patch("/api/profile", async (req, res) => {
     if (!req.user) return res.sendStatus(401);
 
-    const updatedUser = await storage.updateUser(req.user.id, req.body);
-    if (!updatedUser) return res.sendStatus(404);
+    try {
+      const startTime = Date.now();
+      console.log('Profile update request received:', { 
+        userId: req.user.id, 
+        updates: req.body,
+        timestamp: new Date().toISOString()
+      });
 
-    res.json(updatedUser);
+      const updatedUser = await storage.updateUser(req.user.id, req.body);
+      if (!updatedUser) {
+        console.error('User not found for update:', req.user.id);
+        return res.sendStatus(404);
+      }
+
+      const endTime = Date.now();
+      console.log('Profile update completed:', { 
+        userId: req.user.id, 
+        processingTime: `${endTime - startTime}ms`,
+        timestamp: new Date().toISOString()
+      });
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Profile update failed:', { 
+        userId: req.user.id, 
+        error,
+        timestamp: new Date().toISOString()
+      });
+      res.status(500).json({ 
+        message: "Failed to update profile",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
   });
 
   app.get("/api/events", async (req, res) => {

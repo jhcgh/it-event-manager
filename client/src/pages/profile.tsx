@@ -30,30 +30,75 @@ export default function ProfilePage() {
     },
   });
 
+  const onSubmit = (data: Partial<InsertUser>) => {
+    const updates = {
+      ...data,
+      companyName: data.companyName || user?.companyName,
+    };
+    console.log('Profile update initiated:', {
+      updates,
+      timestamp: new Date().toISOString()
+    });
+    updateProfileMutation.mutate(updates);
+  };
+
   const updateProfileMutation = useMutation({
     mutationFn: async (data: Partial<InsertUser>) => {
-      const res = await apiRequest("PATCH", "/api/profile", data);
-      return res;
-    },
-    onSuccess: (updatedUser) => {
-      queryClient.setQueryData(["/api/user"], updatedUser);
-      toast({
-        title: "Success",
-        description: "Profile updated successfully",
+      console.log('Making profile update request:', {
+        data,
+        timestamp: new Date().toISOString()
       });
+      const response = await apiRequest("PATCH", "/api/profile", data);
+      return response;
     },
-    onError: (error: Error) => {
+    onMutate: async (newData) => {
+      console.log('Optimistic update started:', {
+        newData,
+        timestamp: new Date().toISOString()
+      });
+
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["/api/user"] });
+
+      // Snapshot the previous value
+      const previousUser = queryClient.getQueryData(["/api/user"]);
+
+      // Optimistically update to new value immediately
+      queryClient.setQueryData(["/api/user"], (old: any) => ({
+        ...old,
+        ...newData,
+      }));
+
+      console.log('Optimistic update completed');
+      return { previousUser };
+    },
+    onError: (error: Error, _newData, context) => {
+      console.error('Profile update error:', {
+        error,
+        timestamp: new Date().toISOString()
+      });
+      // Rollback on error
+      queryClient.setQueryData(["/api/user"], context?.previousUser);
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
       });
     },
-  });
+    onSuccess: (updatedUser) => {
+      console.log('Profile update success:', {
+        updatedUser,
+        timestamp: new Date().toISOString()
+      });
+      // Update cache with server response
+      queryClient.setQueryData(["/api/user"], updatedUser);
 
-  const onSubmit = (data: Partial<InsertUser>) => {
-    updateProfileMutation.mutate(data);
-  };
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+    },
+  });
 
   if (!user) return null;
 
@@ -80,20 +125,6 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Email</Label>
-                <Input
-                  id="username"
-                  type="email"
-                  {...form.register("username")}
-                />
-                {form.formState.errors.username && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.username.message}
-                  </p>
-                )}
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
@@ -120,6 +151,20 @@ export default function ProfilePage() {
                     </p>
                   )}
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="username">Email</Label>
+                <Input
+                  id="username"
+                  type="email"
+                  {...form.register("username")}
+                />
+                {form.formState.errors.username && (
+                  <p className="text-sm text-destructive">
+                    {form.formState.errors.username.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">

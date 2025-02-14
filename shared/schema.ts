@@ -51,6 +51,7 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   companyId: integer("company_id").references(() => companies.id),
+  companyName: text("company_name"),
   companyRoleId: integer("company_role_id").references(() => companyRoles.id),
   title: text("title").notNull(),
   mobile: text("mobile").notNull(),
@@ -99,18 +100,18 @@ export const eventRelations = relations(events, ({ one }) => ({
 }));
 
 export const insertCompanySchema = createInsertSchema(companies)
-  .omit({ 
+  .omit({
     id: true,
     status: true,
     createdAt: true,
-    updatedAt: true 
+    updatedAt: true
   });
 
 export const insertCompanyRoleSchema = createInsertSchema(companyRoles)
-  .omit({ 
+  .omit({
     id: true,
     createdAt: true,
-    updatedAt: true 
+    updatedAt: true
   });
 
 export const insertUserSchema = createInsertSchema(users)
@@ -119,8 +120,8 @@ export const insertUserSchema = createInsertSchema(users)
       .regex(/[!@#$%^&*]/, "Password must contain at least one special character"),
     username: z.string().email("Must be a valid email address")
   })
-  .omit({ 
-    id: true, 
+  .omit({
+    id: true,
     isAdmin: true,
     isSuperAdmin: true,
     status: true,
@@ -139,7 +140,7 @@ export const insertEventSchema = createInsertSchema(events)
         "Description must not exceed 50 words"
       )
   })
-  .omit({ 
+  .omit({
     id: true,
     userId: true,
     status: true,
@@ -152,8 +153,9 @@ export const updateUserSchema = createInsertSchema(users)
   .extend({
     status: z.enum(["active", "deleted"]).optional(),
     isAdmin: z.boolean().optional(),
+    companyName: z.string().optional() // Added companyName to partial update schema
   })
-  .omit({ 
+  .omit({
     id: true,
     password: true,
     createdAt: true,
