@@ -153,11 +153,8 @@ function CompanySettingsDialog({ company }: { company: Company }) {
   );
 }
 
-function CustomerSection({ customers }: { customers: User[] }) {
+function CustomerSection({ customers, companies }: { customers: User[], companies: Company[] }) {
   const { toast } = useToast();
-  const { data: companies = [] } = useQuery<Company[]>({
-    queryKey: ["/api/admin/companies"],
-  });
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
@@ -604,6 +601,10 @@ function AdminPage() {
     queryKey: ["/api/admin/users"],
   });
 
+  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Company[]>({
+    queryKey: ["/api/admin/companies"],
+  });
+
   const { data: allEvents = [], isLoading: isLoadingEvents, error: eventsError } = useQuery<Event[]>({
     queryKey: ["/api/admin/events"],
     retry: 3
@@ -635,7 +636,7 @@ function AdminPage() {
     },
   });
 
-  if (isLoadingUsers || isLoadingEvents) {
+  if (isLoadingUsers || isLoadingEvents || isLoadingCompanies) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -719,61 +720,13 @@ function AdminPage() {
                           <TableCell>{companies.find(c => c.id === u.companyId)?.name || 'N/A'}</TableCell>
                           <TableCell>{u.title}</TableCell>
                           <TableCell>{u.mobile}</TableCell>
-                          <TableCell className="flex items-center gap-2">
+                          <TableCell>
                             <Badge
                               variant={u.status === "active" ? "default" : "destructive"}
-                              className="capitalize flex w-fit items-center gap-1"
+                              className="capitalize"
                             >
-                              {u.status === "active" ? (
-                                <>
-                                  <CheckCircle className="h-3 w-3" />
-                                  Active
-                                </>
-                              ) : (
-                                <>
-                                  <Ban className="h-3 w-3" />
-                                  Deleted
-                                </>
-                              )}
+                              {u.status}
                             </Badge>
-                            {user?.id !== u.id && (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    className="flex items-center gap-1 w-[82px]"
-                                  >
-                                    <UserX className="h-4 w-4" />
-                                    Delete
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Super User</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete this super user? This action cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => superUserDeleteMutation.mutate(u.id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      {superUserDeleteMutation.isPending ? (
-                                        <>
-                                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                          Deleting...
-                                        </>
-                                      ) : (
-                                        "Delete Super User"
-                                      )}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -782,7 +735,7 @@ function AdminPage() {
                 </CardContent>
               </Card>
             )}
-            <CustomerSection customers={customers} />
+            <CustomerSection customers={customers} companies={companies} />
           </TabsContent>
 
           <TabsContent value="events">
