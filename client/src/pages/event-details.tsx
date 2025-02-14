@@ -10,8 +10,7 @@ import {
   Link as LinkIcon,
   Tag,
   Info,
-  Type,
-  Hash
+  Type
 } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
@@ -82,12 +81,6 @@ export default function EventDetailsPage() {
               </div>
             )}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="bg-white/10 text-white border-white/20">
-                  <Hash className="h-3 w-3 mr-1" />
-                  Event #{event.eventNumber}
-                </Badge>
-              </div>
               <h1 className="text-4xl font-bold text-white">{event.title}</h1>
               <div className="flex items-center gap-3 mt-2">
                 <Badge variant="outline" className="bg-white/10 text-white border-white/20">
