@@ -67,8 +67,8 @@ export class DatabaseStorage implements IStorage {
       status: 'active' as const,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
-    const result = await db.insert(companies).values(values).returning();
+    } as const;
+    const result = await db.insert(companies).values([values]).returning();
     return result[0];
   }
 
@@ -100,8 +100,8 @@ export class DatabaseStorage implements IStorage {
       ...insertRole,
       createdAt: new Date(),
       updatedAt: new Date(),
-    };
-    const result = await db.insert(companyRoles).values(values).returning();
+    } as const;
+    const result = await db.insert(companyRoles).values([values]).returning();
     return result[0];
   }
 
@@ -114,7 +114,7 @@ export class DatabaseStorage implements IStorage {
     const values = {
       ...updateData,
       updatedAt: new Date(),
-    };
+    } as const;
     const result = await db
       .update(companyRoles)
       .set(values)
@@ -133,7 +133,7 @@ export class DatabaseStorage implements IStorage {
 
   // User Management Methods with Company Context
   async createUser(insertUser: InsertUser & { companyId: number, companyRoleId?: number }): Promise<User> {
-    const result = await db.insert(users).values(insertUser).returning();
+    const result = await db.insert(users).values([insertUser]).returning();
     return result[0];
   }
 
@@ -174,10 +174,11 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id));
   }
 
+  // Event Management Methods
   async createEvent(userId: number, insertEvent: InsertEvent): Promise<Event> {
     const result = await db
       .insert(events)
-      .values({ ...insertEvent, userId })
+      .values([{ ...insertEvent, userId }])
       .returning();
     return result[0];
   }
@@ -211,6 +212,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(events).where(eq(events.id, id));
   }
 
+  // Admin Methods
   async adminGetAllUsers(includeDeleted: boolean = false): Promise<User[]> {
     const query = includeDeleted
       ? db.select().from(users)
@@ -237,7 +239,7 @@ export class DatabaseStorage implements IStorage {
   async adminCreateAdmin(insertUser: InsertUser): Promise<User> {
     const result = await db
       .insert(users)
-      .values({ ...insertUser, isAdmin: true })
+      .values([{ ...insertUser, isAdmin: true }])
       .returning();
     return result[0];
   }
@@ -245,7 +247,7 @@ export class DatabaseStorage implements IStorage {
   async adminCreateSuperAdmin(insertUser: InsertUser): Promise<User> {
     const result = await db
       .insert(users)
-      .values({ ...insertUser, isAdmin: true, isSuperAdmin: true })
+      .values([{ ...insertUser, isAdmin: true, isSuperAdmin: true }])
       .returning();
     return result[0];
   }

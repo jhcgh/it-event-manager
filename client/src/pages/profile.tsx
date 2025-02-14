@@ -33,7 +33,7 @@ export default function ProfilePage() {
   const updateProfileMutation = useMutation({
     mutationFn: async (data: Partial<InsertUser>) => {
       const res = await apiRequest("PATCH", "/api/profile", data);
-      return res.json();
+      return res;
     },
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(["/api/user"], updatedUser);
