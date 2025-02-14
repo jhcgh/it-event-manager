@@ -64,6 +64,12 @@ export class DatabaseStorage implements IStorage {
   async createCompany(insertCompany: InsertCompany): Promise<Company> {
     const values = {
       ...insertCompany,
+      settings: {
+        maxUsers: insertCompany.settings?.maxUsers ?? 10,
+        maxEvents: insertCompany.settings?.maxEvents ?? 20,
+        allowedEventTypes: insertCompany.settings?.allowedEventTypes ?? ["conference", "workshop", "seminar"],
+        requireEventApproval: insertCompany.settings?.requireEventApproval ?? false
+      },
       status: 'active' as const,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -98,6 +104,12 @@ export class DatabaseStorage implements IStorage {
   async createCompanyRole(insertRole: InsertCompanyRole): Promise<CompanyRole> {
     const values = {
       ...insertRole,
+      permissions: {
+        canManageUsers: insertRole.permissions?.canManageUsers ?? false,
+        canCreateEvents: insertRole.permissions?.canCreateEvents ?? false,
+        canDeleteEvents: insertRole.permissions?.canDeleteEvents ?? false,
+        canManageSettings: insertRole.permissions?.canManageSettings ?? false
+      },
       createdAt: new Date(),
       updatedAt: new Date(),
     } as const;
@@ -112,7 +124,13 @@ export class DatabaseStorage implements IStorage {
 
   async updateCompanyRole(id: number, updateData: Partial<InsertCompanyRole>): Promise<CompanyRole | undefined> {
     const values = {
-      ...updateData,
+      name: updateData.name,
+      permissions: updateData.permissions ? {
+        canManageUsers: updateData.permissions.canManageUsers ?? false,
+        canCreateEvents: updateData.permissions.canCreateEvents ?? false,
+        canDeleteEvents: updateData.permissions.canDeleteEvents ?? false,
+        canManageSettings: updateData.permissions.canManageSettings ?? false
+      } : undefined,
       updatedAt: new Date(),
     } as const;
     const result = await db
@@ -158,8 +176,8 @@ export class DatabaseStorage implements IStorage {
   async updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined> {
     try {
       const startTime = Date.now();
-      console.log('Storage updateUser started:', { 
-        userId: id, 
+      console.log('Storage updateUser started:', {
+        userId: id,
         updates: updateData,
         timestamp: new Date().toISOString()
       });
@@ -176,8 +194,8 @@ export class DatabaseStorage implements IStorage {
         .returning();
 
       const endTime = Date.now();
-      console.log('Storage updateUser completed:', { 
-        userId: id, 
+      console.log('Storage updateUser completed:', {
+        userId: id,
         processingTime: `${endTime - startTime}ms`,
         success: !!result,
         timestamp: new Date().toISOString()

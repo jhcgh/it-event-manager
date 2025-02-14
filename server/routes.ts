@@ -481,6 +481,126 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ message: "Failed to process CSV file" });
     }
   });
+  // Add these routes inside the registerRoutes function, before return httpServer
+  app.get("/api/companies/:id/users", async (req, res) => {
+    if (!req.user) {
+      console.log("GET /api/companies/:id/users - Unauthorized: No user in session");
+      return res.sendStatus(401);
+    }
+
+    try {
+      const companyId = parseInt(req.params.id);
+      console.log(`GET /api/companies/${companyId}/users - User:`, req.user.id);
+
+      // Only allow users to access their own company's data
+      if (companyId !== req.user.companyId && !req.user.isAdmin) {
+        console.log(`GET /api/companies/${companyId}/users - Forbidden: User doesn't belong to company`);
+        return res.sendStatus(403);
+      }
+
+      const users = await storage.getUsersByCompany(companyId);
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching company users:", error);
+      res.status(500).json({ message: "Failed to fetch company users" });
+    }
+  });
+
+  app.post("/api/companies/:id/users", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const companyId = parseInt(req.params.id);
+
+      // Check if user has permission to manage users
+      if (companyId !== req.user.companyId && !req.user.isAdmin) {
+        return res.sendStatus(403);
+      }
+
+      const company = await storage.getCompany(companyId);
+      if (!company) {
+        return res.status(404).json({ message: "Company not found" });
+      }
+
+      // Check if company has reached its user limit
+      const currentUsers = await storage.getUsersByCompany(companyId);
+      if (company.settings.maxUsers && currentUsers.length >= company.settings.maxUsers) {
+        return res.status(400).json({ message: "Company has reached its maximum user limit" });
+      }
+
+      const parsed = insertUserSchema.parse(req.body);
+      const hashedPassword = await hashPassword(parsed.password);
+
+      const newUser = await storage.createUser({
+        ...parsed,
+        password: hashedPassword,
+        companyId,
+        companyRoleId: parseInt(req.body.companyRoleId)
+      });
+
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error("Error creating company user:", error);
+      res.status(500).json({ 
+        message: "Failed to create user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.patch("/api/companies/:id/users/:userId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const companyId = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
+
+      // Check if user has permission to manage users
+      if (companyId !== req.user.companyId && !req.user.isAdmin) {
+        return res.sendStatus(403);
+      }
+
+      const userToUpdate = await storage.getUser(userId);
+      if (!userToUpdate || userToUpdate.companyId !== companyId) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const updatedUser = await storage.updateUser(userId, {
+        ...req.body,
+        companyRoleId: req.body.companyRoleId ? parseInt(req.body.companyRoleId) : undefined
+      });
+
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating company user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/companies/:id/users/:userId", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const companyId = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
+
+      // Check if user has permission to manage users
+      if (companyId !== req.user.companyId && !req.user.isAdmin) {
+        return res.sendStatus(403);
+      }
+
+      const userToDelete = await storage.getUser(userId);
+      if (!userToDelete || userToDelete.companyId !== companyId) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await storage.deleteUser(userId);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("Error deleting company user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
