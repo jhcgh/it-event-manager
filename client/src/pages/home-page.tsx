@@ -10,6 +10,14 @@ import { Event } from "@shared/schema";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
 import { HoverUserMenu } from "@/components/hover-user-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function HomePage() {
   const { user } = useAuth();

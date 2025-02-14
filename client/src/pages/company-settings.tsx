@@ -19,12 +19,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation } from "wouter";
 import type { Company } from "@shared/schema";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
+
+const EVENT_TYPES = ["conference", "workshop", "seminar", "meetup", "training"];
 
 const companySettingsSchema = z.object({
   maxUsers: z.number().min(1, "Must allow at least 1 user"),
   maxEvents: z.number().min(1, "Must allow at least 1 event"),
   requireEventApproval: z.boolean(),
-  allowedEventTypes: z.array(z.string())
+  allowedEventTypes: z.array(z.string()).min(1, "Must allow at least one event type")
 });
 
 type CompanySettings = z.infer<typeof companySettingsSchema>;
@@ -51,13 +55,7 @@ export default function CompanySettingsPage() {
 
   const updateSettings = useMutation({
     mutationFn: async (data: CompanySettings) => {
-      const response = await apiRequest<Company>(`/api/companies/${user?.companyId}/settings`, {
-        method: "PATCH",
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
+      const response = await apiRequest("PATCH", `/api/companies/${user?.companyId}/settings`, data);
       return response;
     },
     onSuccess: () => {
@@ -94,6 +92,14 @@ export default function CompanySettingsPage() {
 
   const onSubmit = (data: CompanySettings) => {
     updateSettings.mutate(data);
+  };
+
+  const toggleEventType = (type: string) => {
+    const currentTypes = form.getValues("allowedEventTypes");
+    const newTypes = currentTypes.includes(type)
+      ? currentTypes.filter(t => t !== type)
+      : [...currentTypes, type];
+    form.setValue("allowedEventTypes", newTypes, { shouldValidate: true });
   };
 
   return (
@@ -154,6 +160,34 @@ export default function CompanySettingsPage() {
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="allowedEventTypes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Allowed Event Types</FormLabel>
+                  <div className="flex flex-wrap gap-2">
+                    {EVENT_TYPES.map(type => (
+                      <Badge
+                        key={type}
+                        variant={field.value.includes(type) ? "default" : "outline"}
+                        className="cursor-pointer"
+                        onClick={() => toggleEventType(type)}
+                      >
+                        {type}
+                        {field.value.includes(type) && (
+                          <X className="w-3 h-3 ml-1" />
+                        )}
+                      </Badge>
+                    ))}
+                  </div>
+                  <FormDescription>
+                    Select the types of events that can be created
+                  </FormDescription>
                 </FormItem>
               )}
             />

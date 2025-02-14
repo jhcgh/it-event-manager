@@ -299,18 +299,25 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/companies/:id", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
+    if (!req.user) {
+      console.log("GET /api/companies/:id - Unauthorized: No user in session");
+      return res.sendStatus(401);
+    }
 
     try {
       const companyId = parseInt(req.params.id);
+      console.log(`GET /api/companies/${companyId} - User:`, req.user.id);
+
       const company = await storage.getCompany(companyId);
 
       if (!company) {
+        console.log(`GET /api/companies/${companyId} - Company not found`);
         return res.status(404).json({ message: "Company not found" });
       }
 
       // Only allow users to access their own company's data
       if (company.id !== req.user.companyId && !req.user.isAdmin) {
+        console.log(`GET /api/companies/${companyId} - Forbidden: User doesn't belong to company`);
         return res.sendStatus(403);
       }
 
@@ -322,18 +329,25 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.patch("/api/companies/:id/settings", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
+    if (!req.user) {
+      console.log("PATCH /api/companies/:id/settings - Unauthorized: No user in session");
+      return res.sendStatus(401);
+    }
 
     try {
       const companyId = parseInt(req.params.id);
+      console.log(`PATCH /api/companies/${companyId}/settings - User:`, req.user.id);
+
       const company = await storage.getCompany(companyId);
 
       if (!company) {
+        console.log(`PATCH /api/companies/${companyId}/settings - Company not found`);
         return res.status(404).json({ message: "Company not found" });
       }
 
       // Only allow users to update their own company's settings
       if (company.id !== req.user.companyId && !req.user.isAdmin) {
+        console.log(`PATCH /api/companies/${companyId}/settings - Forbidden: User doesn't belong to company`);
         return res.sendStatus(403);
       }
 

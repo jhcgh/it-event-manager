@@ -179,7 +179,6 @@ function CustomerSection({ customers }: { customers: User[] }) {
     },
   });
 
-  // Group users by their company
   const customersByCompany = customers.reduce((acc, customer) => {
     const company = companies.find(c => c.id === customer.companyId);
     const companyName = company?.name || 'Other';
@@ -323,7 +322,6 @@ function UserEventsDialog({ user }: { user: User }) {
       await apiRequest("DELETE", `/api/events/${eventId}`);
     },
     onSuccess: () => {
-      // Invalidate all related queries
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
       queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/events`] });
@@ -409,7 +407,6 @@ function UserEventsDialog({ user }: { user: User }) {
   );
 }
 
-// Create Super User Dialog Component
 function CreateSuperUserDialog() {
   const { toast } = useToast();
   const form = useForm({
@@ -579,7 +576,6 @@ function AdminPage() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
 
-  // Add this mutation for super user deletion
   const superUserDeleteMutation = useMutation({
     mutationFn: async (userId: number) => {
       await apiRequest("DELETE", `/api/admin/users/${userId}`);
@@ -600,7 +596,6 @@ function AdminPage() {
     },
   });
 
-  // Redirect non-admin users
   if (!user?.isAdmin && !user?.isSuperAdmin) {
     return <Redirect to="/" />;
   }
@@ -614,7 +609,6 @@ function AdminPage() {
     retry: 3
   });
 
-  // Filter and sort upcoming events
   const events = allEvents
     .filter(event => event.status === 'active')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -625,7 +619,6 @@ function AdminPage() {
       await apiRequest("DELETE", `/api/events/${eventId}`);
     },
     onSuccess: () => {
-      // Invalidate both regular and admin event queries
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
       toast({
@@ -659,7 +652,6 @@ function AdminPage() {
     });
   }
 
-  // Filter super users correctly in the render section
   const superUsers = users.filter(u => u.isSuperAdmin === true);
   const customers = users.filter(u => !u.isSuperAdmin);
 
@@ -724,7 +716,7 @@ function AdminPage() {
                       {superUsers.map((u) => (
                         <TableRow key={u.id}>
                           <TableCell>{u.username}</TableCell>
-                          <TableCell>{u.companyName}</TableCell>
+                          <TableCell>{companies.find(c => c.id === u.companyId)?.name || 'N/A'}</TableCell>
                           <TableCell>{u.title}</TableCell>
                           <TableCell>{u.mobile}</TableCell>
                           <TableCell className="flex items-center gap-2">
