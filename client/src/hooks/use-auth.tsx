@@ -29,14 +29,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<SelectUser | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    // Increase polling frequency to catch status changes
+    refetchInterval: 30000, // Check every 30 seconds
   });
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
       const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      const data = await res.json();
+
+      // If the response is not ok, throw the error message
+      if (!res.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      return data;
     },
     onSuccess: (user: SelectUser) => {
+      if (user.status !== 'active') {
+        // If user is not active, handle as an error
+        toast({
+          title: "Account Suspended",
+          description: "Your account has been suspended. Please contact support.",
+          variant: "destructive",
+        });
+        // Clear the user data
+        queryClient.setQueryData(["/api/user"], null);
+        return;
+      }
       queryClient.setQueryData(["/api/user"], user);
     },
     onError: (error: Error) => {
@@ -51,7 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
       const res = await apiRequest("POST", "/api/register", credentials);
-      return await res.json();
+      const data = await res.json();
+
+      // If the response is not ok, throw the error message
+      if (!res.ok) {
+        throw new Error(data.message || "Registration failed");
+      }
+
+      return data;
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);

@@ -65,8 +65,8 @@ export function setupAuth(app: Express) {
         }
 
         if (user.status !== 'active') {
-          console.log("User account is not active");
-          return done(null, false, { message: "Account is not active" });
+          console.log("User account is suspended");
+          return done(null, false, { message: "Your account has been suspended. Please contact support." });
         }
 
         const isValid = await comparePasswords(password, user.password);
@@ -89,26 +89,45 @@ export function setupAuth(app: Express) {
     done(null, user.id);
   });
 
-  // Simple in-memory cache for deserialized users
-  const userCache = new Map<number, Express.User>();
-  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
   passport.deserializeUser(async (id: number, done) => {
     try {
-      const cachedUser = userCache.get(id);
-      if (cachedUser) {
-        return done(null, cachedUser);
+      console.log("Deserializing user:", id);
+      const user = await storage.getUser(id);
+
+      // Check if user exists and is active during session verification
+      if (!user || user.status !== 'active') {
+        console.log(`User ${id} is no longer active or does not exist`);
+        return done(null, false);
       }
 
-      const user = await storage.getUser(id);
-      if (user) {
-        userCache.set(id, user);
-        setTimeout(() => userCache.delete(id), CACHE_TTL);
-      }
+      console.log("User successfully deserialized:", user.id);
       done(null, user);
     } catch (error) {
+      console.error("Deserialization error:", error);
       done(error);
     }
+  });
+
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) {
+        console.error("Authentication error:", err);
+        return next(err);
+      }
+      if (!user) {
+        console.log("Authentication failed:", info?.message);
+        return res.status(401).json({ message: info?.message || "Authentication failed" });
+      }
+
+      req.login(user, (err) => {
+        if (err) {
+          console.error("Login error:", err);
+          return next(err);
+        }
+        console.log("Login successful for user:", user.username);
+        res.json(user);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/register", async (req, res, next) => {
@@ -137,28 +156,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: any, info: any) => {
-      if (err) {
-        console.error("Authentication error:", err);
-        return next(err);
-      }
-      if (!user) {
-        console.log("Authentication failed:", info?.message);
-        return res.status(401).json({ message: info?.message || "Authentication failed" });
-      }
-
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Login error:", err);
-          return next(err);
-        }
-        console.log("Login successful for user:", user.username);
-        res.json(user);
-      });
-    })(req, res, next);
-  });
-
   app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);
@@ -171,6 +168,16 @@ export function setupAuth(app: Express) {
       console.log("Unauthorized access attempt");
       return res.sendStatus(401);
     }
+
+    // Double check user status before sending response
+    if (req.user.status !== 'active') {
+      console.log("Suspended user attempted to access protected route:", req.user.id);
+      req.logout((err) => {
+        if (err) console.error("Error logging out suspended user:", err);
+      });
+      return res.sendStatus(401);
+    }
+
     res.json(req.user);
   });
 }

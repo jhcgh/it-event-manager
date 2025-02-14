@@ -10,6 +10,7 @@ import { insertUserSchema, InsertUser } from "@shared/schema";
 import { Redirect, useLocation } from "wouter";
 import { z } from "zod";
 import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 // Extend the schema to include password confirmation
 const registerSchema = insertUserSchema.extend({
@@ -30,6 +31,7 @@ export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [location] = useLocation();
   const [activeTab, setActiveTab] = useState<string>("login");
+  const [loginError, setLoginError] = useState<string>("");
 
   // Set the active tab based on the URL parameter when component mounts
   // and when the location changes
@@ -73,6 +75,15 @@ export default function AuthPage() {
     registerMutation.mutate(registrationData);
   };
 
+  const handleLogin = async (data: any) => {
+    try {
+      setLoginError(""); // Clear any previous error
+      await loginMutation.mutateAsync(data);
+    } catch (error: any) {
+      setLoginError(error.message || "Login failed. Please try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen grid md:grid-cols-2">
       <div className="flex items-center justify-center p-8">
@@ -92,9 +103,7 @@ export default function AuthPage() {
 
               <TabsContent value="login">
                 <form
-                  onSubmit={loginForm.handleSubmit((data) =>
-                    loginMutation.mutate(data)
-                  )}
+                  onSubmit={loginForm.handleSubmit(handleLogin)}
                   className="space-y-4"
                 >
                   <div className="space-y-2">
@@ -113,12 +122,24 @@ export default function AuthPage() {
                       {...loginForm.register("password")}
                     />
                   </div>
+                  {loginError && (
+                    <div className="text-sm text-destructive font-medium">
+                      {loginError}
+                    </div>
+                  )}
                   <Button
                     type="submit"
                     className="w-full"
                     disabled={loginMutation.isPending}
                   >
-                    Login
+                    {loginMutation.isPending ? (
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Logging in...
+                      </div>
+                    ) : (
+                      "Login"
+                    )}
                   </Button>
                 </form>
               </TabsContent>

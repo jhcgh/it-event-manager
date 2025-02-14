@@ -84,10 +84,15 @@ export default function HomePage() {
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex-1 flex justify-center">
             <Link href="/">
-              <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary via-purple-500 to-purple-600 bg-clip-text text-transparent relative group transition-all duration-300 hover:scale-[1.02]">
-                <span className="inline-flex items-center gap-2">
-                  <Calendar className="w-10 h-10 text-primary" />
-                  ITEvents.io
+              <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary via-purple-500 to-purple-600 bg-clip-text text-transparent relative group transition-all duration-300 hover:scale-[1.02] select-none">
+                <span className="inline-flex items-center gap-3">
+                  <Calendar className="w-12 h-12 text-primary animate-pulse" />
+                  <span className="flex flex-col">
+                    <span className="text-5xl tracking-tight">ITEvents.io</span>
+                    <span className="text-sm font-medium text-muted-foreground tracking-wider">
+                      Connect • Learn • Grow
+                    </span>
+                  </span>
                   <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-purple-600 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300" />
                 </span>
               </h1>
