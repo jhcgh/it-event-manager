@@ -37,16 +37,20 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  // Generate a secure session secret if not provided
+  const sessionSecret = process.env.SESSION_SECRET || randomBytes(32).toString('hex');
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID!, // Using REPL_ID as the secret
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
-      secure: false, // Set to false for development
+      secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+    },
+    name: 'sid' // Custom session cookie name
   };
 
   app.use(session(sessionSettings));

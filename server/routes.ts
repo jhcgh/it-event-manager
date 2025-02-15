@@ -482,6 +482,132 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get("/api/companies/:id/users", async (req, res) => {
+    if (!req.user) {
+      console.log("GET /api/companies/:id/users - Unauthorized: No user in session");
+      return res.sendStatus(401);
+    }
+
+    try {
+      const companyId = parseInt(req.params.id);
+      console.log(`GET /api/companies/${companyId}/users - User:`, req.user.id);
+
+      // Only allow users to access their own company's data
+      if (companyId !== req.user.companyId && !req.user.isAdmin) {
+        console.log(`GET /api/companies/${companyId}/users - Forbidden: User doesn't belong to company`);
+        return res.sendStatus(403);
+      }
+
+      const users = await storage.getUsersByCompany(companyId);
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching company users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/companies/:id/users", async (req, res) => {
+    if (!req.user) {
+      console.log("POST /api/companies/:id/users - Unauthorized: No user in session");
+      return res.sendStatus(401);
+    }
+
+    try {
+      const companyId = parseInt(req.params.id);
+      console.log(`POST /api/companies/${companyId}/users - User:`, req.user.id);
+
+      if (companyId !== req.user.companyId && !req.user.isAdmin) {
+        console.log(`POST /api/companies/${companyId}/users - Forbidden: User doesn't belong to company`);
+        return res.sendStatus(403);
+      }
+
+      const parsed = insertUserSchema.parse(req.body);
+      const hashedPassword = await hashPassword(parsed.password);
+
+      const newUser = await storage.createUser({
+        ...parsed,
+        password: hashedPassword,
+        companyId,
+        companyRoleId: req.body.companyRoleId
+      });
+
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ 
+        message: "Failed to create user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.patch("/api/companies/:id/users/:userId", async (req, res) => {
+    if (!req.user) {
+      console.log("PATCH /api/companies/:id/users/:userId - Unauthorized: No user in session");
+      return res.sendStatus(401);
+    }
+
+    try {
+      const companyId = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
+      console.log(`PATCH /api/companies/${companyId}/users/${userId} - User:`, req.user.id);
+
+      if (companyId !== req.user.companyId && !req.user.isAdmin) {
+        console.log(`PATCH /api/companies/${companyId}/users/${userId} - Forbidden: User doesn't belong to company`);
+        return res.sendStatus(403);
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.companyId !== companyId) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const updateData = { ...req.body };
+      if (updateData.password) {
+        updateData.password = await hashPassword(updateData.password);
+      }
+
+      const updatedUser = await storage.updateUser(userId, updateData);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ 
+        message: "Failed to update user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.delete("/api/companies/:id/users/:userId", async (req, res) => {
+    if (!req.user) {
+      console.log("DELETE /api/companies/:id/users/:userId - Unauthorized: No user in session");
+      return res.sendStatus(401);
+    }
+
+    try {
+      const companyId = parseInt(req.params.id);
+      const userId = parseInt(req.params.userId);
+      console.log(`DELETE /api/companies/${companyId}/users/${userId} - User:`, req.user.id);
+
+      if (companyId !== req.user.companyId && !req.user.isAdmin) {
+        console.log(`DELETE /api/companies/${companyId}/users/${userId} - Forbidden: User doesn't belong to company`);
+        return res.sendStatus(403);
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || user.companyId !== companyId) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await storage.deleteUser(userId);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+
   const httpServer = createServer(app);
   return httpServer;
 }
