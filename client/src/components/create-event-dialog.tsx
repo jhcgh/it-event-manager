@@ -39,6 +39,7 @@ export function CreateEventDialog() {
       type: "seminar",
       url: "",
       imageUrl: "",
+      status: "active", // Ensure status is set to active by default
     }
   });
 
