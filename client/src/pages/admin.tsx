@@ -79,7 +79,7 @@ function CompanySettingsDialog({ company }: { company: Company }) {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/companies"] });
       toast({
         title: "Success",
-        description: "Company settings updated successfully",
+        description: "Customer settings updated successfully",
       });
     },
     onError: (error: Error) => {
@@ -101,9 +101,9 @@ function CompanySettingsDialog({ company }: { company: Company }) {
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Company Settings - {company.name}</DialogTitle>
+          <DialogTitle>Customer Settings - {company.name}</DialogTitle>
           <DialogDescription>
-            Configure company-wide settings and permissions
+            Configure customer-wide settings and permissions
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -196,7 +196,7 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Building2 className="h-5 w-5" />
-          Companies & Customers
+          Customers
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -204,99 +204,91 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
           {sortedCompanies.map((companyName) => {
             const { company, users } = customersByCompany[companyName];
             return (
-              <AccordionItem key={companyName} value={companyName} className="border rounded-lg px-4 hover:bg-accent/50 transition-colors">
-                <AccordionTrigger className="hover:no-underline">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    <span>{companyName}</span>
-                    <Badge variant="outline" className="ml-2">
-                      {users.length} {users.length === 1 ? 'user' : 'users'}
-                    </Badge>
-                    {company && <CompanySettingsDialog company={company} />}
+              <AccordionItem key={companyName} value={companyName} className="border rounded-lg px-4">
+                <AccordionTrigger>
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      <span className="font-semibold">{companyName}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline">
+                        {users.length} {users.length === 1 ? 'user' : 'users'}
+                      </Badge>
+                      {company && (
+                        <CompanySettingsDialog company={company} />
+                      )}
+                    </div>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Username</TableHead>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Events</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.map((u) => (
-                        <TableRow key={u.id}>
-                          <TableCell className="font-medium">{u.username}</TableCell>
-                          <TableCell>{u.title}</TableCell>
-                          <TableCell>{u.mobile}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={u.status === "active" ? "default" : "destructive"}
-                              className="capitalize flex w-fit items-center gap-1"
-                            >
-                              {u.status === "active" ? (
-                                <>
-                                  <CheckCircle className="h-3 w-3" />
-                                  Active
-                                </>
-                              ) : (
-                                <>
-                                  <Ban className="h-3 w-3" />
-                                  Deleted
-                                </>
-                              )}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <UserEventsDialog user={u} />
-                          </TableCell>
-                          <TableCell>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  className="flex items-center gap-1 w-[82px]"
-                                >
-                                  <UserX className="h-4 w-4" />
-                                  Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete this user? This
-                                    action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteUserMutation.mutate(u.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    {deleteUserMutation.isPending ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        Deleting...
-                                      </>
-                                    ) : (
-                                      "Delete User"
-                                    )}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </TableCell>
+                  <div className="mt-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Phone</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              {user.firstName} {user.lastName}
+                            </TableCell>
+                            <TableCell>{user.username}</TableCell>
+                            <TableCell>{user.title}</TableCell>
+                            <TableCell>{user.mobile}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <UserEventsDialog user={user} />
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      className="flex items-center gap-1"
+                                    >
+                                      <UserX className="h-4 w-4" />
+                                      Delete
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete User</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete this user? This
+                                        action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => deleteUserMutation.mutate(user.id)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        {deleteUserMutation.isPending ? (
+                                          <>
+                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                            Deleting...
+                                          </>
+                                        ) : (
+                                          "Delete User"
+                                        )}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </AccordionContent>
               </AccordionItem>
             );
