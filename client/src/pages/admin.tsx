@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertUserSchema, companySettingsSchema } from "@shared/schema";
+import { insertUserSchema } from "@shared/schema";
 import {
   Loader2,
   UserX,
@@ -23,8 +23,7 @@ import {
   ArrowLeft,
   LogOut,
   Settings,
-  Building2,
-  Trash2
+  Building2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -51,6 +50,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EditEventDialog } from "@/components/edit-event-dialog";
+import { Trash2 } from "lucide-react";
 import { HoverUserMenu } from "@/components/hover-user-menu";
 import { UploadEventsDialog } from "@/components/upload-events-dialog";
 import {
@@ -59,51 +59,29 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { useState } from "react";
 
-// Update the CompanySettingsDialog component to match the styling and functionality
+// Updating the CompanySettingsDialog component for better navigation
 function CompanySettingsDialog({ company }: { company: Company }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [_, navigate] = useLocation();
-  const [isDeleteCompanyDialogOpen, setIsDeleteCompanyDialogOpen] = useState(false);
 
-  const deleteCompany = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest(
-        "DELETE",
-        `/api/companies/${company.id}`
-      );
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete company');
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['/api/companies'],
-      });
-      toast({
-        title: "Success",
-        description: `Company "${company.name}" has been deleted successfully.`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+  console.log('CompanySettingsDialog - User:', { 
+    isSuperAdmin: user?.isSuperAdmin, 
+    companyId: company.id 
   });
 
+  // Advanced settings button click handler
+  const handleAdvancedSettings = () => {
+    navigate(`/company-settings?id=${company.id}`);
+  };
+
   const form = useForm({
-    resolver: zodResolver(companySettingsSchema),
     defaultValues: {
-      maxUsers: company.settings.maxUsers || 10,
-      maxEvents: company.settings.maxEvents || 20,
-      requireEventApproval: company.settings.requireEventApproval || false,
-      allowedEventTypes: company.settings.allowedEventTypes || ["conference", "workshop", "seminar"]
+      maxUsers: company.settings.maxUsers || 0,
+      maxEvents: company.settings.maxEvents || 0,
+      allowedEventTypes: company.settings.allowedEventTypes || [],
+      requireEventApproval: company.settings.requireEventApproval || false
     }
   });
 
@@ -115,7 +93,7 @@ function CompanySettingsDialog({ company }: { company: Company }) {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/companies"] });
       toast({
         title: "Success",
-        description: "Company settings updated successfully",
+        description: "Customer settings updated successfully",
       });
     },
     onError: (error: Error) => {
@@ -130,16 +108,12 @@ function CompanySettingsDialog({ company }: { company: Company }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button
-          variant="secondary"
-          size="sm"
-          className="flex items-center gap-2"
-        >
+        <Button variant="outline" size="sm" className="flex items-center gap-1">
           <Settings className="h-4 w-4" />
-          Manage Company
+          {user?.isSuperAdmin ? "Manage Settings" : "Company Settings"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Company Settings - {company.name}</DialogTitle>
           <DialogDescription>
@@ -147,35 +121,57 @@ function CompanySettingsDialog({ company }: { company: Company }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit((data) => updateSettingsMutation.mutate(data))} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="maxUsers"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Maximum Users</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="maxEvents"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Maximum Events</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        {/* Super Admin Advanced Settings Section */}
+        {user?.isSuperAdmin && (
+          <div className="mb-6 bg-destructive/5 border-destructive/20 border rounded-lg p-4">
+            <h3 className="text-base font-semibold mb-2 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Advanced Settings Available
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              As a super admin, you have access to advanced company settings, including deletion capabilities.
+            </p>
+            <Button 
+              variant="destructive" 
+              className="w-full flex items-center justify-center gap-2"
+              onClick={handleAdvancedSettings}
+            >
+              <Settings className="h-4 w-4" />
+              Advanced Company Settings
+            </Button>
+          </div>
+        )}
+
+        {/* Regular Settings Form */}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((data) => updateSettingsMutation.mutate(data))} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="maxUsers"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Maximum Users</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="maxEvents"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Maximum Events</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
               <Button type="submit" disabled={updateSettingsMutation.isPending}>
                 {updateSettingsMutation.isPending ? (
                   <>
@@ -186,86 +182,24 @@ function CompanySettingsDialog({ company }: { company: Company }) {
                   "Save Settings"
                 )}
               </Button>
-            </form>
-          </Form>
-
-          {user?.isSuperAdmin && (
-            <div className="mt-8 border-t pt-8">
-              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-6 w-6" />
-                Danger Zone
-              </h2>
-              <div className="bg-destructive/10 border-destructive border rounded-lg p-6">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-semibold">Delete {company.name}</h3>
-                    <p className="text-sm text-muted-foreground max-w-md">
-                      This action cannot be undone. This will permanently delete {company.name}
-                      and remove all associated data including users, events, and settings.
-                    </p>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    size="lg"
-                    onClick={() => setIsDeleteCompanyDialogOpen(true)}
-                    disabled={deleteCompany.isPending}
-                    className="shrink-0"
-                  >
-                    {deleteCompany.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      "Delete Company"
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
-
-      <AlertDialog
-        open={isDeleteCompanyDialogOpen}
-        onOpenChange={setIsDeleteCompanyDialogOpen}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {company.name}?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              This action cannot be undone. This will permanently delete
-              {company.name} and all associated data including:
-              <div className="mt-2">
-                <ul className="list-disc list-inside">
-                  <li>All user accounts in this company</li>
-                  <li>All events created by this company</li>
-                  <li>All company settings and configurations</li>
-                </ul>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteCompany.mutate()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete {company.name}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </Dialog>
   );
 }
 
-// Update CustomerSection to remove general delete company functionality
 function CustomerSection({ customers, companies }: { customers: User[], companies: Company[] }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  const [_, navigate] = useLocation();
+
+  console.log('CustomerSection - User:', { 
+    isSuperAdmin: user?.isSuperAdmin,
+    customers: customers.length,
+    companies: companies.length
+  });
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
@@ -284,41 +218,12 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
         description: error.message,
         variant: "destructive",
       });
-    }
-  });
-
-  const deleteCompanyMutation = useMutation({
-    mutationFn: async (companyId: number) => {
-      const response = await apiRequest(
-        "DELETE",
-        `/api/companies/${companyId}`
-      );
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete company');
-      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['/api/companies'],
-      });
-      toast({
-        title: "Success",
-        description: `Company has been deleted successfully.`,
-      });
-      setCompanyToDelete(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
   });
 
   const customersByCompany = customers.reduce((acc, customer) => {
     const company = companies.find((c: Company) => c.id === customer.companyId);
+    // Use customer's companyName if no matching company record is found
     const companyName = company?.name || customer.companyName || 'Unassigned';
     if (!acc[companyName]) {
       acc[companyName] = {
@@ -340,6 +245,16 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
             <Building2 className="h-5 w-5" />
             Companies and Users
           </CardTitle>
+          {user?.isSuperAdmin && (
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => navigate('/company-settings')}
+            >
+              <Settings className="h-4 w-4" />
+              Manage All Companies
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -358,22 +273,8 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
                       <Badge variant="outline">
                         {users.length} {users.length === 1 ? 'user' : 'users'}
                       </Badge>
-                      {company && user?.isSuperAdmin && (
-                        <div className="flex items-center gap-2">
-                          <CompanySettingsDialog company={company} />
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="flex items-center gap-2"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCompanyToDelete(company);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            Delete Company
-                          </Button>
-                        </div>
+                      {company && (
+                        <CompanySettingsDialog company={company} />
                       )}
                     </div>
                   </div>
@@ -391,17 +292,17 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {users.map((customer) => (
-                          <TableRow key={customer.id}>
+                        {users.map((user) => (
+                          <TableRow key={user.id}>
                             <TableCell>
-                              {customer.firstName} {customer.lastName}
+                              {user.firstName} {user.lastName}
                             </TableCell>
-                            <TableCell>{customer.username}</TableCell>
-                            <TableCell>{customer.title}</TableCell>
-                            <TableCell>{customer.mobile}</TableCell>
+                            <TableCell>{user.username}</TableCell>
+                            <TableCell>{user.title}</TableCell>
+                            <TableCell>{user.mobile}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <UserEventsDialog user={customer} />
+                                <UserEventsDialog user={user} />
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button
@@ -424,7 +325,7 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                                       <AlertDialogAction
-                                        onClick={() => deleteUserMutation.mutate(customer.id)}
+                                        onClick={() => deleteUserMutation.mutate(user.id)}
                                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                       >
                                         {deleteUserMutation.isPending ? (
@@ -451,45 +352,6 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
             );
           })}
         </Accordion>
-
-        {/* Delete Company Confirmation Dialog */}
-        <AlertDialog
-          open={!!companyToDelete}
-          onOpenChange={() => setCompanyToDelete(null)}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete {companyToDelete?.name}?</AlertDialogTitle>
-              <AlertDialogDescription className="space-y-2">
-                This action cannot be undone. This will permanently delete {' '}
-                {companyToDelete?.name} and all associated data including:
-                <div className="mt-2">
-                  <ul className="list-disc list-inside">
-                    <li>All user accounts in this company</li>
-                    <li>All events created by this company</li>
-                    <li>All company settings and configurations</li>
-                  </ul>
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => companyToDelete && deleteCompanyMutation.mutate(companyToDelete.id)}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {deleteCompanyMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    Deleting...
-                  </>
-                ) : (
-                  `Delete ${companyToDelete?.name}`
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </CardContent>
     </Card>
   );
@@ -990,7 +852,8 @@ function AdminPage() {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={event.status === 'active' ? 'default' : 'secondary'}
+                                variant={event.status === "active" ? "default" : "destructive"}
+                                className="capitalize"
                               >
                                 {event.status}
                               </Badge>
@@ -1004,7 +867,7 @@ function AdminPage() {
                                     <Button
                                       variant="destructive"
                                       size="sm"
-                                      className="flex items-center gap-1"
+                                      className="action-button flex items-center gap-1"
                                     >
                                       <Trash2 className="h-4 w-4" />
                                       Delete
@@ -1014,8 +877,7 @@ function AdminPage() {
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Delete Event</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        Are you sure you want to delete this event? This
-                                        action cannot be undone.
+                                        Are you sure you want to delete this event? This action cannot be undone.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>

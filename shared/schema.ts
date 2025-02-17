@@ -71,18 +71,9 @@ export const eventRelations = relations(events, ({ one }) => ({
   }),
 }));
 
-// Company Settings Schema
-export const companySettingsSchema = z.object({
-  maxUsers: z.number().min(1, "Must allow at least 1 user"),
-  maxEvents: z.number().min(1, "Must allow at least 1 event"),
-  requireEventApproval: z.boolean(),
-  allowedEventTypes: z.array(z.string()).min(1, "Must allow at least one event type")
-});
-
 export const insertCompanySchema = createInsertSchema(companies)
   .extend({
     status: z.enum(['active', 'inactive', 'deleted']).default('active'),
-    settings: companySettingsSchema.partial().default({})
   })
   .omit({
     id: true,
@@ -139,8 +130,6 @@ export const updateUserSchema = createInsertSchema(users)
     isSuperAdmin: true
   });
 
-// Add type exports for the settings schema
-export type CompanySettings = z.infer<typeof companySettingsSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Event = typeof events.$inferSelect;
