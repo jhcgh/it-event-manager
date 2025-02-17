@@ -1,6 +1,6 @@
 import { users, events, companies, type User, type Event, type InsertUser, type InsertEvent, type Company, type InsertCompany } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, ne } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import session from "express-session";
 import { pool } from "./db";
@@ -10,13 +10,13 @@ const PostgresSessionStore = connectPg(session);
 export interface IStorage {
   sessionStore: session.Store;
 
-  // Company Management Methods
+  // Customer Management Methods
   createCompany(insertCompany: InsertCompany): Promise<Company>;
   getCompany(id: number): Promise<Company | undefined>;
   updateCompanySettings(id: number, settings: Partial<Company['settings']>): Promise<Company | undefined>;
   getAllCompanies(): Promise<Company[]>;
 
-  // User Management Methods with Company Context
+  // User Management Methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(insertUser: InsertUser & { companyId?: number }): Promise<User>;
@@ -43,11 +43,14 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  // Company Management Methods
   async createCompany(insertCompany: InsertCompany): Promise<Company> {
-    const [company] = await db.insert(companies)
-      .values(insertCompany)
-      .returning();
+    const [company] = await db.insert(companies).values({
+      name: insertCompany.name,
+      settings: insertCompany.settings || {},
+      status: insertCompany.status || 'active',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
     return company;
   }
 
@@ -70,10 +73,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllCompanies(): Promise<Company[]> {
-    return await db.select().from(companies).where(eq(companies.status, 'active')).orderBy(desc(companies.createdAt));
+    return await db.select()
+      .from(companies)
+      .where(eq(companies.status, sql`'active'`))
+      .orderBy(desc(companies.createdAt));
   }
 
-  // User Management Methods with Company Context
   async getUser(id: number): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.id, id));
     return result[0];
@@ -91,7 +96,6 @@ export class DatabaseStorage implements IStorage {
         timestamp: new Date().toISOString()
       });
 
-      // If companyName is provided, create company first
       let companyId = insertUser.companyId;
       if (insertUser.companyName && !companyId) {
         const company = await this.createCompany({
@@ -107,7 +111,6 @@ export class DatabaseStorage implements IStorage {
         });
       }
 
-      // Create user with company association
       const [user] = await db.insert(users).values({
         username: insertUser.username,
         password: insertUser.password,
@@ -151,7 +154,6 @@ export class DatabaseStorage implements IStorage {
         timestamp: new Date().toISOString()
       });
 
-      // Extract only valid update fields
       const validUpdateFields = {
         ...(updateData.username && { username: updateData.username }),
         ...(updateData.firstName && { firstName: updateData.firstName }),
@@ -162,23 +164,19 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       };
 
-      // If company name is being updated, handle company creation/update
       if (updateData.companyName) {
         const user = await this.getUser(id);
         if (user) {
           if (user.companyId) {
-            // Update existing company name
             await db.update(companies)
               .set({ name: updateData.companyName, updatedAt: new Date() })
               .where(eq(companies.id, user.companyId));
           } else {
-            // Create new company and associate with user
             const company = await this.createCompany({
               name: updateData.companyName,
               settings: {},
               status: 'active'
             });
-            // Add companyId to valid update fields
             Object.assign(validUpdateFields, { companyId: company.id });
           }
         }
@@ -206,18 +204,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users).where(ne(users.status, 'deleted')).orderBy(desc(users.createdAt));
-  }
-
-  async getUsersByCompany(companyId: number): Promise<User[]> {
-    return await db
-      .select()
+    return await db.select()
       .from(users)
-      .where(and(eq(users.companyId, companyId), ne(users.status, 'deleted')))
+      .where(sql`${users.status} != 'deleted'`)
       .orderBy(desc(users.createdAt));
   }
 
-  // Event Management Methods
+  async getUsersByCompany(companyId: number): Promise<User[]> {
+    return await db.select()
+      .from(users)
+      .where(
+        and(
+          eq(users.companyId, companyId),
+          sql`${users.status} != 'deleted'`
+        )
+      )
+      .orderBy(desc(users.createdAt));
+  }
+
   async createEvent(userId: number, insertEvent: InsertEvent): Promise<Event> {
     const [result] = await db
       .insert(events)

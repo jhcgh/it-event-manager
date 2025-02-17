@@ -23,29 +23,29 @@ import { Badge } from "@/components/ui/badge";
 
 const EVENT_TYPES = ["conference", "workshop", "seminar", "meetup", "training"];
 
-const companySettingsSchema = z.object({
+const customerSettingsSchema = z.object({
   maxUsers: z.number().min(1, "Must allow at least 1 user"),
   maxEvents: z.number().min(1, "Must allow at least 1 event"),
   requireEventApproval: z.boolean(),
   allowedEventTypes: z.array(z.string()).min(1, "Must allow at least one event type")
 });
 
-type CompanySettings = z.infer<typeof companySettingsSchema>;
+type CustomerSettings = z.infer<typeof customerSettingsSchema>;
 
-export default function CompanySettingsPage() {
+export default function CustomerSettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [_, navigate] = useLocation();
   const [location] = useLocation();
 
-  console.log('CompanySettings - User:', { 
+  console.log('CustomerSettings - User:', { 
     isSuperAdmin: user?.isSuperAdmin,
     userId: user?.id,
     location 
   });
 
   const params = new URLSearchParams(location.split('?')[1] || "");
-  const companyId = parseInt(params.get('id') || (user?.companyId?.toString() || ''));
+  const customerId = parseInt(params.get('id') || (user?.companyId?.toString() || ''));
 
   // Redirect if not a super admin
   if (!user?.isSuperAdmin) {
@@ -54,46 +54,46 @@ export default function CompanySettingsPage() {
     return null;
   }
 
-  const { data: company, isLoading } = useQuery<Company>({
-    queryKey: [`/api/companies/${companyId}`],
-    enabled: !!companyId,
+  const { data: customer, isLoading } = useQuery<Company>({
+    queryKey: [`/api/companies/${customerId}`],
+    enabled: !!customerId,
   });
 
-  const form = useForm<CompanySettings>({
-    resolver: zodResolver(companySettingsSchema),
+  const form = useForm<CustomerSettings>({
+    resolver: zodResolver(customerSettingsSchema),
     defaultValues: {
-      maxUsers: company?.settings?.maxUsers ?? 10,
-      maxEvents: company?.settings?.maxEvents ?? 20,
-      requireEventApproval: company?.settings?.requireEventApproval ?? false,
-      allowedEventTypes: company?.settings?.allowedEventTypes ?? ["conference", "workshop", "seminar"]
+      maxUsers: customer?.settings?.maxUsers ?? 10,
+      maxEvents: customer?.settings?.maxEvents ?? 20,
+      requireEventApproval: customer?.settings?.requireEventApproval ?? false,
+      allowedEventTypes: customer?.settings?.allowedEventTypes ?? ["conference", "workshop", "seminar"]
     }
   });
 
   const updateSettings = useMutation({
-    mutationFn: async (data: CompanySettings) => {
-      const response = await apiRequest("PATCH", `/api/companies/${companyId}/settings`, data);
+    mutationFn: async (data: CustomerSettings) => {
+      const response = await apiRequest("PATCH", `/api/companies/${customerId}/settings`, data);
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/companies/${companyId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/companies/${customerId}`] });
       toast({
         title: "Settings Updated",
-        description: "Company settings have been successfully updated."
+        description: "Customer settings have been successfully updated."
       });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to update company settings. Please try again.",
+        description: "Failed to update customer settings. Please try again.",
         variant: "destructive"
       });
     }
   });
 
-  if (!companyId) {
+  if (!customerId) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <p className="text-muted-foreground">Invalid company ID.</p>
+        <p className="text-muted-foreground">Invalid customer ID.</p>
       </div>
     );
   }
@@ -106,16 +106,8 @@ export default function CompanySettingsPage() {
     );
   }
 
-  const onSubmit = (data: CompanySettings) => {
+  const onSubmit = (data: CustomerSettings) => {
     updateSettings.mutate(data);
-  };
-
-  const toggleEventType = (type: string) => {
-    const currentTypes = form.getValues("allowedEventTypes");
-    const newTypes = currentTypes.includes(type)
-      ? currentTypes.filter(t => t !== type)
-      : [...currentTypes, type];
-    form.setValue("allowedEventTypes", newTypes, { shouldValidate: true });
   };
 
   return (
@@ -130,7 +122,7 @@ export default function CompanySettingsPage() {
               </Button>
             </Link>
             {user?.isSuperAdmin && (
-              <Badge variant="destructive">Super Admin Mode</Badge>
+              <Badge variant="outline">Super Admin Mode</Badge>
             )}
           </div>
         </div>
@@ -139,12 +131,7 @@ export default function CompanySettingsPage() {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold">Company Settings</h1>
-            {user?.isSuperAdmin && (
-              <Badge variant="outline" className="text-destructive border-destructive">
-                Advanced Settings Enabled
-              </Badge>
-            )}
+            <h1 className="text-3xl font-bold">Customer Settings</h1>
           </div>
 
           <Form {...form}>
@@ -159,7 +146,7 @@ export default function CompanySettingsPage() {
                       <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
                     </FormControl>
                     <FormDescription>
-                      Maximum number of users allowed in your company
+                      Maximum number of users allowed for this customer
                     </FormDescription>
                   </FormItem>
                 )}
@@ -175,7 +162,7 @@ export default function CompanySettingsPage() {
                       <Input type="number" {...field} onChange={e => field.onChange(parseInt(e.target.value))} />
                     </FormControl>
                     <FormDescription>
-                      Maximum number of events your company can create
+                      Maximum number of events this customer can create
                     </FormDescription>
                   </FormItem>
                 )}
@@ -216,7 +203,7 @@ export default function CompanySettingsPage() {
                           key={type}
                           variant={field.value.includes(type) ? "default" : "outline"}
                           className="cursor-pointer"
-                          onClick={() => toggleEventType(type)}
+                          onClick={() => form.setValue("allowedEventTypes", field.value.includes(type) ? field.value.filter(t => t !== type) : [...field.value, type], { shouldValidate: true })}
                         >
                           {type}
                         </Badge>

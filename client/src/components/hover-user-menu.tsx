@@ -47,12 +47,12 @@ export function HoverUserMenu({ user }: HoverUserMenuProps) {
             View Profile
           </Link>
         </DropdownMenuItem>
-        {/* Show Company Settings for all users except super-admin */}
+        {/* Show Customer Settings for non-super-admin users */}
         {!user.isSuperAdmin && user.companyId && (
           <DropdownMenuItem asChild>
-            <Link href="/company-settings" className="cursor-pointer flex items-center">
+            <Link href="/customer-settings" className="cursor-pointer flex items-center">
               <Settings className="mr-2 h-4 w-4" />
-              Company Settings
+              Customer Settings
             </Link>
           </DropdownMenuItem>
         )}

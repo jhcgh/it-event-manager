@@ -60,103 +60,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-// Updating the CompanySettingsDialog component for better navigation
-function CompanySettingsDialog({ company }: { company: Company }) {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [_, navigate] = useLocation();
-
-  const form = useForm({
-    defaultValues: {
-      maxUsers: company.settings.maxUsers || 0,
-      maxEvents: company.settings.maxEvents || 0,
-      allowedEventTypes: company.settings.allowedEventTypes || [],
-      requireEventApproval: company.settings.requireEventApproval || false
-    }
-  });
-
-  const updateSettingsMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("PATCH", `/api/companies/${company.id}/settings`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/companies"] });
-      toast({
-        title: "Success",
-        description: "Customer settings updated successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-1">
-          <Settings className="h-4 w-4" />
-          Company Settings
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Company Settings - {company.name}</DialogTitle>
-          <DialogDescription>
-            Configure company-wide settings and permissions
-          </DialogDescription>
-        </DialogHeader>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit((data) => updateSettingsMutation.mutate(data))} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="maxUsers"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Maximum Users</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="maxEvents"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Maximum Events</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="submit" disabled={updateSettingsMutation.isPending}>
-                {updateSettingsMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  "Save Settings"
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
+// Remove the CompanySettingsDialog component as it's no longer needed
+// The functionality has been moved to the dedicated company-settings page
 
 function CustomerSection({ customers, companies }: { customers: User[], companies: Company[] }) {
   const { user } = useAuth();
@@ -184,18 +89,8 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Customers
+            Customer Overview
           </CardTitle>
-          {user?.isSuperAdmin && (
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2"
-              onClick={() => navigate('/company-settings')}
-            >
-              <Settings className="h-4 w-4" />
-              Manage All Customers
-            </Button>
-          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -214,8 +109,13 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
                       <Badge variant="outline">
                         {users.length} {users.length === 1 ? 'user' : 'users'}
                       </Badge>
-                      {company && (
-                        <CompanySettingsDialog company={company} />
+                      {company && user?.isSuperAdmin && (
+                        <Link href={`/company-settings?id=${company.id}`}>
+                          <Button variant="outline" size="sm" className="flex items-center gap-1">
+                            <Settings className="h-4 w-4" />
+                            Settings
+                          </Button>
+                        </Link>
                       )}
                     </div>
                   </div>
@@ -268,27 +168,7 @@ function UserEventsDialog({ user }: { user: User }) {
   });
 
   const { toast } = useToast();
-  const deleteEventMutation = useMutation({
-    mutationFn: async (eventId: number) => {
-      await apiRequest("DELETE", `/api/events/${eventId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/events`] });
-      toast({
-        title: "Success",
-        description: "Event deleted successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  //Removed deleteEventMutation
 
   return (
     <Dialog>
@@ -317,38 +197,7 @@ function UserEventsDialog({ user }: { user: User }) {
                     <p>Type: {event.type}</p>
                   </div>
                 </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="sm" className="flex items-center gap-1">
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Event</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete this event? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => deleteEventMutation.mutate(event.id)}
-                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      >
-                        {deleteEventMutation.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            Deleting...
-                          </>
-                        ) : (
-                          "Delete Event"
-                        )}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                {/* Removed AlertDialog for delete functionality */}
               </div>
             </div>
           ))}
@@ -523,9 +372,10 @@ function CreateSuperUserDialog() {
   );
 }
 
-function AdminPage() {
+export default function AdminPage() {
   const { user, logoutMutation } = useAuth();
   const { toast } = useToast();
+  const [_, navigate] = useLocation();
 
   const superUserDeleteMutation = useMutation({
     mutationFn: async (userId: number) => {
@@ -567,28 +417,6 @@ function AdminPage() {
   const events = allEvents
     .filter(event => event.status === 'active')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-
-  const deleteEventMutationAdmin = useMutation({
-    mutationFn: async (eventId: number) => {
-      await apiRequest("DELETE", `/api/events/${eventId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
-      toast({
-        title: "Success",
-        description: "Event deleted successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   if (isLoadingUsers || isLoadingEvents || isLoadingCompanies) {
     return (
@@ -635,10 +463,14 @@ function AdminPage() {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="users">
-          <TabsList className="grid w-[400px] grid-cols-2 mb-8">
+          <TabsList className="grid w-[600px] grid-cols-3 mb-8">
             <TabsTrigger value="users" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Admin Settings
+            </TabsTrigger>
+            <TabsTrigger value="customers" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Users
+              Customers
             </TabsTrigger>
             <TabsTrigger value="events" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
@@ -648,11 +480,11 @@ function AdminPage() {
 
           <TabsContent value="users">
             {user?.isSuperAdmin && (
-              <Card className="mb-8">
+              <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="h-5 w-5" />
-                    Super Users
+                    Admin Users
                   </CardTitle>
                   <CreateSuperUserDialog />
                 </CardHeader>
@@ -661,7 +493,7 @@ function AdminPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Username</TableHead>
-                        <TableHead>Company</TableHead>
+                        <TableHead>Customer</TableHead>
                         <TableHead>Title</TableHead>
                         <TableHead>Phone</TableHead>
                         <TableHead>Status</TableHead>
@@ -689,6 +521,19 @@ function AdminPage() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="customers">
+            {user?.isSuperAdmin && (
+              <div className="flex justify-end mb-4">
+                <Link href="/company-settings">
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Settings className="h-4 w-4" />
+                    Manage All Customers
+                  </Button>
+                </Link>
+              </div>
+            )}
             <CustomerSection customers={customers} companies={companies} />
           </TabsContent>
 
@@ -698,7 +543,7 @@ function AdminPage() {
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Calendar className="h-5 w-5" />
-                    Upcoming Events Management
+                    Upcoming Events
                   </CardTitle>
                   <UploadEventsDialog />
                 </div>
@@ -732,13 +577,6 @@ function AdminPage() {
                           <TableRow
                             key={event.id}
                             className="cursor-pointer transition-colors hover:bg-muted/50"
-                            onClick={(e) => {
-                              if ((e.target as HTMLElement).closest('.action-button')) {
-                                e.stopPropagation();
-                                return;
-                              }
-                              window.location.href = `/event/${event.id}`;
-                            }}
                           >
                             <TableCell className="font-medium">
                               {event.title}
@@ -766,42 +604,6 @@ function AdminPage() {
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <EditEventDialog event={event} />
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="destructive"
-                                      size="sm"
-                                      className="action-button flex items-center gap-1"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                      Delete
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Event</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete this event? This action cannot be undone.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => deleteEventMutationAdmin.mutate(event.id)}
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                      >
-                                        {deleteEventMutationAdmin.isPending ? (
-                                          <>
-                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                            Deleting...
-                                          </>
-                                        ) : (
-                                          "Delete Event"
-                                        )}
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -818,5 +620,3 @@ function AdminPage() {
     </div>
   );
 }
-
-export default AdminPage;
