@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertUserSchema, companySettingsSchema } from "@shared/schema"; // Added import
+import { insertUserSchema, companySettingsSchema } from "@shared/schema";
 import {
   Loader2,
   UserX,
@@ -23,7 +23,8 @@ import {
   ArrowLeft,
   LogOut,
   Settings,
-  Building2
+  Building2,
+  Trash2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -50,7 +51,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EditEventDialog } from "@/components/edit-event-dialog";
-import { Trash2 } from "lucide-react";
 import { HoverUserMenu } from "@/components/hover-user-menu";
 import { UploadEventsDialog } from "@/components/upload-events-dialog";
 import {
@@ -265,8 +265,27 @@ function CompanySettingsDialog({ company }: { company: Company }) {
 function CustomerSection({ customers, companies }: { customers: User[], companies: Company[] }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [_, navigate] = useLocation();
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      await apiRequest("DELETE", `/api/admin/users/${userId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User deleted successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
   const deleteCompanyMutation = useMutation({
     mutationFn: async (companyId: number) => {
@@ -295,13 +314,7 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
         description: error.message,
         variant: "destructive",
       });
-    },
-  });
-
-  console.log('CustomerSection - User:', {
-    isSuperAdmin: user?.isSuperAdmin,
-    customers: customers.length,
-    companies: companies.length
+    }
   });
 
   const customersByCompany = customers.reduce((acc, customer) => {
@@ -378,17 +391,17 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {users.map((user) => (
-                          <TableRow key={user.id}>
+                        {users.map((customer) => (
+                          <TableRow key={customer.id}>
                             <TableCell>
-                              {user.firstName} {user.lastName}
+                              {customer.firstName} {customer.lastName}
                             </TableCell>
-                            <TableCell>{user.username}</TableCell>
-                            <TableCell>{user.title}</TableCell>
-                            <TableCell>{user.mobile}</TableCell>
+                            <TableCell>{customer.username}</TableCell>
+                            <TableCell>{customer.title}</TableCell>
+                            <TableCell>{customer.mobile}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <UserEventsDialog user={user} />
+                                <UserEventsDialog user={customer} />
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
                                     <Button
@@ -411,7 +424,7 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                                       <AlertDialogAction
-                                        onClick={() => deleteUserMutation.mutate(user.id)}
+                                        onClick={() => deleteUserMutation.mutate(customer.id)}
                                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                       >
                                         {deleteUserMutation.isPending ? (
@@ -440,15 +453,15 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
         </Accordion>
 
         {/* Delete Company Confirmation Dialog */}
-        <AlertDialog 
-          open={!!companyToDelete} 
+        <AlertDialog
+          open={!!companyToDelete}
           onOpenChange={() => setCompanyToDelete(null)}
         >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete {companyToDelete?.name}?</AlertDialogTitle>
               <AlertDialogDescription className="space-y-2">
-                This action cannot be undone. This will permanently delete
+                This action cannot be undone. This will permanently delete {' '}
                 {companyToDelete?.name} and all associated data including:
                 <div className="mt-2">
                   <ul className="list-disc list-inside">
@@ -977,8 +990,7 @@ function AdminPage() {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={event.status === "active" ? "default" : "destructive"}
-                                className="capitalize"
+                                variant={event.status === 'active' ? 'default' : 'secondary'}
                               >
                                 {event.status}
                               </Badge>
@@ -992,17 +1004,18 @@ function AdminPage() {
                                     <Button
                                       variant="destructive"
                                       size="sm"
-                                      className="action-button flex items-center gap-1"
+                                      className="flex items-center gap-1"
                                     >
                                       <Trash2 className="h-4 w-4" />
                                       Delete
                                     </Button>
-                                                                 </AlertDialogTrigger>
+                                  </AlertDialogTrigger>
                                   <AlertDialogContent>
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Delete Event</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        Are you sure you want to delete this event? This action cannot be undone.
+                                        Are you sure you want to delete this event? This
+                                        action cannot be undone.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
