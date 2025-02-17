@@ -13,7 +13,6 @@ import {
   FormLabel,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,12 +20,9 @@ import { useLocation, Link } from "wouter";
 import type { Company } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 
-const EVENT_TYPES = ["conference", "workshop", "seminar", "meetup", "training"];
-
 const customerSettingsSchema = z.object({
   maxUsers: z.number().min(1, "Must allow at least 1 user"),
   maxEvents: z.number().min(1, "Must allow at least 1 event"),
-  allowedEventTypes: z.array(z.string()).min(1, "Must allow at least one event type")
 });
 
 type CustomerSettings = z.infer<typeof customerSettingsSchema>;
@@ -63,7 +59,6 @@ export default function CustomerSettingsPage() {
     defaultValues: {
       maxUsers: customer?.settings?.maxUsers ?? 10,
       maxEvents: customer?.settings?.maxEvents ?? 20,
-      allowedEventTypes: customer?.settings?.allowedEventTypes ?? ["conference", "workshop", "seminar"]
     }
   });
 
@@ -161,31 +156,6 @@ export default function CustomerSettingsPage() {
                     </FormControl>
                     <FormDescription>
                       Maximum number of events this customer can create
-                    </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="allowedEventTypes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Allowed Event Types</FormLabel>
-                    <div className="flex flex-wrap gap-2">
-                      {EVENT_TYPES.map(type => (
-                        <Badge
-                          key={type}
-                          variant={field.value.includes(type) ? "default" : "outline"}
-                          className="cursor-pointer"
-                          onClick={() => form.setValue("allowedEventTypes", field.value.includes(type) ? field.value.filter(t => t !== type) : [...field.value, type], { shouldValidate: true })}
-                        >
-                          {type}
-                        </Badge>
-                      ))}
-                    </div>
-                    <FormDescription>
-                      Select the types of events that can be created
                     </FormDescription>
                   </FormItem>
                 )}

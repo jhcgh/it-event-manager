@@ -9,7 +9,6 @@ export const companies = pgTable("companies", {
   settings: jsonb("settings").$type<{
     maxUsers?: number;
     maxEvents?: number;
-    allowedEventTypes?: string[];
   }>().notNull().default({}),
   status: text("status", { enum: ['active', 'inactive'] }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

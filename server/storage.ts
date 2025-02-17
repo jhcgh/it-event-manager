@@ -52,13 +52,15 @@ export class DatabaseStorage implements IStorage {
 
       const [company] = await db.insert(companies)
         .values({
-          id: undefined,
           name: insertCompany.name,
-          settings: insertCompany.settings || {},
+          settings: {
+            maxUsers: insertCompany.settings?.maxUsers,
+            maxEvents: insertCompany.settings?.maxEvents
+          },
           status: insertCompany.status || 'active',
           createdAt: new Date(),
           updatedAt: new Date()
-        } satisfies typeof companies.$inferInsert)
+        })
         .returning();
 
       console.log('Company created successfully:', {
@@ -86,7 +88,12 @@ export class DatabaseStorage implements IStorage {
     const company = await this.getCompany(id);
     if (!company) return undefined;
 
-    const updatedSettings = { ...company.settings, ...settings };
+    // Only update maxUsers and maxEvents
+    const updatedSettings = {
+      maxUsers: settings.maxUsers !== undefined ? settings.maxUsers : company.settings.maxUsers,
+      maxEvents: settings.maxEvents !== undefined ? settings.maxEvents : company.settings.maxEvents
+    };
+
     const [result] = await db
       .update(companies)
       .set({ settings: updatedSettings, updatedAt: new Date() })
@@ -171,8 +178,8 @@ export class DatabaseStorage implements IStorage {
   async updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined> {
     try {
       const startTime = Date.now();
-      console.log('Storage updateUser started:', { 
-        userId: id, 
+      console.log('Storage updateUser started:', {
+        userId: id,
         updates: updateData,
         timestamp: new Date().toISOString()
       });
@@ -212,8 +219,8 @@ export class DatabaseStorage implements IStorage {
         .returning();
 
       const endTime = Date.now();
-      console.log('Storage updateUser completed:', { 
-        userId: id, 
+      console.log('Storage updateUser completed:', {
+        userId: id,
         processingTime: `${endTime - startTime}ms`,
         success: !!result,
         timestamp: new Date().toISOString()
