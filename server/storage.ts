@@ -33,6 +33,7 @@ export interface IStorage {
   getUserEvents(userId: number): Promise<Event[]>;
   updateEvent(id: number, userId: number, updateData: Partial<InsertEvent>): Promise<Event | undefined>;
   deleteEvent(id: number): Promise<void>;
+  validateUserDeletion(id: number): Promise<{ canDelete: boolean; reason?: string; user?: User; }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -173,7 +174,7 @@ export class DatabaseStorage implements IStorage {
               settings: {},
               status: 'active'
             });
-            updateData = { ...updateData };
+            updateData = { ...updateData, companyId: company.id };
           }
         }
       }
@@ -208,22 +209,49 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: number): Promise<void> {
     try {
-      console.log(`Starting deletion process for user ${id}`);
+      console.log(`Starting soft deletion process for user ${id}`);
+
+      // Get the user first to validate
+      const user = await this.getUser(id);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Check if user has any active events
+      const userEvents = await this.getUserEvents(id);
+      if (userEvents.length > 0) {
+        console.log(`User ${id} has ${userEvents.length} events that will be deleted`);
+      }
+
+      // Log user state before deletion
+      console.log('User state before deletion:', {
+        userId: id,
+        status: user.status,
+        companyId: user.companyId,
+        companyName: user.companyName,
+        timestamp: new Date().toISOString()
+      });
 
       // First delete all events
       await this.deleteUserEvents(id);
 
-      // Then update the user status to deleted and remove company associations
+      // Then update the user status to deleted but preserve company information
       await db.update(users)
         .set({ 
           status: 'deleted', 
           updatedAt: new Date(),
-          companyId: null,
-          companyName: null
         })
         .where(eq(users.id, id));
 
-      console.log(`Successfully completed deletion process for user ${id}`);
+      console.log('User state after deletion:', {
+        userId: id,
+        status: 'deleted',
+        companyId: user.companyId,
+        companyName: user.companyName,
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`Successfully completed soft deletion process for user ${id}`);
     } catch (error) {
       console.error(`Error during user deletion process:`, error);
       throw error;
@@ -280,6 +308,43 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEvent(id: number): Promise<void> {
     await db.delete(events).where(eq(events.id, id));
+  }
+
+  async validateUserDeletion(id: number): Promise<{ 
+    canDelete: boolean; 
+    reason?: string;
+    user?: User;
+  }> {
+    const user = await this.getUser(id);
+    if (!user) {
+      return { canDelete: false, reason: 'User not found' };
+    }
+
+    if (user.status === 'deleted') {
+      return { canDelete: false, reason: 'User is already deleted' };
+    }
+
+    if (user.isAdmin) {
+      const activeAdmins = await db
+        .select()
+        .from(users)
+        .where(
+          and(
+            eq(users.isAdmin, true),
+            eq(users.status, 'active')
+          )
+        );
+
+      if (activeAdmins.length <= 1) {
+        return { 
+          canDelete: false, 
+          reason: 'Cannot delete the last admin user',
+          user
+        };
+      }
+    }
+
+    return { canDelete: true, user };
   }
 }
 

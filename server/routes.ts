@@ -313,12 +313,35 @@ export function registerRoutes(app: Express): Server {
 
     try {
       const userId = parseInt(req.params.id);
-      console.log(`Deleting user ${userId}`);
+      console.log(`Admin ${req.user.id} requested deletion of user ${userId}`);
+
+      // First validate if the user can be deleted
+      const validation = await storage.validateUserDeletion(userId);
+      if (!validation.canDelete) {
+        console.log(`User deletion validation failed:`, {
+          userId,
+          reason: validation.reason,
+          timestamp: new Date().toISOString()
+        });
+        return res.status(400).json({
+          message: validation.reason
+        });
+      }
+
+      const user = validation.user!;
+      console.log(`Initiating deletion process for user:`, {
+        userId,
+        username: user.username,
+        companyId: user.companyId,
+        companyName: user.companyName,
+        requestedBy: req.user.id,
+        timestamp: new Date().toISOString()
+      });
 
       // First, delete all events created by this user
       await storage.deleteUserEvents(userId);
 
-      // Then delete the user
+      // Then soft delete the user
       await storage.deleteUser(userId);
 
       console.log(`Successfully deleted user ${userId} and their associated data`);
@@ -327,6 +350,40 @@ export function registerRoutes(app: Express): Server {
       console.error("Error deleting user:", error);
       res.status(500).json({
         message: "Failed to delete user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Add a new endpoint to validate deletion before it happens
+  app.get("/api/admin/users/:id/validate-deletion", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+
+    try {
+      const userId = parseInt(req.params.id);
+      const validation = await storage.validateUserDeletion(userId);
+
+      if (!validation.canDelete) {
+        return res.status(400).json({
+          canDelete: false,
+          message: validation.reason
+        });
+      }
+
+      // Include additional information about what will be affected
+      const events = await storage.getUserEvents(userId);
+
+      res.json({
+        canDelete: true,
+        user: validation.user,
+        impactedData: {
+          eventsCount: events.length
+        }
+      });
+    } catch (error) {
+      console.error("Error validating user deletion:", error);
+      res.status(500).json({
+        message: "Failed to validate user deletion",
         error: error instanceof Error ? error.message : String(error)
       });
     }
@@ -653,6 +710,18 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "User not found" });
       }
 
+      // First validate if the user can be deleted
+      const validation = await storage.validateUserDeletion(userId);
+      if (!validation.canDelete) {
+        console.log(`User deletion validation failed:`, {
+          userId,
+          reason: validation.reason,
+          companyId,
+          timestamp: new Date().toISOString()
+        });
+        return res.status(400).json({ message: validation.reason });
+      }
+
       // First delete all events created by this user
       await storage.deleteUserEvents(userId);
 
@@ -666,7 +735,6 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ message: "Failed to delete user" });
     }
   });
-
 
 
   const httpServer = createServer(app);
