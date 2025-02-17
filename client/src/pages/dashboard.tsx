@@ -35,12 +35,18 @@ export default function DashboardPage() {
   const { toast } = useToast();
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
-    queryKey: ["/api/events", user?.id]
+    queryKey: ["/api/events", user?.id],
+    select: (data) => data.filter(event => event.status === 'active')
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   });
 
   const deleteEventMutation = useMutation({
     mutationFn: async (eventId: number) => {
-      const response = await apiRequest("DELETE", `/api/events/${eventId}`);
+      const response = await apiRequest(
+        "PATCH", 
+        `/api/events/${eventId}`,
+        { status: 'inactive' }
+      );
       if (!response.ok) {
         throw new Error('Failed to delete event');
       }

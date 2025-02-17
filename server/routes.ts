@@ -215,13 +215,38 @@ export function registerRoutes(app: Express): Server {
     const parsed = insertEventSchema.partial().safeParse(req.body);
     if (!parsed.success) return res.status(400).json(parsed.error);
 
-    const updatedEvent = await storage.updateEvent(
-      parseInt(req.params.id),
-      req.user.id,
-      parsed.data
-    );
+    try {
+      console.log('Updating event:', {
+        eventId: req.params.id,
+        userId: req.user.id,
+        isAdmin: req.user.isAdmin,
+        updates: req.body,
+        timestamp: new Date().toISOString()
+      });
 
-    res.json(updatedEvent);
+      const updatedEvent = await storage.updateEvent(
+        parseInt(req.params.id),
+        event.userId, // Use original event's userId for admin updates
+        parsed.data
+      );
+
+      if (!updatedEvent) {
+        return res.status(500).json({ message: "Failed to update event" });
+      }
+
+      console.log('Event updated successfully:', {
+        eventId: updatedEvent.id,
+        timestamp: new Date().toISOString()
+      });
+
+      return res.json(updatedEvent);
+    } catch (error) {
+      console.error('Error updating event:', error);
+      return res.status(500).json({
+        message: "Failed to update event",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
   });
 
   app.get("/api/events/:id/calendar", async (req, res) => {

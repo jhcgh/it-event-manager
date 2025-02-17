@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, Pencil, CalendarIcon, Image as ImageIcon } from "lucide-react";
+import { Loader2, Pencil, CalendarIcon, Image as ImageIcon, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { InsertEvent, insertEventSchema, Event } from "@shared/schema";
@@ -19,9 +19,10 @@ import { useState, useRef } from "react";
 
 type EditEventDialogProps = {
   event: Event;
+  onDelete?: (event: Event) => Promise<void>;
 };
 
-export function EditEventDialog({ event }: EditEventDialogProps) {
+export function EditEventDialog({ event, onDelete }: EditEventDialogProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [date, setDate] = useState<Date>(new Date(event.date));
@@ -30,6 +31,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
     event.isHybrid ? "hybrid" : event.isRemote ? "online" : "in-person"
   );
   const [selectedImage, setSelectedImage] = useState<string | null>(event.imageUrl || null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<InsertEvent>({
@@ -45,22 +47,19 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       type: event.type,
       url: event.url || "",
       imageUrl: event.imageUrl || "",
+      status: event.status, // Preserve the current status
     },
-    mode: 'onSubmit' // Only validate on form submission
   });
 
   const handleLocationTypeChange = (type: "in-person" | "online" | "hybrid") => {
     setLocationType(type);
-    // Update form values without triggering validation or submission
-    const formUpdates = {
-      isRemote: type === "online" || type === "hybrid",
-      isHybrid: type === "hybrid"
-    };
-    Object.entries(formUpdates).forEach(([key, value]) => {
-      form.setValue(key as "isRemote" | "isHybrid", value, { 
-        shouldDirty: true,
-        shouldValidate: false // Prevent validation on change
-      });
+    form.setValue("isRemote", type === "online" || type === "hybrid", {
+      shouldDirty: true,
+      shouldValidate: false
+    });
+    form.setValue("isHybrid", type === "hybrid", {
+      shouldDirty: true,
+      shouldValidate: false
     });
   };
 
@@ -71,8 +70,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       reader.onloadend = () => {
         const imageUrl = reader.result as string;
         setSelectedImage(imageUrl);
-        // Update form value without triggering validation or submission
-        form.setValue("imageUrl", imageUrl, { 
+        form.setValue("imageUrl", imageUrl, {
           shouldDirty: true,
           shouldValidate: false
         });
@@ -81,14 +79,54 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
     }
   };
 
+  const handleDelete = async () => {
+    if (!onDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await onDelete(event);
+      setOpen(false);
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const updateEventMutation = useMutation({
     mutationFn: async (data: InsertEvent) => {
-      const res = await apiRequest("PATCH", `/api/events/${event.id}`, data);
-      return await res.json();
+      try {
+        const response = await apiRequest<CSVUploadResponse>("POST", "/api/events/upload-csv", formData); // Assuming formData is defined elsewhere
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.message || 'Failed to update event');
+        }
+
+        // Only try to parse JSON if we expect a response body
+        if (response.status === 204) {
+          return null;
+        }
+
+        try {
+          return await response.json();
+        } catch (parseError) {
+          console.error('Failed to parse response:', parseError);
+          return null;
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error('Failed to update event');
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
+      if (event.userId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/users/${event.userId}/events`] });
+      }
       toast({
         title: "Success",
         description: "Event updated successfully",
@@ -96,16 +134,16 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
       setOpen(false);
     },
     onError: (error: Error) => {
+      console.error('Update event error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to update event",
         variant: "destructive",
       });
     }
   });
 
   const onSubmit = (data: InsertEvent) => {
-    // Only submit all form data when the update button is clicked
     updateEventMutation.mutate(data);
   };
 
@@ -129,6 +167,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          {/* Image Upload */}
           <div className="space-y-2">
             <Label htmlFor="image" className="flex items-center gap-2">
               Event Image
@@ -167,6 +206,7 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             </div>
           </div>
 
+          {/* Event Details Form Fields */}
           <div className="space-y-2">
             <Label htmlFor="title">Event Name *</Label>
             <Input id="title" {...form.register("title")} />
@@ -202,13 +242,9 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
                   onSelect={(newDate) => {
                     if (newDate) {
                       setDate(newDate);
-                      // Update form value without triggering submission
                       form.setValue("date", newDate, { shouldDirty: true, shouldValidate: false });
                     }
                   }}
-                  disabled={(date) =>
-                    date < new Date(new Date().setHours(0, 0, 0, 0))
-                  }
                   initialFocus
                 />
                 <div className="flex justify-end gap-2 p-3 border-t">
@@ -298,7 +334,6 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
             <Select
               value={form.getValues("type")}
               onValueChange={(value) => {
-                // Update form value without triggering submission
                 form.setValue("type", value, { shouldDirty: true, shouldValidate: false });
               }}
             >
@@ -315,23 +350,46 @@ export function EditEventDialog({ event }: EditEventDialogProps) {
 
           <div className="space-y-2">
             <Label htmlFor="url">Event URL</Label>
-            <Input 
-              id="url" 
-              type="url" 
-              {...form.register("url")} 
+            <Input
+              id="url"
+              type="url"
+              {...form.register("url")}
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={updateEventMutation.isPending}>
-            {updateEventMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Updating...
-              </>
-            ) : (
-              "Update Event"
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1" disabled={updateEventMutation.isPending}>
+              {updateEventMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Updating...
+                </>
+              ) : (
+                "Update Event"
+              )}
+            </Button>
+
+            {onDelete && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </>
+                )}
+              </Button>
             )}
-          </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

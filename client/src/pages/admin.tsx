@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { User, Event, UpdateUser, Company } from "@shared/schema";
+import { User, Event, Company } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +19,6 @@ import {
   Building2,
   UserPlus,
   ArrowLeft,
-  Pencil
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -45,9 +44,6 @@ import {
 } from "@/components/ui/accordion";
 
 function CustomerSection({ customers, companies }: { customers: User[], companies: Company[] }) {
-  const { user } = useAuth();
-  const { toast } = useToast();
-
   const customersByCompany = customers.reduce((acc, customer) => {
     const company = companies.find((c: Company) => c.id === customer.companyId);
     const companyName = company?.name || customer.companyName || 'Unassigned';
@@ -340,6 +336,7 @@ function CreateSuperUserDialog() {
 
 export default function AdminPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
 
   if (!user?.isAdmin && !user?.isSuperAdmin) {
     return <Redirect to="/" />;
@@ -361,6 +358,27 @@ export default function AdminPage() {
   const events = allEvents
     .filter(event => event.status === 'active')
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const handleDeleteEvent = async (event: Event) => {
+    try {
+      await apiRequest(
+        "PATCH",
+        `/api/events/${event.id}`,
+        { status: 'inactive' }
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
+      toast({
+        title: "Success",
+        description: "Event has been deleted successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete event",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoadingUsers || isLoadingEvents || isLoadingCompanies) {
     return (
@@ -528,7 +546,7 @@ export default function AdminPage() {
                             <TableCell>{organizer?.username}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <EditEventDialog event={event} />
+                                <EditEventDialog event={event} onDelete={handleDeleteEvent} />
                               </div>
                             </TableCell>
                           </TableRow>

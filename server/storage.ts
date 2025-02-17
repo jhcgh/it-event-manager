@@ -243,23 +243,80 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllEvents(): Promise<Event[]> {
-    return await db.select().from(events).orderBy(desc(events.createdAt));
+    try {
+      console.log('Fetching all active events');
+      return await db.select()
+        .from(events)
+        .where(eq(events.status, 'active'))
+        .orderBy(desc(events.createdAt));
+    } catch (error) {
+      console.error('Error fetching all events:', error);
+      throw error;
+    }
   }
 
   async getUserEvents(userId: number): Promise<Event[]> {
-    return await db.select()
-      .from(events)
-      .where(eq(events.userId, userId))
-      .orderBy(desc(events.createdAt));
+    try {
+      console.log('Fetching user events:', {
+        userId,
+        timestamp: new Date().toISOString()
+      });
+
+      return await db.select()
+        .from(events)
+        .where(
+          and(
+            eq(events.userId, userId),
+            eq(events.status, 'active')
+          )
+        )
+        .orderBy(desc(events.createdAt));
+    } catch (error) {
+      console.error('Error fetching user events:', {
+        error,
+        userId,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
   }
 
   async updateEvent(id: number, userId: number, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
-    const [result] = await db
-      .update(events)
-      .set({ ...updateData, updatedAt: new Date() })
-      .where(and(eq(events.id, id), eq(events.userId, userId)))
-      .returning();
-    return result;
+    try {
+      console.log('Updating event:', {
+        eventId: id,
+        userId,
+        updateData,
+        timestamp: new Date().toISOString()
+      });
+
+      const [result] = await db
+        .update(events)
+        .set({ 
+          ...updateData,
+          updatedAt: new Date(),
+          // Ensure status is set when updating
+          ...(updateData.status && { status: updateData.status })
+        })
+        .where(and(eq(events.id, id), eq(events.userId, userId)))
+        .returning();
+
+      console.log('Event update result:', {
+        success: !!result,
+        eventId: id,
+        timestamp: new Date().toISOString()
+      });
+
+      return result;
+    } catch (error) {
+      console.error('Error updating event:', {
+        error,
+        eventId: id,
+        userId,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
   }
 }
 
