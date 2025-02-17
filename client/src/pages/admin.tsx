@@ -28,7 +28,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
-import { Redirect, Link } from "wouter";
+import { Redirect, Link, useLocation } from "wouter";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,9 +60,22 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+// Updating the CompanySettingsDialog component for better navigation
 function CompanySettingsDialog({ company }: { company: Company }) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [_, navigate] = useLocation();
+
+  console.log('CompanySettingsDialog - User:', { 
+    isSuperAdmin: user?.isSuperAdmin, 
+    companyId: company.id 
+  });
+
+  // Advanced settings button click handler
+  const handleAdvancedSettings = () => {
+    navigate(`/company-settings?id=${company.id}`);
+  };
+
   const form = useForm({
     defaultValues: {
       maxUsers: company.settings.maxUsers || 0,
@@ -97,7 +110,7 @@ function CompanySettingsDialog({ company }: { company: Company }) {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="flex items-center gap-1">
           <Settings className="h-4 w-4" />
-          Company Settings
+          {user?.isSuperAdmin ? "Manage Settings" : "Company Settings"}
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -108,6 +121,7 @@ function CompanySettingsDialog({ company }: { company: Company }) {
           </DialogDescription>
         </DialogHeader>
 
+        {/* Super Admin Advanced Settings Section */}
         {user?.isSuperAdmin && (
           <div className="mb-6 bg-destructive/5 border-destructive/20 border rounded-lg p-4">
             <h3 className="text-base font-semibold mb-2 flex items-center gap-2">
@@ -115,20 +129,20 @@ function CompanySettingsDialog({ company }: { company: Company }) {
               Advanced Settings Available
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              As a super admin, you have access to advanced company settings, including the ability to delete this company.
+              As a super admin, you have access to advanced company settings, including deletion capabilities.
             </p>
-            <Link href={`/company-settings?id=${company.id}`}>
-              <Button 
-                variant="destructive" 
-                className="w-full flex items-center justify-center gap-2"
-              >
-                <Settings className="h-4 w-4" />
-                Manage Advanced Settings
-              </Button>
-            </Link>
+            <Button 
+              variant="destructive" 
+              className="w-full flex items-center justify-center gap-2"
+              onClick={handleAdvancedSettings}
+            >
+              <Settings className="h-4 w-4" />
+              Advanced Company Settings
+            </Button>
           </div>
         )}
 
+        {/* Regular Settings Form */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit((data) => updateSettingsMutation.mutate(data))} className="space-y-4">
             <FormField
@@ -177,7 +191,15 @@ function CompanySettingsDialog({ company }: { company: Company }) {
 }
 
 function CustomerSection({ customers, companies }: { customers: User[], companies: Company[] }) {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const [_, navigate] = useLocation();
+
+  console.log('CustomerSection - User:', { 
+    isSuperAdmin: user?.isSuperAdmin,
+    customers: customers.length,
+    companies: companies.length
+  });
 
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
@@ -218,10 +240,22 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Building2 className="h-5 w-5" />
-          Customers
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Companies and Users
+          </CardTitle>
+          {user?.isSuperAdmin && (
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => navigate('/company-settings')}
+            >
+              <Settings className="h-4 w-4" />
+              Manage All Companies
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <Accordion type="single" collapsible className="space-y-4">

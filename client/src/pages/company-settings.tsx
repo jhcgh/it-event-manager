@@ -17,7 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLocation, Link, useSearch } from "wouter";
+import { useLocation, Link } from "wouter";
 import type { Company } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
@@ -48,10 +48,24 @@ export default function CompanySettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [_, navigate] = useLocation();
+  const [location] = useLocation();
   const [isDeleteCompanyDialogOpen, setIsDeleteCompanyDialogOpen] = useState(false);
-  const search = useSearch();
-  const params = new URLSearchParams(search);
+
+  console.log('CompanySettings - User:', { 
+    isSuperAdmin: user?.isSuperAdmin,
+    userId: user?.id,
+    location 
+  });
+
+  const params = new URLSearchParams(location.split('?')[1] || "");
   const companyId = parseInt(params.get('id') || (user?.companyId?.toString() || ''));
+
+  // Redirect if not a super admin
+  if (!user?.isSuperAdmin) {
+    console.log('Redirecting non-super admin user');
+    navigate('/admin');
+    return null;
+  }
 
   const { data: company, isLoading } = useQuery<Company>({
     queryKey: [`/api/companies/${companyId}`],
@@ -152,18 +166,30 @@ export default function CompanySettingsPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/admin">
-            <Button variant="ghost" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Admin
-            </Button>
-          </Link>
+          <div className="flex items-center justify-between">
+            <Link href="/admin">
+              <Button variant="ghost" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Admin
+              </Button>
+            </Link>
+            {user?.isSuperAdmin && (
+              <Badge variant="destructive">Super Admin Mode</Badge>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">Company Settings</h1>
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-3xl font-bold">Company Settings</h1>
+            {user?.isSuperAdmin && (
+              <Badge variant="outline" className="text-destructive border-destructive">
+                Advanced Settings Enabled
+              </Badge>
+            )}
+          </div>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -267,65 +293,65 @@ export default function CompanySettingsPage() {
             </form>
           </Form>
 
-          {user?.isSuperAdmin && (
-            <div className="mt-8 border-t pt-8">
-              <h2 className="text-2xl font-bold mb-4 text-destructive">Danger Zone</h2>
-              <div className="bg-destructive/10 border-destructive border rounded-lg p-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold">Delete Company</h3>
-                    <p className="text-sm text-muted-foreground">
-                      This action cannot be undone. This will permanently delete the company
-                      and all associated data.
-                    </p>
-                  </div>
-                  <Button
-                    variant="destructive"
-                    onClick={() => setIsDeleteCompanyDialogOpen(true)}
-                    disabled={deleteCompany.isPending}
-                  >
-                    {deleteCompany.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      "Delete Company"
-                    )}
-                  </Button>
+          <div className="mt-8 border-t pt-8">
+            <h2 className="text-2xl font-bold mb-4 text-destructive">Danger Zone</h2>
+            <div className="bg-destructive/10 border-destructive border rounded-lg p-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold">Delete Company</h3>
+                  <p className="text-sm text-muted-foreground">
+                    This action cannot be undone. This will permanently delete the company
+                    and all associated data.
+                  </p>
                 </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setIsDeleteCompanyDialogOpen(true)}
+                  disabled={deleteCompany.isPending}
+                >
+                  {deleteCompany.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete Company"
+                  )}
+                </Button>
               </div>
+            </div>
 
-              <AlertDialog
-                open={isDeleteCompanyDialogOpen}
-                onOpenChange={setIsDeleteCompanyDialogOpen}
-              >
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the
-                      company and all associated data including:
-                      <ul className="list-disc list-inside mt-2">
+            <AlertDialog
+              open={isDeleteCompanyDialogOpen}
+              onOpenChange={setIsDeleteCompanyDialogOpen}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-2">
+                    This action cannot be undone. This will permanently delete the
+                    company and all associated data including:
+                    <div className="mt-2">
+                      <ul className="list-disc list-inside">
                         <li>All user accounts</li>
                         <li>All events</li>
                         <li>All company settings</li>
                       </ul>
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => deleteCompany.mutate()}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      Delete Company
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          )}
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteCompany.mutate()}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete Company
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
       </main>
     </div>
