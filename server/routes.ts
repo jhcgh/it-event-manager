@@ -50,8 +50,7 @@ export function registerRoutes(app: Express): Server {
         lastName: "Admin",
         companyName: "SaaS Platform",
         title: "Super Administrator",
-        mobile: "+1234567890",
-        isSuperAdmin: true
+        mobile: "+1234567890"
       };
 
       const existing = await storage.getUserByUsername(adminData.username);
@@ -66,9 +65,10 @@ export function registerRoutes(app: Express): Server {
       const parsed = insertUserSchema.parse(adminData);
       const hashedPassword = await hashPassword(parsed.password);
 
-      await storage.adminCreateSuperAdmin({
+      const user = await storage.createUser({
         ...parsed,
-        password: hashedPassword
+        password: hashedPassword,
+        status: 'active'
       });
 
       res.json({
@@ -85,13 +85,39 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get("/api/user", (req, res) => {
+    console.log('GET /api/user - Session info:', {
+      isAuthenticated: req.isAuthenticated(),
+      userId: req.user?.id,
+      sessionID: req.sessionID,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!req.isAuthenticated()) {
+      console.log('GET /api/user - Unauthorized: No valid session');
+      return res.sendStatus(401);
+    }
+    res.json(req.user);
+  });
+
   app.patch("/api/profile", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
+    console.log('PATCH /api/profile - Request received:', {
+      isAuthenticated: req.isAuthenticated(),
+      userId: req.user?.id,
+      sessionID: req.sessionID,
+      updates: req.body,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!req.user) {
+      console.log('PATCH /api/profile - Unauthorized: No user in session');
+      return res.sendStatus(401);
+    }
 
     try {
       const startTime = Date.now();
-      console.log('Profile update request received:', { 
-        userId: req.user.id, 
+      console.log('Profile update request received:', {
+        userId: req.user.id,
         updates: req.body,
         timestamp: new Date().toISOString()
       });
@@ -103,20 +129,20 @@ export function registerRoutes(app: Express): Server {
       }
 
       const endTime = Date.now();
-      console.log('Profile update completed:', { 
-        userId: req.user.id, 
+      console.log('Profile update completed:', {
+        userId: req.user.id,
         processingTime: `${endTime - startTime}ms`,
         timestamp: new Date().toISOString()
       });
 
       res.json(updatedUser);
     } catch (error) {
-      console.error('Profile update failed:', { 
-        userId: req.user.id, 
+      console.error('Profile update failed:', {
+        userId: req.user.id,
         error,
         timestamp: new Date().toISOString()
       });
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to update profile",
         error: error instanceof Error ? error.message : String(error)
       });
@@ -252,7 +278,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/users/:id/events", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
     try {
-      const events = await storage.getEventsByUserId(parseInt(req.params.id));
+      const events = await storage.getUserEvents(parseInt(req.params.id));
       res.json(events);
     } catch (error) {
       console.error("Error fetching user events:", error);
@@ -273,7 +299,7 @@ export function registerRoutes(app: Express): Server {
     }
     try {
       console.log("Fetching admin events for user:", req.user.id);
-      const events = await storage.adminGetAllEvents();
+      const events = await storage.getAllEvents();
       console.log("Retrieved events count:", events.length);
       res.json(events);
     } catch (error) {
@@ -299,7 +325,7 @@ export function registerRoutes(app: Express): Server {
       res.sendStatus(200);
     } catch (error) {
       console.error("Error deleting user:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to delete user",
         error: error instanceof Error ? error.message : String(error)
       });
@@ -317,7 +343,7 @@ export function registerRoutes(app: Express): Server {
       });
 
       const hashedPassword = await hashPassword(parsed.password);
-      const newUser = await storage.adminCreateSuperAdmin({
+      const newUser = await storage.createUser({ // Changed to createUser
         ...parsed,
         password: hashedPassword,
         username: parsed.username.toLowerCase()
@@ -334,12 +360,12 @@ export function registerRoutes(app: Express): Server {
   app.patch("/api/admin/users/:id/status", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
 
-    const { status } = req.body;
+    const { status } = req.body as { status: 'active' | 'deleted' };
     if (status !== "active" && status !== "deleted") {
       return res.status(400).json({ message: "Invalid status. Must be 'active' or 'deleted'" });
     }
 
-    const updatedUser = await storage.adminUpdateUser(parseInt(req.params.id), { status });
+    const updatedUser = await storage.updateUser(parseInt(req.params.id), { status });
     if (!updatedUser) return res.sendStatus(404);
 
     res.json(updatedUser);
@@ -375,43 +401,53 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.patch("/api/companies/:id/settings", async (req, res) => {
+  app.patch("/api/companies/:id", async (req, res) => {
     if (!req.user) {
-      console.log("PATCH /api/companies/:id/settings - Unauthorized: No user in session");
+      console.log("PATCH /api/companies/:id - Unauthorized: No user in session");
       return res.sendStatus(401);
     }
 
     try {
       const companyId = parseInt(req.params.id);
-      console.log(`PATCH /api/companies/${companyId}/settings - User:`, req.user.id);
+      console.log(`PATCH /api/companies/${companyId} - User:`, req.user.id);
 
       const company = await storage.getCompany(companyId);
 
       if (!company) {
-        console.log(`PATCH /api/companies/${companyId}/settings - Company not found`);
+        console.log(`PATCH /api/companies/${companyId} - Company not found`);
         return res.status(404).json({ message: "Company not found" });
       }
 
-      // Only allow users to update their own company's settings
+      // Only allow company updates from company members or admins
       if (company.id !== req.user.companyId && !req.user.isAdmin) {
-        console.log(`PATCH /api/companies/${companyId}/settings - Forbidden: User doesn't belong to company`);
+        console.log(`PATCH /api/companies/${companyId} - Forbidden: User doesn't belong to company`);
         return res.sendStatus(403);
       }
 
-      const updatedCompany = await storage.updateCompanySettings(companyId, req.body);
+      const updatedCompany = await storage.updateCompanySettings(companyId, req.body.settings || {});
       if (!updatedCompany) {
-        return res.status(404).json({ message: "Failed to update company settings" });
+        return res.status(404).json({ message: "Failed to update company" });
       }
-
-      console.log("Updated company settings:", {
-        companyId,
-        settings: updatedCompany.settings
-      });
 
       res.json(updatedCompany);
     } catch (error) {
-      console.error("Error updating company settings:", error);
-      res.status(500).json({ message: "Failed to update company settings" });
+      console.error("Error updating company:", error);
+      res.status(500).json({ message: "Failed to update company" });
+    }
+  });
+
+  app.get("/api/companies", async (req, res) => {
+    if (!req.user?.isAdmin) {
+      console.log("GET /api/companies - Forbidden: User is not an admin");
+      return res.sendStatus(403);
+    }
+
+    try {
+      const companies = await storage.getAllCompanies();
+      res.json(companies);
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      res.status(500).json({ message: "Failed to fetch companies" });
     }
   });
 
@@ -552,7 +588,7 @@ export function registerRoutes(app: Express): Server {
       res.status(201).json(newUser);
     } catch (error) {
       console.error("Error creating user:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to create user",
         error: error instanceof Error ? error.message : String(error)
       });
@@ -589,7 +625,7 @@ export function registerRoutes(app: Express): Server {
       res.json(updatedUser);
     } catch (error) {
       console.error("Error updating user:", error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to update user",
         error: error instanceof Error ? error.message : String(error)
       });
@@ -630,6 +666,7 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ message: "Failed to delete user" });
     }
   });
+
 
 
   const httpServer = createServer(app);

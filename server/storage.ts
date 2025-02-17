@@ -1,4 +1,4 @@
-import { users, events, companies, companyRoles, type User, type Event, type InsertUser, type InsertEvent, type UpdateUser, type Company, type InsertCompany, type CompanyRole, type InsertCompanyRole } from "@shared/schema";
+import { users, events, companies, type User, type Event, type InsertUser, type InsertEvent, type Company, type InsertCompany } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, ne } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
@@ -16,16 +16,10 @@ export interface IStorage {
   updateCompanySettings(id: number, settings: Partial<Company['settings']>): Promise<Company | undefined>;
   getAllCompanies(): Promise<Company[]>;
 
-  // Company Role Management Methods
-  createCompanyRole(insertRole: InsertCompanyRole): Promise<CompanyRole>;
-  getCompanyRole(id: number): Promise<CompanyRole | undefined>;
-  updateCompanyRole(id: number, updateData: Partial<InsertCompanyRole>): Promise<CompanyRole | undefined>;
-  getCompanyRoles(companyId: number): Promise<CompanyRole[]>;
-
   // User Management Methods with Company Context
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(insertUser: InsertUser & { companyId?: number, companyRoleId?: number }): Promise<User>;
+  createUser(insertUser: InsertUser & { companyId?: number }): Promise<User>;
   updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   deleteUser(id: number): Promise<void>;
@@ -39,15 +33,6 @@ export interface IStorage {
   getUserEvents(userId: number): Promise<Event[]>;
   updateEvent(id: number, userId: number, updateData: Partial<InsertEvent>): Promise<Event | undefined>;
   deleteEvent(id: number): Promise<void>;
-
-  // Admin Methods
-  adminGetAllUsers(includeDeleted?: boolean): Promise<User[]>;
-  adminUpdateUser(id: number, updateData: UpdateUser): Promise<User | undefined>;
-  adminGetAllEvents(includeDeleted?: boolean): Promise<Event[]>;
-  adminCreateAdmin(insertUser: InsertUser): Promise<User>;
-  adminCreateSuperAdmin(insertUser: InsertUser): Promise<User>;
-  adminUpdateEvent(id: number, updateData: Partial<InsertEvent>): Promise<Event | undefined>;
-  getEventsByUserId(userId: number): Promise<Event[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -63,14 +48,13 @@ export class DatabaseStorage implements IStorage {
 
   // Company Management Methods
   async createCompany(insertCompany: InsertCompany): Promise<Company> {
-    const values = {
+    const [company] = await db.insert(companies).values({
       ...insertCompany,
-      status: 'active' as const,
+      status: 'active',
       createdAt: new Date(),
       updatedAt: new Date(),
-    } as const;
-    const result = await db.insert(companies).values([values]).returning();
-    return result[0];
+    }).returning();
+    return company;
   }
 
   async getCompany(id: number): Promise<Company | undefined> {
@@ -83,53 +67,16 @@ export class DatabaseStorage implements IStorage {
     if (!company) return undefined;
 
     const updatedSettings = { ...company.settings, ...settings };
-    const result = await db
+    const [result] = await db
       .update(companies)
       .set({ settings: updatedSettings, updatedAt: new Date() })
       .where(eq(companies.id, id))
       .returning();
-    return result[0];
+    return result;
   }
 
   async getAllCompanies(): Promise<Company[]> {
     return await db.select().from(companies).where(eq(companies.status, 'active')).orderBy(desc(companies.createdAt));
-  }
-
-  // Company Role Management Methods
-  async createCompanyRole(insertRole: InsertCompanyRole): Promise<CompanyRole> {
-    const values = {
-      ...insertRole,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as const;
-    const result = await db.insert(companyRoles).values([values]).returning();
-    return result[0];
-  }
-
-  async getCompanyRole(id: number): Promise<CompanyRole | undefined> {
-    const result = await db.select().from(companyRoles).where(eq(companyRoles.id, id));
-    return result[0];
-  }
-
-  async updateCompanyRole(id: number, updateData: Partial<InsertCompanyRole>): Promise<CompanyRole | undefined> {
-    const values = {
-      ...updateData,
-      updatedAt: new Date(),
-    } as const;
-    const result = await db
-      .update(companyRoles)
-      .set(values)
-      .where(eq(companyRoles.id, id))
-      .returning();
-    return result[0];
-  }
-
-  async getCompanyRoles(companyId: number): Promise<CompanyRole[]> {
-    return await db
-      .select()
-      .from(companyRoles)
-      .where(eq(companyRoles.companyId, companyId))
-      .orderBy(desc(companyRoles.createdAt));
   }
 
   // User Management Methods with Company Context
@@ -143,7 +90,7 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createUser(insertUser: InsertUser & { companyId?: number, companyRoleId?: number }): Promise<User> {
+  async createUser(insertUser: InsertUser & { companyId?: number }): Promise<User> {
     try {
       console.log('Starting user creation process:', {
         username: insertUser.username,
@@ -155,7 +102,8 @@ export class DatabaseStorage implements IStorage {
       if (insertUser.companyName && !companyId) {
         const company = await this.createCompany({
           name: insertUser.companyName,
-          settings: {}
+          settings: {},
+          status: 'active'
         });
         companyId = company.id;
         console.log('Created new company:', {
@@ -166,7 +114,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Create user with company association
-      const values = {
+      const [user] = await db.insert(users).values({
         username: insertUser.username,
         password: insertUser.password,
         firstName: insertUser.firstName,
@@ -180,9 +128,7 @@ export class DatabaseStorage implements IStorage {
         isSuperAdmin: false,
         createdAt: new Date(),
         updatedAt: new Date()
-      } as const;
-
-      const [user] = await db.insert(users).values(values).returning();
+      }).returning();
 
       console.log('User creation completed:', {
         userId: user.id,
@@ -224,21 +170,20 @@ export class DatabaseStorage implements IStorage {
             // Create new company and associate with user
             const company = await this.createCompany({
               name: updateData.companyName,
-              settings: {}
+              settings: {},
+              status: 'active'
             });
-            updateData = { ...updateData, companyId: company.id };
+            updateData = { ...updateData };
           }
         }
       }
 
-      const values = {
-        ...updateData,
-        updatedAt: new Date(),
-      };
-
       const [result] = await db
         .update(users)
-        .set(values)
+        .set({
+          ...updateData,
+          updatedAt: new Date()
+        })
         .where(eq(users.id, id))
         .returning();
 
@@ -274,7 +219,6 @@ export class DatabaseStorage implements IStorage {
           status: 'deleted', 
           updatedAt: new Date(),
           companyId: null,
-          companyRoleId: null,
           companyName: null
         })
         .where(eq(users.id, id));
@@ -302,11 +246,11 @@ export class DatabaseStorage implements IStorage {
 
   // Event Management Methods
   async createEvent(userId: number, insertEvent: InsertEvent): Promise<Event> {
-    const result = await db
+    const [result] = await db
       .insert(events)
-      .values([{ ...insertEvent, userId }])
+      .values({ ...insertEvent, userId, status: 'active' })
       .returning();
-    return result[0];
+    return result;
   }
 
   async getEvent(id: number): Promise<Event | undefined> {
@@ -326,73 +270,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateEvent(id: number, userId: number, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
-    const result = await db
+    const [result] = await db
       .update(events)
       .set({ ...updateData, updatedAt: new Date() })
       .where(and(eq(events.id, id), eq(events.userId, userId)))
       .returning();
-    return result[0];
+    return result;
   }
 
   async deleteEvent(id: number): Promise<void> {
     await db.delete(events).where(eq(events.id, id));
-  }
-
-
-  // Admin Methods
-  async adminGetAllUsers(includeDeleted: boolean = false): Promise<User[]> {
-    const query = includeDeleted
-      ? db.select().from(users)
-      : db.select().from(users).where(ne(users.status, 'deleted'));
-    return await query.orderBy(desc(users.createdAt));
-  }
-
-  async adminUpdateUser(id: number, updateData: UpdateUser): Promise<User | undefined> {
-    const result = await db
-      .update(users)
-      .set({ ...updateData, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return result[0];
-  }
-
-  async adminGetAllEvents(includeDeleted: boolean = false): Promise<Event[]> {
-    const query = includeDeleted
-      ? db.select().from(events)
-      : db.select().from(events).where(ne(events.status, 'deleted'));
-    return await query.orderBy(desc(events.createdAt));
-  }
-
-  async adminCreateAdmin(insertUser: InsertUser): Promise<User> {
-    const result = await db
-      .insert(users)
-      .values([{ ...insertUser, isAdmin: true }])
-      .returning();
-    return result[0];
-  }
-
-  async adminCreateSuperAdmin(insertUser: InsertUser): Promise<User> {
-    const result = await db
-      .insert(users)
-      .values([{ ...insertUser, isAdmin: true, isSuperAdmin: true }])
-      .returning();
-    return result[0];
-  }
-
-  async adminUpdateEvent(id: number, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
-    const result = await db
-      .update(events)
-      .set({ ...updateData, updatedAt: new Date() })
-      .where(eq(events.id, id))
-      .returning();
-    return result[0];
-  }
-
-  async getEventsByUserId(userId: number): Promise<Event[]> {
-    return await db.select()
-      .from(events)
-      .where(eq(events.userId, userId))
-      .orderBy(desc(events.createdAt));
   }
 }
 

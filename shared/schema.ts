@@ -19,29 +19,6 @@ export const companies = pgTable("companies", {
 
 export const companyRelations = relations(companies, ({ many }) => ({
   users: many(users),
-  roles: many(companyRoles),
-}));
-
-export const companyRoles = pgTable("company_roles", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").references(() => companies.id).notNull(),
-  name: text("name").notNull(),
-  permissions: jsonb("permissions").$type<{
-    canManageUsers?: boolean;
-    canCreateEvents?: boolean;
-    canDeleteEvents?: boolean;
-    canManageSettings?: boolean;
-  }>().notNull().default({}),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const companyRoleRelations = relations(companyRoles, ({ one, many }) => ({
-  company: one(companies, {
-    fields: [companyRoles.companyId],
-    references: [companies.id],
-  }),
-  users: many(users),
 }));
 
 export const users = pgTable("users", {
@@ -52,7 +29,6 @@ export const users = pgTable("users", {
   lastName: text("last_name").notNull(),
   companyId: integer("company_id").references(() => companies.id),
   companyName: text("company_name"),
-  companyRoleId: integer("company_role_id").references(() => companyRoles.id),
   title: text("title").notNull(),
   mobile: text("mobile").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
@@ -67,10 +43,6 @@ export const userRelations = relations(users, ({ many, one }) => ({
   company: one(companies, {
     fields: [users.companyId],
     references: [companies.id],
-  }),
-  companyRole: one(companyRoles, {
-    fields: [users.companyRoleId],
-    references: [companyRoles.id],
   }),
 }));
 
@@ -100,14 +72,9 @@ export const eventRelations = relations(events, ({ one }) => ({
 }));
 
 export const insertCompanySchema = createInsertSchema(companies)
-  .omit({
-    id: true,
-    status: true,
-    createdAt: true,
-    updatedAt: true
-  });
-
-export const insertCompanyRoleSchema = createInsertSchema(companyRoles)
+  .extend({
+    status: z.enum(['active', 'inactive']).default('active'),
+  })
   .omit({
     id: true,
     createdAt: true,
@@ -119,17 +86,16 @@ export const insertUserSchema = createInsertSchema(users)
     password: z.string().min(8).regex(/[0-9]/, "Password must contain at least one number")
       .regex(/[!@#$%^&*]/, "Password must contain at least one special character"),
     username: z.string().email("Must be a valid email address"),
-    companyName: z.string().min(1, "Company name is required")
+    companyName: z.string().min(1, "Company name is required"),
+    status: z.enum(['active', 'deleted']).default('active'),
   })
   .omit({
     id: true,
     isAdmin: true,
     isSuperAdmin: true,
-    status: true,
     createdAt: true,
     updatedAt: true,
     companyId: true,
-    companyRoleId: true
   });
 
 export const insertEventSchema = createInsertSchema(events)
@@ -139,12 +105,12 @@ export const insertEventSchema = createInsertSchema(events)
       .refine(
         (val) => val.trim().split(/\s+/).length <= 50,
         "Description must not exceed 50 words"
-      )
+      ),
+    status: z.enum(['active', 'deleted']).default('active'),
   })
   .omit({
     id: true,
     userId: true,
-    status: true,
     createdAt: true,
     updatedAt: true
   });
@@ -171,5 +137,3 @@ export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
-export type CompanyRole = typeof companyRoles.$inferSelect;
-export type InsertCompanyRole = z.infer<typeof insertCompanyRoleSchema>;

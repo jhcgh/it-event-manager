@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { createServer } from "net";
 
 const app = express();
 app.use(express.json());
@@ -37,6 +38,21 @@ app.use((req, res, next) => {
   next();
 });
 
+// Function to check if port is available
+const isPortAvailable = (port: number): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const server = createServer();
+    server.once('error', () => {
+      resolve(false);
+    });
+    server.once('listening', () => {
+      server.close();
+      resolve(true);
+    });
+    server.listen(port, '0.0.0.0');
+  });
+};
+
 (async () => {
   try {
     log("Starting server setup...");
@@ -61,6 +77,12 @@ app.use((req, res, next) => {
 
     const PORT = parseInt(process.env.PORT || "5000", 10);
     log(`Starting server on port ${PORT}...`);
+
+    // Check port availability before starting
+    const isAvailable = await isPortAvailable(PORT);
+    if (!isAvailable) {
+      throw new Error(`Port ${PORT} is already in use`);
+    }
 
     // Create a Promise to handle server startup
     const startServer = new Promise<void>((resolve, reject) => {
