@@ -10,10 +10,9 @@ const PostgresSessionStore = connectPg(session);
 export interface IStorage {
   sessionStore: session.Store;
 
-  // Customer Management Methods
+  // Company Methods
   createCompany(insertCompany: InsertCompany): Promise<Company>;
   getCompany(id: number): Promise<Company | undefined>;
-  updateCompanySettings(id: number, settings: Partial<Company['settings']>): Promise<Company | undefined>;
   getAllCompanies(): Promise<Company[]>;
 
   // User Management Methods
@@ -47,14 +46,12 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('Creating company:', {
         name: insertCompany.name,
-        settings: insertCompany.settings,
         timestamp: new Date().toISOString()
       });
 
       const [company] = await db.insert(companies)
         .values({
           name: insertCompany.name,
-          settings: insertCompany.settings || {},
           status: insertCompany.status || 'active',
           updatedAt: new Date(),
           createdAt: new Date()
@@ -82,24 +79,6 @@ export class DatabaseStorage implements IStorage {
   async getCompany(id: number): Promise<Company | undefined> {
     const result = await db.select().from(companies).where(eq(companies.id, id));
     return result[0];
-  }
-
-  async updateCompanySettings(id: number, settings: Partial<Company['settings']>): Promise<Company | undefined> {
-    const company = await this.getCompany(id);
-    if (!company) return undefined;
-
-    // Only update maxUsers and maxEvents
-    const updatedSettings = {
-      maxUsers: settings.maxUsers !== undefined ? settings.maxUsers : company.settings.maxUsers,
-      maxEvents: settings.maxEvents !== undefined ? settings.maxEvents : company.settings.maxEvents
-    };
-
-    const [result] = await db
-      .update(companies)
-      .set({ settings: updatedSettings, updatedAt: new Date() })
-      .where(eq(companies.id, id))
-      .returning();
-    return result;
   }
 
   async getAllCompanies(): Promise<Company[]> {
@@ -130,7 +109,6 @@ export class DatabaseStorage implements IStorage {
       if (insertUser.companyName && !companyId) {
         const company = await this.createCompany({
           name: insertUser.companyName,
-          settings: {},
           status: 'active'
         });
         companyId = company.id;
@@ -204,7 +182,6 @@ export class DatabaseStorage implements IStorage {
           } else {
             const company = await this.createCompany({
               name: updateData.companyName,
-              settings: {},
               status: 'active'
             });
             Object.assign(validUpdateFields, { companyId: company.id });

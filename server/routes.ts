@@ -301,7 +301,7 @@ export function registerRoutes(app: Express): Server {
       });
 
       const hashedPassword = await hashPassword(parsed.password);
-      const newUser = await storage.createUser({ // Changed to createUser
+      const newUser = await storage.createUser({
         ...parsed,
         password: hashedPassword,
         username: parsed.username.toLowerCase()
@@ -318,129 +318,15 @@ export function registerRoutes(app: Express): Server {
   app.patch("/api/admin/users/:id/status", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
 
-    const { status } = req.body as { status: 'active' | 'deleted' };
-    if (status !== "active" && status !== "deleted") {
-      return res.status(400).json({ message: "Invalid status. Must be 'active' or 'deleted'" });
+    const { status } = req.body as { status: 'active' | 'inactive' };
+    if (status !== "active" && status !== "inactive") {
+      return res.status(400).json({ message: "Invalid status. Must be 'active' or 'inactive'" });
     }
 
     const updatedUser = await storage.updateUser(parseInt(req.params.id), { status });
     if (!updatedUser) return res.sendStatus(404);
 
     res.json(updatedUser);
-  });
-
-  app.get("/api/companies/:id", async (req, res) => {
-    if (!req.user) {
-      console.log("GET /api/companies/:id - Unauthorized: No user in session");
-      return res.sendStatus(401);
-    }
-
-    try {
-      const companyId = parseInt(req.params.id);
-      console.log(`GET /api/companies/${companyId} - User:`, req.user.id);
-
-      const company = await storage.getCompany(companyId);
-
-      if (!company) {
-        console.log(`GET /api/companies/${companyId} - Company not found`);
-        return res.status(404).json({ message: "Company not found" });
-      }
-
-      // Only allow users to access their own company's data
-      if (company.id !== req.user.companyId && !req.user.isAdmin) {
-        console.log(`GET /api/companies/${companyId} - Forbidden: User doesn't belong to company`);
-        return res.sendStatus(403);
-      }
-
-      res.json(company);
-    } catch (error) {
-      console.error("Error fetching company:", error);
-      res.status(500).json({ message: "Failed to fetch company" });
-    }
-  });
-
-  app.patch("/api/companies/:id", async (req, res) => {
-    if (!req.user) {
-      console.log("PATCH /api/companies/:id - Unauthorized: No user in session");
-      return res.sendStatus(401);
-    }
-
-    try {
-      const companyId = parseInt(req.params.id);
-      console.log(`PATCH /api/companies/${companyId} - User:`, req.user.id);
-
-      const company = await storage.getCompany(companyId);
-
-      if (!company) {
-        console.log(`PATCH /api/companies/${companyId} - Company not found`);
-        return res.status(404).json({ message: "Company not found" });
-      }
-
-      // Only allow company updates from company members or admins
-      if (company.id !== req.user.companyId && !req.user.isAdmin) {
-        console.log(`PATCH /api/companies/${companyId} - Forbidden: User doesn't belong to company`);
-        return res.sendStatus(403);
-      }
-
-      const updatedCompany = await storage.updateCompanySettings(companyId, req.body.settings || {});
-      if (!updatedCompany) {
-        return res.status(404).json({ message: "Failed to update company" });
-      }
-
-      res.json(updatedCompany);
-    } catch (error) {
-      console.error("Error updating company:", error);
-      res.status(500).json({ message: "Failed to update company" });
-    }
-  });
-
-  app.get("/api/companies", async (req, res) => {
-    if (!req.user?.isAdmin) {
-      console.log("GET /api/companies - Forbidden: User is not an admin");
-      return res.sendStatus(403);
-    }
-
-    try {
-      const companies = await storage.getAllCompanies();
-      res.json(companies);
-    } catch (error) {
-      console.error("Error fetching companies:", error);
-      res.status(500).json({ message: "Failed to fetch companies" });
-    }
-  });
-
-  app.post("/api/companies/:id/users", async (req, res) => {
-    if (!req.user) {
-      console.log("POST /api/companies/:id/users - Unauthorized: No user in session");
-      return res.sendStatus(401);
-    }
-
-    try {
-      const companyId = parseInt(req.params.id);
-      console.log(`POST /api/companies/${companyId}/users - User:`, req.user.id);
-
-      if (companyId !== req.user.companyId && !req.user.isAdmin) {
-        console.log(`POST /api/companies/${companyId}/users - Forbidden: User doesn't belong to company`);
-        return res.sendStatus(403);
-      }
-
-      const parsed = insertUserSchema.parse(req.body);
-      const hashedPassword = await hashPassword(parsed.password);
-
-      const newUser = await storage.createUser({
-        ...parsed,
-        password: hashedPassword,
-        companyId
-      });
-
-      res.status(201).json(newUser);
-    } catch (error) {
-      console.error("Error creating user:", error);
-      res.status(500).json({
-        message: "Failed to create user",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
   });
 
   app.post("/api/events/upload-csv", upload.single('file'), async (req: FileRequest, res) => {
@@ -494,7 +380,6 @@ export function registerRoutes(app: Express): Server {
           const parsed = insertEventSchema.parse(eventData);
           const event = await storage.createEvent(req.user.id, parsed);
           if (event) {
-            // Type assertion to handle the mismatch between DB Event type and DOM Event
             successfulEvents.push(event as any);
           }
         } catch (error) {
@@ -513,67 +398,6 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('CSV processing error:', error);
       res.status(500).json({ message: "Failed to process CSV file" });
-    }
-  });
-
-  app.get("/api/companies/:id/users", async (req, res) => {
-    if (!req.user) {
-      console.log("GET /api/companies/:id/users - Unauthorized: No user in session");
-      return res.sendStatus(401);
-    }
-
-    try {
-      const companyId = parseInt(req.params.id);
-      console.log(`GET /api/companies/${companyId}/users - User:`, req.user.id);
-
-      // Only allow users to access their own company's data
-      if (companyId !== req.user.companyId && !req.user.isAdmin) {
-        console.log(`GET /api/companies/${companyId}/users - Forbidden: User doesn't belong to company`);
-        return res.sendStatus(403);
-      }
-
-      const users = await storage.getUsersByCompany(companyId);
-      res.json(users);
-    } catch (error) {
-      console.error("Error fetching company users:", error);
-      res.status(500).json({ message: "Failed to fetch users" });
-    }
-  });
-
-  app.patch("/api/companies/:id/users/:userId", async (req, res) => {
-    if (!req.user) {
-      console.log("PATCH /api/companies/:id/users/:userId - Unauthorized: No user in session");
-      return res.sendStatus(401);
-    }
-
-    try {
-      const companyId = parseInt(req.params.id);
-      const userId = parseInt(req.params.userId);
-      console.log(`PATCH /api/companies/${companyId}/users/${userId} - User:`, req.user.id);
-
-      if (companyId !== req.user.companyId && !req.user.isAdmin) {
-        console.log(`PATCH /api/companies/${companyId}/users/${userId} - Forbidden: User doesn't belong to company`);
-        return res.sendStatus(403);
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || user.companyId !== companyId) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      const updateData = { ...req.body };
-      if (updateData.password) {
-        updateData.password = await hashPassword(updateData.password);
-      }
-
-      const updatedUser = await storage.updateUser(userId, updateData);
-      res.json(updatedUser);
-    } catch (error) {
-      console.error("Error updating user:", error);
-      res.status(500).json({
-        message: "Failed to update user",
-        error: error instanceof Error ? error.message : String(error)
-      });
     }
   });
 

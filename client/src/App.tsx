@@ -10,7 +10,6 @@ import DashboardPage from "@/pages/dashboard";
 import AdminPage from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
 import EventDetailsPage from "@/pages/event-details";
-import CompanySettingsPage from "@/pages/company-settings";
 import { ProtectedRoute } from "./lib/protected-route";
 import { useAuth } from './hooks/use-auth';
 import { AdminBar } from "@/components/admin-bar";
@@ -28,7 +27,6 @@ function Router() {
         <ProtectedRoute path="/dashboard" component={DashboardPage} />
         <ProtectedRoute path="/admin" component={AdminPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
-        <ProtectedRoute path="/company-settings" component={CompanySettingsPage} />
         <Route component={NotFound} />
       </Switch>
     </div>

@@ -511,7 +511,7 @@ export default function AdminPage() {
                               variant={u.status === "active" ? "default" : "destructive"}
                               className="capitalize"
                             >
-                              {u.status}
+                              {u.status === 'deleted' ? 'inactive' : u.status}
                             </Badge>
                           </TableCell>
                         </TableRow>
@@ -524,16 +524,6 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="customers">
-            {user?.isSuperAdmin && (
-              <div className="flex justify-end mb-4">
-                <Link href="/company-settings">
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Settings className="h-4 w-4" />
-                    Manage All Customers
-                  </Button>
-                </Link>
-              </div>
-            )}
             <CustomerSection customers={customers} companies={companies} />
           </TabsContent>
 
@@ -597,7 +587,7 @@ export default function AdminPage() {
                                 variant={event.status === "active" ? "default" : "destructive"}
                                 className="capitalize"
                               >
-                                {event.status}
+                                {event.status === 'active' ? 'active' : 'inactive'}
                               </Badge>
                             </TableCell>
                             <TableCell>{organizer?.username}</TableCell>
