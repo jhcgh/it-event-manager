@@ -47,22 +47,23 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('Creating company:', {
         name: insertCompany.name,
+        settings: insertCompany.settings,
         timestamp: new Date().toISOString()
       });
 
       const [company] = await db.insert(companies)
         .values({
           name: insertCompany.name,
-          settings: {
-            maxUsers: insertCompany.settings?.maxUsers,
-            maxEvents: insertCompany.settings?.maxEvents
-          },
-          status: insertCompany.status || 'active'
+          settings: insertCompany.settings || {},
+          status: insertCompany.status || 'active',
+          updatedAt: new Date(),
+          createdAt: new Date()
         })
         .returning();
 
       console.log('Company created successfully:', {
         companyId: company.id,
+        companyName: company.name,
         timestamp: new Date().toISOString()
       });
 
@@ -71,7 +72,8 @@ export class DatabaseStorage implements IStorage {
       console.error('Error creating company:', {
         error,
         name: insertCompany.name,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        stack: error instanceof Error ? error.stack : undefined
       });
       throw error;
     }

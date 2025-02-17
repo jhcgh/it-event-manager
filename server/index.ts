@@ -7,10 +7,11 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Add request logging middleware with improved error handling
+// Update request logging middleware
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
+  const method = req.method;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   // Capture JSON responses for logging
@@ -23,16 +24,65 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        const responseStr = JSON.stringify(capturedJsonResponse);
-        logLine += ` :: ${responseStr.length > 80 ? responseStr.slice(0, 77) + "..." : responseStr}`;
+      interface LogData {
+        method: string;
+        path: string;
+        status: number;
+        duration: string;
+        timestamp: string;
+        ip: string | undefined;
+        userAgent: string | undefined;
+        response?: string;
       }
-      log(logLine);
+
+      const logData: LogData = {
+        method,
+        path,
+        status: res.statusCode,
+        duration: `${duration}ms`,
+        timestamp: new Date().toISOString(),
+        ip: req.ip,
+        userAgent: req.get('user-agent'),
+      };
+
+      if (capturedJsonResponse && res.statusCode >= 400) {
+        logData.response = JSON.stringify(capturedJsonResponse).slice(0, 200);
+      }
+
+      log(`${method} ${path} ${res.statusCode} in ${duration}ms :: ${JSON.stringify(logData)}`);
     }
   });
 
   next();
+});
+
+// Update the error handler middleware
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const errorDetails = {
+    message: err.message || "Internal Server Error",
+    status: err.status || err.statusCode || 500,
+    timestamp: new Date().toISOString(),
+    path: _req.path,
+    method: _req.method,
+    query: _req.query,
+    body: _req.method !== 'GET' ? _req.body : undefined,
+  };
+
+  // Log detailed error information
+  console.error("Server error:", {
+    ...errorDetails,
+    stack: err.stack,
+    headers: _req.headers,
+    ip: _req.ip,
+  });
+
+  // Send sanitized error response to client
+  res.status(errorDetails.status).json({
+    error: errorDetails.message,
+    status: errorDetails.status,
+    timestamp: errorDetails.timestamp,
+    path: errorDetails.path
+  });
 });
 
 // Function to check if port is available with timeout
@@ -58,23 +108,6 @@ const isPortAvailable = (port: number, timeout = 5000): Promise<boolean> => {
   try {
     log("Starting server setup...");
     const server = registerRoutes(app);
-
-    // Global error handler with improved error details
-    app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      const errorDetails = {
-        message: err.message || "Internal Server Error",
-        status: err.status || err.statusCode || 500,
-        timestamp: new Date().toISOString(),
-        path: _req.path
-      };
-
-      console.error("Server error:", {
-        ...errorDetails,
-        stack: err.stack
-      });
-
-      res.status(errorDetails.status).json(errorDetails);
-    });
 
     if (app.get("env") === "development") {
       log("Setting up Vite in development mode...");
