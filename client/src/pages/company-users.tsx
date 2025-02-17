@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, UserPlus, Pencil, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, UserPlus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -35,16 +35,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useState } from "react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 type UserFormData = InsertUser;
 
@@ -53,9 +43,7 @@ export default function CompanyUsersPage() {
   const { toast } = useToast();
   const [_, navigate] = useLocation();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
-  const [isDeleteCompanyDialogOpen, setIsDeleteCompanyDialogOpen] = useState(false);
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(insertUserSchema),
@@ -136,63 +124,6 @@ export default function CompanyUsersPage() {
     },
   });
 
-  const deleteUser = useMutation({
-    mutationFn: async (userId: number) => {
-      await apiRequest(
-        "DELETE",
-        `/api/companies/${user?.companyId}/users/${userId}`
-      );
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [`/api/companies/${user?.companyId}/users`],
-      });
-      setIsDeleteDialogOpen(false);
-      setSelectedUser(null);
-      toast({
-        title: "Success",
-        description: "User has been removed successfully.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteCompany = useMutation({
-    mutationFn: async () => {
-      if (!user?.companyId) return;
-      const response = await apiRequest(
-        "DELETE",
-        `/api/companies/${user.companyId}`
-      );
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete company');
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['/api/companies'],
-      });
-      navigate('/');
-      toast({
-        title: "Success",
-        description: "Company has been deleted successfully.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   const onSubmit = (data: UserFormData) => {
     if (selectedUser) {
@@ -214,11 +145,6 @@ export default function CompanyUsersPage() {
       status: user.status
     });
     setIsUserFormOpen(true);
-  };
-
-  const handleDeleteUser = (user: User) => {
-    setSelectedUser(user);
-    setIsDeleteDialogOpen(true);
   };
 
   if (!user?.companyId) {
@@ -409,110 +335,12 @@ export default function CompanyUsersPage() {
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteUser(user)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
-
-        <AlertDialog
-          open={isDeleteDialogOpen}
-          onOpenChange={setIsDeleteDialogOpen}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently remove the user
-                from your company.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => selectedUser && deleteUser.mutate(selectedUser.id)}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {deleteUser.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  "Delete"
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        {user?.isSuperAdmin && (
-          <div className="mt-8 border-t pt-8">
-            <h2 className="text-2xl font-bold mb-4">Danger Zone</h2>
-            <div className="bg-destructive/10 border-destructive border rounded-lg p-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold">Delete Company</h3>
-                  <p className="text-sm text-muted-foreground">
-                    This action cannot be undone. This will permanently delete the company
-                    and all associated data.
-                  </p>
-                </div>
-                <Button
-                  variant="destructive"
-                  onClick={() => setIsDeleteCompanyDialogOpen(true)}
-                  disabled={deleteCompany.isPending}
-                >
-                  {deleteCompany.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    "Delete Company"
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <AlertDialog
-              open={isDeleteCompanyDialogOpen}
-              onOpenChange={setIsDeleteCompanyDialogOpen}
-            >
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the
-                    company and all associated data including:
-                    <ul className="list-disc list-inside mt-2">
-                      <li>All user accounts</li>
-                      <li>All events</li>
-                      <li>All company settings</li>
-                    </ul>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteCompany.mutate()}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Delete Company
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )}
       </main>
     </div>
   );

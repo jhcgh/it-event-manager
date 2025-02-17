@@ -224,24 +224,6 @@ export function registerRoutes(app: Express): Server {
     res.json(updatedEvent);
   });
 
-  app.delete("/api/events/:id", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-
-    try {
-      const eventId = parseInt(req.params.id);
-      const event = await storage.getEvent(eventId);
-
-      if (!event) return res.sendStatus(404);
-      if (event.userId !== req.user.id && !req.user.isAdmin) return res.sendStatus(403);
-
-      await storage.deleteEvent(eventId);
-      res.sendStatus(200);
-    } catch (error) {
-      console.error('Error deleting event:', error);
-      res.status(500).json({ message: 'Failed to delete event' });
-    }
-  });
-
   app.get("/api/events/:id/calendar", async (req, res) => {
     const event = await storage.getEvent(parseInt(req.params.id));
     if (!event) return res.sendStatus(404);
@@ -305,87 +287,6 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error fetching admin events:", error);
       res.status(500).json({ message: "Failed to fetch events" });
-    }
-  });
-
-  app.delete("/api/admin/users/:id", async (req, res) => {
-    if (!req.user?.isAdmin) return res.sendStatus(403);
-
-    try {
-      const userId = parseInt(req.params.id);
-      console.log(`Admin ${req.user.id} requested deletion of user ${userId}`);
-
-      // First validate if the user can be deleted
-      const validation = await storage.validateUserDeletion(userId);
-      if (!validation.canDelete) {
-        console.log(`User deletion validation failed:`, {
-          userId,
-          reason: validation.reason,
-          timestamp: new Date().toISOString()
-        });
-        return res.status(400).json({
-          message: validation.reason
-        });
-      }
-
-      const user = validation.user!;
-      console.log(`Initiating deletion process for user:`, {
-        userId,
-        username: user.username,
-        companyId: user.companyId,
-        companyName: user.companyName,
-        requestedBy: req.user.id,
-        timestamp: new Date().toISOString()
-      });
-
-      // First, delete all events created by this user
-      await storage.deleteUserEvents(userId);
-
-      // Then soft delete the user
-      await storage.deleteUser(userId);
-
-      console.log(`Successfully deleted user ${userId} and their associated data`);
-      res.sendStatus(200);
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      res.status(500).json({
-        message: "Failed to delete user",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  // Add a new endpoint to validate deletion before it happens
-  app.get("/api/admin/users/:id/validate-deletion", async (req, res) => {
-    if (!req.user?.isAdmin) return res.sendStatus(403);
-
-    try {
-      const userId = parseInt(req.params.id);
-      const validation = await storage.validateUserDeletion(userId);
-
-      if (!validation.canDelete) {
-        return res.status(400).json({
-          canDelete: false,
-          message: validation.reason
-        });
-      }
-
-      // Include additional information about what will be affected
-      const events = await storage.getUserEvents(userId);
-
-      res.json({
-        canDelete: true,
-        user: validation.user,
-        impactedData: {
-          eventsCount: events.length
-        }
-      });
-    } catch (error) {
-      console.error("Error validating user deletion:", error);
-      res.status(500).json({
-        message: "Failed to validate user deletion",
-        error: error instanceof Error ? error.message : String(error)
-      });
     }
   });
 
@@ -507,7 +408,6 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ message: "Failed to fetch companies" });
     }
   });
-
 
   app.post("/api/companies/:id/users", async (req, res) => {
     if (!req.user) {
@@ -672,100 +572,6 @@ export function registerRoutes(app: Express): Server {
       console.error("Error updating user:", error);
       res.status(500).json({
         message: "Failed to update user",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  app.delete("/api/companies/:id/users/:userId", async (req, res) => {
-    if (!req.user) {
-      console.log("DELETE /api/companies/:id/users/:userId - Unauthorized: No user in session");
-      return res.sendStatus(401);
-    }
-
-    try {
-      const companyId = parseInt(req.params.id);
-      const userId = parseInt(req.params.userId);
-      console.log(`DELETE /api/companies/${companyId}/users/${userId} - User:`, req.user.id);
-
-      if (companyId !== req.user.companyId && !req.user.isAdmin) {
-        console.log(`DELETE /api/companies/:id/users/:userId - Forbidden: User doesn't belong to company`);
-        return res.sendStatus(403);
-      }
-
-      const user = await storage.getUser(userId);
-      if (!user || user.companyId !== companyId) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // First validate if the user can be deleted
-      const validation = await storage.validateUserDeletion(userId);
-      if (!validation.canDelete) {
-        console.log(`User deletion validation failed:`, {
-          userId,
-          reason: validation.reason,
-          companyId,
-          timestamp: new Date().toISOString()
-        });
-        return res.status(400).json({ message: validation.reason });
-      }
-
-      // First delete all events created by this user
-      await storage.deleteUserEvents(userId);
-
-      // Then delete the user
-      await storage.deleteUser(userId);
-
-      console.log(`Successfully deleted user ${userId} and their associated data`);
-      res.sendStatus(200);
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      res.status(500).json({ message: "Failed to delete user" });
-    }
-  });
-
-  app.get("/api/companies/:id/validate-deletion", async (req, res) => {
-    if (!req.user?.isSuperAdmin) {
-      console.log("GET /api/companies/:id/validate-deletion - Forbidden: User is not a super admin");
-      return res.sendStatus(403);
-    }
-
-    try {
-      const companyId = parseInt(req.params.id);
-      const validation = await storage.validateCompanyDeletion(companyId);
-
-      res.json(validation);
-    } catch (error) {
-      console.error("Error validating company deletion:", error);
-      res.status(500).json({
-        message: "Failed to validate company deletion",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  app.delete("/api/companies/:id", async (req, res) => {
-    if (!req.user?.isSuperAdmin) {
-      console.log("DELETE /api/companies/:id - Forbidden: User is not a super admin");
-      return res.sendStatus(403);
-    }
-
-    try {
-      const companyId = parseInt(req.params.id);
-      const validation = await storage.validateCompanyDeletion(companyId);
-
-      if (!validation.canDelete) {
-        return res.status(400).json({
-          message: validation.reason
-        });
-      }
-
-      await storage.deleteCompany(companyId);
-      res.sendStatus(200);
-    } catch (error) {
-      console.error("Error deleting company:", error);
-      res.status(500).json({
-        message: "Failed to delete company",
         error: error instanceof Error ? error.message : String(error)
       });
     }

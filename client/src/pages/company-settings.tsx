@@ -20,18 +20,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation, Link } from "wouter";
 import type { Company } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
-import { useState } from 'react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 const EVENT_TYPES = ["conference", "workshop", "seminar", "meetup", "training"];
 
@@ -49,7 +37,6 @@ export default function CompanySettingsPage() {
   const { toast } = useToast();
   const [_, navigate] = useLocation();
   const [location] = useLocation();
-  const [isDeleteCompanyDialogOpen, setIsDeleteCompanyDialogOpen] = useState(false);
 
   console.log('CompanySettings - User:', { 
     isSuperAdmin: user?.isSuperAdmin,
@@ -101,37 +88,6 @@ export default function CompanySettingsPage() {
         variant: "destructive"
       });
     }
-  });
-
-  const deleteCompany = useMutation({
-    mutationFn: async () => {
-      if (!companyId) return;
-      const response = await apiRequest(
-        "DELETE",
-        `/api/companies/${companyId}`
-      );
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete company');
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['/api/companies'],
-      });
-      navigate('/admin');
-      toast({
-        title: "Success",
-        description: "Company has been deleted successfully.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
   if (!companyId) {
@@ -263,9 +219,6 @@ export default function CompanySettingsPage() {
                           onClick={() => toggleEventType(type)}
                         >
                           {type}
-                          {field.value.includes(type) && (
-                            <X className="w-3 h-3 ml-1" />
-                          )}
                         </Badge>
                       ))}
                     </div>
@@ -292,66 +245,6 @@ export default function CompanySettingsPage() {
               </Button>
             </form>
           </Form>
-
-          <div className="mt-8 border-t pt-8">
-            <h2 className="text-2xl font-bold mb-4 text-destructive">Danger Zone</h2>
-            <div className="bg-destructive/10 border-destructive border rounded-lg p-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold">Delete Company</h3>
-                  <p className="text-sm text-muted-foreground">
-                    This action cannot be undone. This will permanently delete the company
-                    and all associated data.
-                  </p>
-                </div>
-                <Button
-                  variant="destructive"
-                  onClick={() => setIsDeleteCompanyDialogOpen(true)}
-                  disabled={deleteCompany.isPending}
-                >
-                  {deleteCompany.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    "Delete Company"
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <AlertDialog
-              open={isDeleteCompanyDialogOpen}
-              onOpenChange={setIsDeleteCompanyDialogOpen}
-            >
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription className="space-y-2">
-                    This action cannot be undone. This will permanently delete the
-                    company and all associated data including:
-                    <div className="mt-2">
-                      <ul className="list-disc list-inside">
-                        <li>All user accounts</li>
-                        <li>All events</li>
-                        <li>All company settings</li>
-                      </ul>
-                    </div>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteCompany.mutate()}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Delete Company
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
         </div>
       </main>
     </div>

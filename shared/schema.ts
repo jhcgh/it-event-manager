@@ -12,7 +12,7 @@ export const companies = pgTable("companies", {
     allowedEventTypes?: string[];
     requireEventApproval?: boolean;
   }>().notNull().default({}),
-  status: text("status", { enum: ['active', 'inactive', 'deleted'] }).default("active").notNull(),
+  status: text("status", { enum: ['active', 'inactive'] }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -33,7 +33,7 @@ export const users = pgTable("users", {
   mobile: text("mobile").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
-  status: text("status", { enum: ['active', 'deleted'] }).default("active").notNull(),
+  status: text("status", { enum: ['active', 'inactive'] }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -59,7 +59,7 @@ export const events = pgTable("events", {
   type: text("type").notNull(),
   url: text("url"),
   imageUrl: text("image_url"),
-  status: text("status").default("active").notNull(),
+  status: text("status", { enum: ['active', 'inactive'] }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -73,7 +73,7 @@ export const eventRelations = relations(events, ({ one }) => ({
 
 export const insertCompanySchema = createInsertSchema(companies)
   .extend({
-    status: z.enum(['active', 'inactive', 'deleted']).default('active'),
+    status: z.enum(['active', 'inactive']).default('active'),
   })
   .omit({
     id: true,
@@ -87,7 +87,7 @@ export const insertUserSchema = createInsertSchema(users)
       .regex(/[!@#$%^&*]/, "Password must contain at least one special character"),
     username: z.string().email("Must be a valid email address"),
     companyName: z.string().min(1, "Company name is required"),
-    status: z.enum(['active', 'deleted']).default('active'),
+    status: z.enum(['active', 'inactive']).default('active'),
   })
   .omit({
     id: true,
@@ -106,7 +106,7 @@ export const insertEventSchema = createInsertSchema(events)
         (val) => val.trim().split(/\s+/).length <= 50,
         "Description must not exceed 50 words"
       ),
-    status: z.enum(['active', 'deleted']).default('active'),
+    status: z.enum(['active', 'inactive']).default('active'),
   })
   .omit({
     id: true,
@@ -118,7 +118,7 @@ export const insertEventSchema = createInsertSchema(events)
 export const updateUserSchema = createInsertSchema(users)
   .partial()
   .extend({
-    status: z.enum(["active", "deleted"]).optional(),
+    status: z.enum(["active", "inactive"]).optional(),
     isAdmin: z.boolean().optional(),
     companyName: z.string().optional()
   })

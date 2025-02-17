@@ -66,16 +66,6 @@ function CompanySettingsDialog({ company }: { company: Company }) {
   const { toast } = useToast();
   const [_, navigate] = useLocation();
 
-  console.log('CompanySettingsDialog - User:', { 
-    isSuperAdmin: user?.isSuperAdmin, 
-    companyId: company.id 
-  });
-
-  // Advanced settings button click handler
-  const handleAdvancedSettings = () => {
-    navigate(`/company-settings?id=${company.id}`);
-  };
-
   const form = useForm({
     defaultValues: {
       maxUsers: company.settings.maxUsers || 0,
@@ -110,7 +100,7 @@ function CompanySettingsDialog({ company }: { company: Company }) {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="flex items-center gap-1">
           <Settings className="h-4 w-4" />
-          {user?.isSuperAdmin ? "Manage Settings" : "Company Settings"}
+          Company Settings
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -121,28 +111,6 @@ function CompanySettingsDialog({ company }: { company: Company }) {
           </DialogDescription>
         </DialogHeader>
 
-        {/* Super Admin Advanced Settings Section */}
-        {user?.isSuperAdmin && (
-          <div className="mb-6 bg-destructive/5 border-destructive/20 border rounded-lg p-4">
-            <h3 className="text-base font-semibold mb-2 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Advanced Settings Available
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              As a super admin, you have access to advanced company settings, including deletion capabilities.
-            </p>
-            <Button 
-              variant="destructive" 
-              className="w-full flex items-center justify-center gap-2"
-              onClick={handleAdvancedSettings}
-            >
-              <Settings className="h-4 w-4" />
-              Advanced Company Settings
-            </Button>
-          </div>
-        )}
-
-        {/* Regular Settings Form */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit((data) => updateSettingsMutation.mutate(data))} className="space-y-4">
             <FormField
@@ -195,35 +163,8 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
   const { toast } = useToast();
   const [_, navigate] = useLocation();
 
-  console.log('CustomerSection - User:', { 
-    isSuperAdmin: user?.isSuperAdmin,
-    customers: customers.length,
-    companies: companies.length
-  });
-
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      await apiRequest("DELETE", `/api/admin/users/${userId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      toast({
-        title: "Success",
-        description: "User deleted successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
   const customersByCompany = customers.reduce((acc, customer) => {
     const company = companies.find((c: Company) => c.id === customer.companyId);
-    // Use customer's companyName if no matching company record is found
     const companyName = company?.name || customer.companyName || 'Unassigned';
     if (!acc[companyName]) {
       acc[companyName] = {
@@ -243,7 +184,7 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Building2 className="h-5 w-5" />
-            Companies and Users
+            Customers
           </CardTitle>
           {user?.isSuperAdmin && (
             <Button 
@@ -252,7 +193,7 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
               onClick={() => navigate('/company-settings')}
             >
               <Settings className="h-4 w-4" />
-              Manage All Companies
+              Manage All Customers
             </Button>
           )}
         </div>
@@ -303,43 +244,6 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <UserEventsDialog user={user} />
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button
-                                      variant="destructive"
-                                      size="sm"
-                                      className="flex items-center gap-1"
-                                    >
-                                      <UserX className="h-4 w-4" />
-                                      Delete
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete this user? This
-                                        action cannot be undone.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => deleteUserMutation.mutate(user.id)}
-                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                      >
-                                        {deleteUserMutation.isPending ? (
-                                          <>
-                                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                            Deleting...
-                                          </>
-                                        ) : (
-                                          "Delete User"
-                                        )}
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
                               </div>
                             </TableCell>
                           </TableRow>
