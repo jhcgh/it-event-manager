@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, UserPlus, Pencil, Trash2, AlertTriangle, Settings } from "lucide-react";
+import { Loader2, ArrowLeft, UserPlus, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -10,8 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Form,
@@ -22,9 +20,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation, Link } from "wouter";
 import type { User, InsertUser } from "@shared/schema";
@@ -37,8 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { useState } from 'react';
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,14 +47,6 @@ import {
 
 type UserFormData = InsertUser;
 
-// Company Settings Schema
-const companySettingsSchema = z.object({
-  maxUsers: z.number().min(1, "Must allow at least 1 user"),
-  maxEvents: z.number().min(1, "Must allow at least 1 event"),
-  requireEventApproval: z.boolean(),
-  allowedEventTypes: z.array(z.string()).min(1, "Must allow at least one event type")
-});
-
 export default function CompanyUsersPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -69,21 +56,41 @@ export default function CompanyUsersPage() {
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [isDeleteCompanyDialogOpen, setIsDeleteCompanyDialogOpen] = useState(false);
 
-  // Company settings form
-  const settingsForm = useForm({
-    resolver: zodResolver(companySettingsSchema),
-    defaultValues: {
-      maxUsers: 10,
-      maxEvents: 20,
-      requireEventApproval: false,
-      allowedEventTypes: ["conference", "workshop", "seminar"]
-    }
+  // Enhanced debug logging for user status
+  console.log('Current user status:', {
+    id: user?.id,
+    username: user?.username,
+    isSuperAdmin: user?.isSuperAdmin,
+    isAdmin: user?.isAdmin,
+    companyId: user?.companyId,
+    companyName: user?.companyName,
+    timestamp: new Date().toISOString()
   });
 
-  // Delete company mutation
+  // Debug element for admin status - Made more prominent
+  const debugAdminStatus = (
+    <div className="bg-yellow-100 p-4 rounded-lg mb-4 border border-yellow-400">
+      <h3 className="font-bold mb-2">Debug Information:</h3>
+      <div>Super Admin Status: {String(user?.isSuperAdmin)}</div>
+      <div>Admin Status: {String(user?.isAdmin)}</div>
+      <div>Company ID: {String(user?.companyId)}</div>
+      <div>Company Name: {String(user?.companyName)}</div>
+      <div className="mt-2 p-2 bg-white rounded">
+        <pre className="whitespace-pre-wrap text-xs">
+          Full User Object: {JSON.stringify(user, null, 2)}
+        </pre>
+      </div>
+    </div>
+  );
+
   const deleteCompany = useMutation({
     mutationFn: async () => {
       if (!user?.companyId) return;
+      console.log('Attempting to delete company:', {
+        companyId: user.companyId,
+        timestamp: new Date().toISOString()
+      });
+
       const response = await apiRequest(
         "DELETE",
         `/api/companies/${user.companyId}`
@@ -104,6 +111,7 @@ export default function CompanyUsersPage() {
       });
     },
     onError: (error: Error) => {
+      console.error('Error deleting company:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -265,21 +273,29 @@ export default function CompanyUsersPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
+          {/* Always show debug info at the top */}
+          {debugAdminStatus}
+
           <div className="flex items-center justify-between">
-            <Link href="/">
-              <Button variant="ghost" className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back to Dashboard
-              </Button>
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link href="/">
+                <Button variant="ghost" className="gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Dashboard
+                </Button>
+              </Link>
+            </div>
+
+            {/* Super Admin Actions - Made more prominent */}
             {user?.isSuperAdmin && (
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
-                  className="flex items-center gap-2"
+                  variant="destructive"
+                  size="lg"
+                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
                   onClick={() => setIsDeleteCompanyDialogOpen(true)}
                 >
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle className="h-5 w-5" />
                   Delete Company
                 </Button>
               </div>

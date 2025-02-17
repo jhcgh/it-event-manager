@@ -130,9 +130,9 @@ function CompanySettingsDialog({ company }: { company: Company }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button 
+        <Button
           variant="secondary"
-          size="sm" 
+          size="sm"
           className="flex items-center gap-2"
         >
           <Settings className="h-4 w-4" />
@@ -266,23 +266,28 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
   const { user } = useAuth();
   const { toast } = useToast();
   const [_, navigate] = useLocation();
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
 
-  console.log('CustomerSection - User:', {
-    isSuperAdmin: user?.isSuperAdmin,
-    customers: customers.length,
-    companies: companies.length
-  });
-
-  const deleteUserMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      await apiRequest("DELETE", `/api/admin/users/${userId}`);
+  const deleteCompanyMutation = useMutation({
+    mutationFn: async (companyId: number) => {
+      const response = await apiRequest(
+        "DELETE",
+        `/api/companies/${companyId}`
+      );
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete company');
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({
+        queryKey: ['/api/companies'],
+      });
       toast({
         title: "Success",
-        description: "User deleted successfully",
+        description: `Company has been deleted successfully.`,
       });
+      setCompanyToDelete(null);
     },
     onError: (error: Error) => {
       toast({
@@ -293,9 +298,14 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
     },
   });
 
+  console.log('CustomerSection - User:', {
+    isSuperAdmin: user?.isSuperAdmin,
+    customers: customers.length,
+    companies: companies.length
+  });
+
   const customersByCompany = customers.reduce((acc, customer) => {
     const company = companies.find((c: Company) => c.id === customer.companyId);
-    // Use customer's companyName if no matching company record is found
     const companyName = company?.name || customer.companyName || 'Unassigned';
     if (!acc[companyName]) {
       acc[companyName] = {
@@ -336,7 +346,21 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
                         {users.length} {users.length === 1 ? 'user' : 'users'}
                       </Badge>
                       {company && user?.isSuperAdmin && (
-                        <CompanySettingsDialog company={company} />
+                        <div className="flex items-center gap-2">
+                          <CompanySettingsDialog company={company} />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="flex items-center gap-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCompanyToDelete(company);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete Company
+                          </Button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -414,6 +438,45 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
             );
           })}
         </Accordion>
+
+        {/* Delete Company Confirmation Dialog */}
+        <AlertDialog 
+          open={!!companyToDelete} 
+          onOpenChange={() => setCompanyToDelete(null)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {companyToDelete?.name}?</AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                This action cannot be undone. This will permanently delete
+                {companyToDelete?.name} and all associated data including:
+                <div className="mt-2">
+                  <ul className="list-disc list-inside">
+                    <li>All user accounts in this company</li>
+                    <li>All events created by this company</li>
+                    <li>All company settings and configurations</li>
+                  </ul>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => companyToDelete && deleteCompanyMutation.mutate(companyToDelete.id)}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleteCompanyMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Deleting...
+                  </>
+                ) : (
+                  `Delete ${companyToDelete?.name}`
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
@@ -934,7 +997,7 @@ function AdminPage() {
                                       <Trash2 className="h-4 w-4" />
                                       Delete
                                     </Button>
-                                  </AlertDialogTrigger>
+                                                                 </AlertDialogTrigger>
                                   <AlertDialogContent>
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Delete Event</AlertDialogTitle>
