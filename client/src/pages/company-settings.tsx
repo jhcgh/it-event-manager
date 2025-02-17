@@ -17,10 +17,21 @@ import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLocation, Link } from "wouter";
+import { useLocation, Link, useSearch } from "wouter";
 import type { Company } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { useState } from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const EVENT_TYPES = ["conference", "workshop", "seminar", "meetup", "training"];
 
@@ -37,10 +48,14 @@ export default function CompanySettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [_, navigate] = useLocation();
+  const [isDeleteCompanyDialogOpen, setIsDeleteCompanyDialogOpen] = useState(false);
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const companyId = parseInt(params.get('id') || (user?.companyId?.toString() || ''));
 
   const { data: company, isLoading } = useQuery<Company>({
-    queryKey: [`/api/companies/${user?.companyId}`],
-    enabled: !!user?.companyId,
+    queryKey: [`/api/companies/${companyId}`],
+    enabled: !!companyId,
   });
 
   const form = useForm<CompanySettings>({
@@ -55,11 +70,11 @@ export default function CompanySettingsPage() {
 
   const updateSettings = useMutation({
     mutationFn: async (data: CompanySettings) => {
-      const response = await apiRequest("PATCH", `/api/companies/${user?.companyId}/settings`, data);
+      const response = await apiRequest("PATCH", `/api/companies/${companyId}/settings`, data);
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/companies/${user?.companyId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/companies/${companyId}`] });
       toast({
         title: "Settings Updated",
         description: "Company settings have been successfully updated."
@@ -74,10 +89,41 @@ export default function CompanySettingsPage() {
     }
   });
 
-  if (!user?.companyId) {
+  const deleteCompany = useMutation({
+    mutationFn: async () => {
+      if (!companyId) return;
+      const response = await apiRequest(
+        "DELETE",
+        `/api/companies/${companyId}`
+      );
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete company');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['/api/companies'],
+      });
+      navigate('/admin');
+      toast({
+        title: "Success",
+        description: "Company has been deleted successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (!companyId) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <p className="text-muted-foreground">You are not associated with any company.</p>
+        <p className="text-muted-foreground">Invalid company ID.</p>
       </div>
     );
   }
@@ -106,10 +152,10 @@ export default function CompanySettingsPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/">
+          <Link href="/admin">
             <Button variant="ghost" className="gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
+              Back to Admin
             </Button>
           </Link>
         </div>
@@ -117,7 +163,7 @@ export default function CompanySettingsPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-2xl mx-auto">
-          <h1 className="text-3xl font-bold mb-8">Customer Settings</h1>
+          <h1 className="text-3xl font-bold mb-8">Company Settings</h1>
 
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -220,6 +266,66 @@ export default function CompanySettingsPage() {
               </Button>
             </form>
           </Form>
+
+          {user?.isSuperAdmin && (
+            <div className="mt-8 border-t pt-8">
+              <h2 className="text-2xl font-bold mb-4 text-destructive">Danger Zone</h2>
+              <div className="bg-destructive/10 border-destructive border rounded-lg p-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-semibold">Delete Company</h3>
+                    <p className="text-sm text-muted-foreground">
+                      This action cannot be undone. This will permanently delete the company
+                      and all associated data.
+                    </p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setIsDeleteCompanyDialogOpen(true)}
+                    disabled={deleteCompany.isPending}
+                  >
+                    {deleteCompany.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      "Delete Company"
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <AlertDialog
+                open={isDeleteCompanyDialogOpen}
+                onOpenChange={setIsDeleteCompanyDialogOpen}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete the
+                      company and all associated data including:
+                      <ul className="list-disc list-inside mt-2">
+                        <li>All user accounts</li>
+                        <li>All events</li>
+                        <li>All company settings</li>
+                      </ul>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => deleteCompany.mutate()}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete Company
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
         </div>
       </main>
     </div>

@@ -61,6 +61,7 @@ import {
 } from "@/components/ui/accordion";
 
 function CompanySettingsDialog({ company }: { company: Company }) {
+  const { user } = useAuth();
   const { toast } = useToast();
   const form = useForm({
     defaultValues: {
@@ -96,16 +97,38 @@ function CompanySettingsDialog({ company }: { company: Company }) {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="flex items-center gap-1">
           <Settings className="h-4 w-4" />
-          Settings
+          Company Settings
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Customer Settings - {company.name}</DialogTitle>
+          <DialogTitle>Company Settings - {company.name}</DialogTitle>
           <DialogDescription>
-            Configure customer-wide settings and permissions
+            Configure company-wide settings and permissions
           </DialogDescription>
         </DialogHeader>
+
+        {user?.isSuperAdmin && (
+          <div className="mb-6 bg-destructive/5 border-destructive/20 border rounded-lg p-4">
+            <h3 className="text-base font-semibold mb-2 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Advanced Settings Available
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              As a super admin, you have access to advanced company settings, including the ability to delete this company.
+            </p>
+            <Link href={`/company-settings?id=${company.id}`}>
+              <Button 
+                variant="destructive" 
+                className="w-full flex items-center justify-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                Manage Advanced Settings
+              </Button>
+            </Link>
+          </div>
+        )}
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit((data) => updateSettingsMutation.mutate(data))} className="space-y-4">
             <FormField
