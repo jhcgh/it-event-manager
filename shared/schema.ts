@@ -6,6 +6,10 @@ import { relations } from "drizzle-orm";
 export const companies = pgTable("companies", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  address: text("address").notNull(),
+  phoneNumber: text("phone_number").notNull(),
+  adminName: text("admin_name").notNull(),
+  adminEmail: text("admin_email").notNull(),
   status: text("status", { enum: ['active', 'inactive'] }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -68,6 +72,8 @@ export const eventRelations = relations(events, ({ one }) => ({
 export const insertCompanySchema = createInsertSchema(companies)
   .extend({
     status: z.enum(['active', 'inactive']).default('active'),
+    phoneNumber: z.string().regex(/^\+?[\d\s-()]+$/, "Invalid phone number format"),
+    adminEmail: z.string().email("Invalid email address"),
   })
   .omit({
     id: true,

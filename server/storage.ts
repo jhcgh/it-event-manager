@@ -14,6 +14,7 @@ export interface IStorage {
   createCompany(insertCompany: InsertCompany): Promise<Company>;
   getCompany(id: number): Promise<Company | undefined>;
   getAllCompanies(): Promise<Company[]>;
+  updateCompany(id: number, updateData: Partial<InsertCompany>): Promise<Company | undefined>;
 
   // User Management Methods
   getUser(id: number): Promise<User | undefined>;
@@ -292,7 +293,7 @@ export class DatabaseStorage implements IStorage {
 
       const [result] = await db
         .update(events)
-        .set({ 
+        .set({
           ...updateData,
           updatedAt: new Date(),
           // Ensure status is set when updating
@@ -313,6 +314,38 @@ export class DatabaseStorage implements IStorage {
         error,
         eventId: id,
         userId,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  }
+  async updateCompany(id: number, updateData: Partial<InsertCompany>): Promise<Company | undefined> {
+    try {
+      console.log('Updating company settings:', {
+        companyId: id,
+        updates: updateData,
+        timestamp: new Date().toISOString()
+      });
+
+      const [updatedCompany] = await db
+        .update(companies)
+        .set({
+          ...updateData,
+          updatedAt: new Date()
+        })
+        .where(eq(companies.id, id))
+        .returning();
+
+      console.log('Company settings updated successfully:', {
+        companyId: id,
+        timestamp: new Date().toISOString()
+      });
+
+      return updatedCompany;
+    } catch (error) {
+      console.error('Error updating company settings:', {
+        error,
+        companyId: id,
         timestamp: new Date().toISOString()
       });
       throw error;

@@ -47,6 +47,11 @@ export function HoverUserMenu({ user }: HoverUserMenuProps) {
             View Profile
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/company-settings" className="cursor-pointer">
+            Company Settings
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer text-destructive focus:text-destructive"

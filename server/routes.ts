@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
-import { insertEventSchema, insertUserSchema } from "@shared/schema";
+import { insertEventSchema, insertUserSchema, insertCompanySchema } from "@shared/schema";
 import multer from "multer";
 import { createEvent } from "ics";
 import sharp from "sharp";
@@ -423,6 +423,43 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error('CSV processing error:', error);
       res.status(500).json({ message: "Failed to process CSV file" });
+    }
+  });
+
+  app.get("/api/company-settings", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const company = await storage.getCompany(req.user.companyId);
+      if (!company) return res.sendStatus(404);
+
+      res.json(company);
+    } catch (error) {
+      console.error('Error fetching company settings:', error);
+      res.status(500).json({
+        message: "Failed to fetch company settings",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.patch("/api/company-settings", async (req, res) => {
+    if (!req.user) return res.sendStatus(401);
+
+    try {
+      const parsed = insertCompanySchema.partial().safeParse(req.body);
+      if (!parsed.success) return res.status(400).json(parsed.error);
+
+      const updatedCompany = await storage.updateCompany(req.user.companyId, parsed.data);
+      if (!updatedCompany) return res.sendStatus(404);
+
+      res.json(updatedCompany);
+    } catch (error) {
+      console.error('Error updating company settings:', error);
+      res.status(500).json({
+        message: "Failed to update company settings",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
