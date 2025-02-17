@@ -57,9 +57,7 @@ export class DatabaseStorage implements IStorage {
             maxUsers: insertCompany.settings?.maxUsers,
             maxEvents: insertCompany.settings?.maxEvents
           },
-          status: insertCompany.status || 'active',
-          createdAt: new Date(),
-          updatedAt: new Date()
+          status: insertCompany.status || 'active'
         })
         .returning();
 

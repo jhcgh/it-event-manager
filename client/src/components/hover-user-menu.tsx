@@ -1,4 +1,4 @@
-import { UserCircle, Settings } from "lucide-react";
+import { UserCircle } from "lucide-react";
 import { User } from "@shared/schema";
 import { Link } from "wouter";
 import {
@@ -47,15 +47,6 @@ export function HoverUserMenu({ user }: HoverUserMenuProps) {
             View Profile
           </Link>
         </DropdownMenuItem>
-        {/* Show Customer Settings for non-super-admin users */}
-        {!user.isSuperAdmin && user.companyId && (
-          <DropdownMenuItem asChild>
-            <Link href="/customer-settings" className="cursor-pointer flex items-center">
-              <Settings className="mr-2 h-4 w-4" />
-              Customer Settings
-            </Link>
-          </DropdownMenuItem>
-        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer text-destructive focus:text-destructive"

@@ -20,6 +20,7 @@ import { useLocation, Link } from "wouter";
 import type { Company } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 
+// Simplified schema without allowedEventTypes
 const customerSettingsSchema = z.object({
   maxUsers: z.number().min(1, "Must allow at least 1 user"),
   maxEvents: z.number().min(1, "Must allow at least 1 event"),

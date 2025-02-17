@@ -7,12 +7,13 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Add request logging middleware
+// Add request logging middleware with improved error handling
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
+  // Capture JSON responses for logging
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
     capturedJsonResponse = bodyJson;
@@ -24,13 +25,9 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        const responseStr = JSON.stringify(capturedJsonResponse);
+        logLine += ` :: ${responseStr.length > 80 ? responseStr.slice(0, 77) + "..." : responseStr}`;
       }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
       log(logLine);
     }
   });
@@ -38,8 +35,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Function to check if port is available
-const isPortAvailable = (port: number): Promise<boolean> => {
+// Function to check if port is available with timeout
+const isPortAvailable = (port: number, timeout = 5000): Promise<boolean> => {
   return new Promise((resolve) => {
     const server = createServer();
     server.once('error', () => {
@@ -50,6 +47,10 @@ const isPortAvailable = (port: number): Promise<boolean> => {
       resolve(true);
     });
     server.listen(port, '0.0.0.0');
+    setTimeout(() => {
+      server.close();
+      resolve(false);
+    }, timeout);
   });
 };
 
@@ -58,12 +59,21 @@ const isPortAvailable = (port: number): Promise<boolean> => {
     log("Starting server setup...");
     const server = registerRoutes(app);
 
-    // Global error handler
+    // Global error handler with improved error details
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-      console.error("Server error:", err);
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      res.status(status).json({ message });
+      const errorDetails = {
+        message: err.message || "Internal Server Error",
+        status: err.status || err.statusCode || 500,
+        timestamp: new Date().toISOString(),
+        path: _req.path
+      };
+
+      console.error("Server error:", {
+        ...errorDetails,
+        stack: err.stack
+      });
+
+      res.status(errorDetails.status).json(errorDetails);
     });
 
     if (app.get("env") === "development") {
@@ -78,22 +88,31 @@ const isPortAvailable = (port: number): Promise<boolean> => {
     const PORT = parseInt(process.env.PORT || "5000", 10);
     log(`Starting server on port ${PORT}...`);
 
-    // Check port availability before starting
+    // Check port availability with improved error handling
     const isAvailable = await isPortAvailable(PORT);
     if (!isAvailable) {
-      throw new Error(`Port ${PORT} is already in use`);
+      throw new Error(`Port ${PORT} is already in use or not available`);
     }
 
-    // Create a Promise to handle server startup
+    // Create a Promise to handle server startup with proper port binding
     const startServer = new Promise<void>((resolve, reject) => {
+      let serverStartTimeout: NodeJS.Timeout;
+
       const onError = (error: Error) => {
+        clearTimeout(serverStartTimeout);
         log(`Error starting server: ${error.message}`);
         console.error('Failed to start server:', error);
         reject(error);
       };
 
       try {
+        // Set a timeout for server startup
+        serverStartTimeout = setTimeout(() => {
+          onError(new Error('Server startup timed out'));
+        }, 10000);
+
         server.listen(PORT, "0.0.0.0", () => {
+          clearTimeout(serverStartTimeout);
           const address = server.address();
           const port = typeof address === 'object' ? address?.port : PORT;
           log(`Server bound successfully to port ${port}`);
@@ -112,7 +131,7 @@ const isPortAvailable = (port: number): Promise<boolean> => {
       }
     });
 
-    // Wait for server to start
+    // Wait for server to start with proper port binding
     await startServer;
     log('Server started successfully');
 
