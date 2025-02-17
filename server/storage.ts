@@ -1,4 +1,4 @@
-import { users, events, companies, type User, type Event, type InsertUser, type InsertEvent, type Company, type InsertCompany } from "@shared/schema";
+import { users, events, customers, type User, type Event, type InsertUser, type InsertEvent, type Customer, type InsertCustomer } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
@@ -10,19 +10,19 @@ const PostgresSessionStore = connectPg(session);
 export interface IStorage {
   sessionStore: session.Store;
 
-  // Company Methods
-  createCompany(insertCompany: InsertCompany): Promise<Company>;
-  getCompany(id: number): Promise<Company | undefined>;
-  getAllCompanies(): Promise<Company[]>;
-  updateCompany(id: number, updateData: Partial<InsertCompany>): Promise<Company | undefined>;
+  // Customer Methods
+  createCustomer(insertCustomer: InsertCustomer): Promise<Customer>;
+  getCustomerById(id: number): Promise<Customer | undefined>;
+  getAllCustomers(): Promise<Customer[]>;
+  updateCustomerById(id: number, updateData: Partial<InsertCustomer>): Promise<Customer | undefined>;
 
   // User Management Methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(insertUser: InsertUser & { companyId?: number }): Promise<User>;
+  createUser(insertUser: InsertUser & { customerId?: number }): Promise<User>;
   updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
-  getUsersByCompany(companyId: number): Promise<User[]>;
+  getUsersByCustomer(customerId: number): Promise<User[]>;
 
   // Event Management Methods
   createEvent(userId: number, insertEvent: InsertEvent): Promise<Event>;
@@ -43,54 +43,49 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async createCompany(insertCompany: InsertCompany): Promise<Company> {
+  async createCustomer(insertCustomer: InsertCustomer): Promise<Customer> {
     try {
-      console.log('Creating company:', {
-        name: insertCompany.name,
+      console.log('Creating customer:', {
+        name: insertCustomer.name,
         timestamp: new Date().toISOString()
       });
 
-      const [company] = await db.insert(companies)
+      const [customer] = await db.insert(customers)
         .values({
-          name: insertCompany.name,
-          address: insertCompany.address,
-          phoneNumber: insertCompany.phoneNumber,
-          adminName: insertCompany.adminName,
-          adminEmail: insertCompany.adminEmail,
-          status: insertCompany.status || 'active',
+          name: insertCustomer.name,
+          address: insertCustomer.address,
+          phoneNumber: insertCustomer.phoneNumber,
+          adminName: insertCustomer.adminName,
+          adminEmail: insertCustomer.adminEmail,
+          status: insertCustomer.status || 'active',
           updatedAt: new Date(),
           createdAt: new Date()
         })
         .returning();
 
-      console.log('Company created successfully:', {
-        companyId: company.id,
-        companyName: company.name,
+      console.log('Customer created successfully:', {
+        customerId: customer.id,
+        customerName: customer.name,
         timestamp: new Date().toISOString()
       });
 
-      return company;
+      return customer;
     } catch (error) {
-      console.error('Error creating company:', {
-        error,
-        name: insertCompany.name,
-        timestamp: new Date().toISOString(),
-        stack: error instanceof Error ? error.stack : undefined
-      });
+      console.error('Error creating customer:', error);
       throw error;
     }
   }
 
-  async getCompany(id: number): Promise<Company | undefined> {
-    const result = await db.select().from(companies).where(eq(companies.id, id));
+  async getCustomerById(id: number): Promise<Customer | undefined> {
+    const result = await db.select().from(customers).where(eq(customers.id, id));
     return result[0];
   }
 
-  async getAllCompanies(): Promise<Company[]> {
+  async getAllCustomers(): Promise<Customer[]> {
     return await db.select()
-      .from(companies)
-      .where(eq(companies.status, sql`'active'`))
-      .orderBy(desc(companies.createdAt));
+      .from(customers)
+      .where(eq(customers.status, sql`'active'`))
+      .orderBy(desc(customers.createdAt));
   }
 
   async getUser(id: number): Promise<User | undefined> {
@@ -103,61 +98,59 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async createUser(insertUser: InsertUser & { companyId?: number }): Promise<User> {
+  async createUser(insertUser: InsertUser & { customerId?: number }): Promise<User> {
     try {
       console.log('Starting user creation process:', {
         username: insertUser.username,
         timestamp: new Date().toISOString()
       });
 
-      let companyId = insertUser.companyId;
-      if (insertUser.companyName && !companyId) {
-        const company = await this.createCompany({
-          name: insertUser.companyName,
+      let customerId = insertUser.customerId;
+      if (insertUser.customerName && !customerId) {
+        const customer = await this.createCustomer({
+          name: insertUser.customerName,
           address: "Please update address",
           phoneNumber: "Please update phone number",
           adminName: "Please update admin name",
           adminEmail: insertUser.username,
           status: 'active'
         });
-        companyId = company.id;
-        console.log('Created new company:', {
-          companyId,
-          companyName: insertUser.companyName,
+        customerId = customer.id;
+        console.log('Created new customer:', {
+          customerId,
+          customerName: insertUser.customerName,
           timestamp: new Date().toISOString()
         });
       }
 
-      const [user] = await db.insert(users).values({
-        username: insertUser.username,
-        password: insertUser.password,
-        firstName: insertUser.firstName,
-        lastName: insertUser.lastName,
-        title: insertUser.title,
-        mobile: insertUser.mobile,
-        companyId,
-        companyName: insertUser.companyName,
-        status: 'active',
-        isAdmin: false,
-        isSuperAdmin: false,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
+      const [user] = await db.insert(users)
+        .values({
+          username: insertUser.username,
+          password: insertUser.password,
+          firstName: insertUser.firstName,
+          lastName: insertUser.lastName,
+          title: insertUser.title,
+          mobile: insertUser.mobile,
+          customerId,
+          customerName: insertUser.customerName,
+          status: 'active',
+          isAdmin: false,
+          isSuperAdmin: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })
+        .returning();
 
       console.log('User creation completed:', {
         userId: user.id,
         username: user.username,
-        companyId: user.companyId,
+        customerId: user.customerId,
         timestamp: new Date().toISOString()
       });
 
       return user;
     } catch (error) {
-      console.error('Error in createUser:', {
-        error,
-        username: insertUser.username,
-        timestamp: new Date().toISOString()
-      });
+      console.error('Error in createUser:', error);
       throw error;
     }
   }
@@ -181,23 +174,23 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       };
 
-      if (updateData.companyName) {
+      if (updateData.customerName) {
         const user = await this.getUser(id);
         if (user) {
-          if (user.companyId) {
-            await db.update(companies)
-              .set({ name: updateData.companyName, updatedAt: new Date() })
-              .where(eq(companies.id, user.companyId));
+          if (user.customerId) {
+            await db.update(customers)
+              .set({ name: updateData.customerName, updatedAt: new Date() })
+              .where(eq(customers.id, user.customerId));
           } else {
-            const company = await this.createCompany({
-              name: updateData.companyName,
+            const customer = await this.createCustomer({
+              name: updateData.customerName,
               address: "Please update address",
               phoneNumber: "Please update phone number",
               adminName: "Please update admin name",
               adminEmail: user.username || "please.update@example.com",
               status: 'active'
             });
-            Object.assign(validUpdateFields, { companyId: company.id });
+            Object.assign(validUpdateFields, { customerId: customer.id });
           }
         }
       }
@@ -230,16 +223,45 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(users.createdAt));
   }
 
-  async getUsersByCompany(companyId: number): Promise<User[]> {
+  async getUsersByCustomer(customerId: number): Promise<User[]> {
     return await db.select()
       .from(users)
       .where(
         and(
-          eq(users.companyId, companyId),
+          eq(users.customerId, customerId),
           sql`${users.status} != 'deleted'`
         )
       )
       .orderBy(desc(users.createdAt));
+  }
+
+  async updateCustomerById(id: number, updateData: Partial<InsertCustomer>): Promise<Customer | undefined> {
+    try {
+      console.log('Storage updateCustomer started:', {
+        customerId: id,
+        updates: updateData,
+        timestamp: new Date().toISOString()
+      });
+
+      const [updatedCustomer] = await db
+        .update(customers)
+        .set({
+          ...updateData,
+          updatedAt: new Date()
+        })
+        .where(eq(customers.id, id))
+        .returning();
+
+      console.log('Customer settings updated successfully:', {
+        customerId: id,
+        timestamp: new Date().toISOString()
+      });
+
+      return updatedCustomer;
+    } catch (error) {
+      console.error('Error updating customer settings:', error);
+      throw error;
+    }
   }
 
   async createEvent(userId: number, insertEvent: InsertEvent): Promise<Event> {
@@ -307,9 +329,7 @@ export class DatabaseStorage implements IStorage {
         .update(events)
         .set({
           ...updateData,
-          updatedAt: new Date(),
-          // Ensure status is set when updating
-          ...(updateData.status && { status: updateData.status })
+          updatedAt: new Date()
         })
         .where(and(eq(events.id, id), eq(events.userId, userId)))
         .returning();
@@ -327,39 +347,6 @@ export class DatabaseStorage implements IStorage {
         eventId: id,
         userId,
         timestamp: new Date().toISOString()
-      });
-      throw error;
-    }
-  }
-  async updateCompany(id: number, updateData: Partial<InsertCompany>): Promise<Company | undefined> {
-    try {
-      console.log('Storage updateCompany started:', {
-        companyId: id,
-        updates: updateData,
-        timestamp: new Date().toISOString()
-      });
-
-      const [updatedCompany] = await db
-        .update(companies)
-        .set({
-          ...updateData,
-          updatedAt: new Date()
-        })
-        .where(eq(companies.id, id))
-        .returning();
-
-      console.log('Company settings updated successfully:', {
-        companyId: id,
-        timestamp: new Date().toISOString()
-      });
-
-      return updatedCompany;
-    } catch (error) {
-      console.error('Error updating company settings:', {
-        error,
-        companyId: id,
-        timestamp: new Date().toISOString(),
-        stack: error instanceof Error ? error.stack : undefined
       });
       throw error;
     }

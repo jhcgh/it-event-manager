@@ -59,7 +59,7 @@ export default function AuthPage() {
       lastName: "",
       title: "",
       mobile: "",
-      companyName: "", // Added company name default value
+      customerName: "", 
     },
     mode: "onBlur",
   });
@@ -75,7 +75,7 @@ export default function AuthPage() {
 
   const handleLogin = async (data: any) => {
     try {
-      setLoginError(""); // Clear any previous error
+      setLoginError(""); 
       await loginMutation.mutateAsync(data);
     } catch (error: any) {
       setLoginError(error.message || "Login failed. Please try again.");
@@ -233,14 +233,14 @@ export default function AuthPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="companyName">Company Name</Label>
+                      <Label htmlFor="customerName">Customer Name</Label>
                       <Input
-                        id="companyName"
-                        {...registerForm.register("companyName")}
+                        id="customerName"
+                        {...registerForm.register("customerName")}
                       />
-                      {registerForm.formState.errors.companyName && (
+                      {registerForm.formState.errors.customerName && (
                         <p className="text-sm text-destructive">
-                          {registerForm.formState.errors.companyName.message}
+                          {registerForm.formState.errors.customerName.message}
                         </p>
                       )}
                     </div>

@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth, hashPassword } from "./auth";
 import { storage } from "./storage";
-import { insertEventSchema, insertUserSchema, insertCompanySchema } from "@shared/schema";
+import { insertEventSchema, insertUserSchema, insertCustomerSchema } from "@shared/schema";
 import multer from "multer";
 import { createEvent } from "ics";
 import sharp from "sharp";
@@ -511,6 +511,96 @@ export function registerRoutes(app: Express): Server {
       console.error('Error updating company settings:', error);
       res.status(500).json({
         message: "Failed to update company settings",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.get("/api/customer-settings", async (req, res) => {
+    try {
+      console.log('GET /api/customer-settings - Request received:', {
+        isAuthenticated: req.isAuthenticated(),
+        userId: req.user?.id,
+        customerId: req.user?.customerId,
+        sessionID: req.sessionID,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!req.user) {
+        console.log('GET /api/customer-settings - Unauthorized: No user in session');
+        return res.sendStatus(401);
+      }
+
+      if (!req.user.customerId) {
+        console.log('GET /api/customer-settings - Not Found: User has no customer');
+        return res.sendStatus(404);
+      }
+
+      const customer = await storage.getCustomerById(req.user.customerId);
+      if (!customer) {
+        console.log('GET /api/customer-settings - Customer not found:', req.user.customerId);
+        return res.sendStatus(404);
+      }
+
+      console.log('GET /api/customer-settings - Success:', {
+        userId: req.user.id,
+        customerId: req.user.customerId,
+        timestamp: new Date().toISOString()
+      });
+
+      res.json(customer);
+    } catch (error) {
+      console.error('Error fetching customer settings:', error);
+      res.status(500).json({
+        message: "Failed to fetch customer settings",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.patch("/api/customer-settings", async (req, res) => {
+    try {
+      console.log('PATCH /api/customer-settings - Request received:', {
+        isAuthenticated: req.isAuthenticated(),
+        userId: req.user?.id,
+        customerId: req.user?.customerId,
+        updates: req.body,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!req.user) {
+        console.log('PATCH /api/customer-settings - Unauthorized: No user in session');
+        return res.sendStatus(401);
+      }
+
+      if (!req.user.customerId) {
+        console.log('PATCH /api/customer-settings - Not Found: User has no customer');
+        return res.sendStatus(404);
+      }
+
+      const parsed = insertCustomerSchema.partial().safeParse(req.body);
+      if (!parsed.success) {
+        console.log('PATCH /api/customer-settings - Invalid data:', parsed.error);
+        return res.status(400).json(parsed.error);
+      }
+
+      const updatedCustomer = await storage.updateCustomerById(req.user.customerId, parsed.data);
+      if (!updatedCustomer) {
+        console.log('PATCH /api/customer-settings - Customer not found:', req.user.customerId);
+        return res.sendStatus(404);
+      }
+
+      console.log('PATCH /api/customer-settings - Success:', {
+        userId: req.user.id,
+        customerId: req.user.customerId,
+        timestamp: new Date().toISOString()
+      });
+
+      res.json(updatedCustomer);
+    } catch (error) {
+      console.error('Error updating customer settings:', error);
+      res.status(500).json({
+        message: "Failed to update customer settings",
         error: error instanceof Error ? error.message : String(error)
       });
     }

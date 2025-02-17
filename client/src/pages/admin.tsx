@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { User, Event, Company } from "@shared/schema";
+import { User, Event, Customer } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,21 +43,19 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-function CustomerSection({ customers, companies }: { customers: User[], companies: Company[] }) {
-  const customersByCompany = customers.reduce((acc, customer) => {
-    const company = companies.find((c: Company) => c.id === customer.companyId);
-    const companyName = company?.name || customer.companyName || 'Unassigned';
-    if (!acc[companyName]) {
-      acc[companyName] = {
-        company,
+function CustomerSection({ customers }: { customers: Customer[] }) {
+  const customersByOrg = customers.reduce((acc, user) => {
+    if (!acc[user.name]) {
+      acc[user.name] = {
+        details: user,
         users: []
       };
     }
-    acc[companyName].users.push(customer);
+    acc[user.name].users.push(user);
     return acc;
-  }, {} as Record<string, { company: Company | undefined, users: User[] }>);
+  }, {} as Record<string, { details: Customer, users: User[] }>);
 
-  const sortedCompanies = Object.keys(customersByCompany).sort();
+  const sortedCustomers = Object.keys(customersByOrg).sort();
 
   return (
     <Card>
@@ -71,15 +69,15 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
       </CardHeader>
       <CardContent>
         <Accordion type="single" collapsible className="space-y-4">
-          {sortedCompanies.map((companyName) => {
-            const { company, users } = customersByCompany[companyName];
+          {sortedCustomers.map((customerName) => {
+            const { details, users } = customersByOrg[customerName];
             return (
-              <AccordionItem key={companyName} value={companyName} className="border rounded-lg px-4">
+              <AccordionItem key={customerName} value={customerName} className="border rounded-lg px-4">
                 <AccordionTrigger>
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
                       <Building2 className="h-4 w-4" />
-                      <span className="font-semibold">{companyName}</span>
+                      <span className="font-semibold">{customerName}</span>
                     </div>
                     <Badge variant="outline">
                       {users.length} {users.length === 1 ? 'user' : 'users'}
@@ -88,13 +86,18 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="mt-4">
+                    <div className="mb-4 text-sm text-muted-foreground">
+                      <p>Admin: {details.adminName}</p>
+                      <p>Email: {details.adminEmail}</p>
+                      <p>Phone: {details.phoneNumber}</p>
+                      <p>Address: {details.address}</p>
+                    </div>
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
                           <TableHead>Email</TableHead>
                           <TableHead>Title</TableHead>
-                          <TableHead>Phone</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -106,7 +109,6 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
                             </TableCell>
                             <TableCell>{user.username}</TableCell>
                             <TableCell>{user.title}</TableCell>
-                            <TableCell>{user.mobile}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <UserEventsDialog user={user} />
@@ -346,7 +348,7 @@ export default function AdminPage() {
     queryKey: ["/api/admin/users"],
   });
 
-  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Company[]>({
+  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Customer[]>({
     queryKey: ["/api/admin/companies"],
   });
 
@@ -380,7 +382,12 @@ export default function AdminPage() {
     }
   };
 
-  if (isLoadingUsers || isLoadingEvents || isLoadingCompanies) {
+  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>({
+    queryKey: ["/api/admin/customers"],
+  });
+
+
+  if (isLoadingUsers || isLoadingEvents || isLoadingCustomers || isLoadingCompanies) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -389,7 +396,7 @@ export default function AdminPage() {
   }
 
   const superUsers = users.filter(u => u.isSuperAdmin === true);
-  const customers = users.filter(u => !u.isSuperAdmin);
+  const customerUsers = users.filter(u => !u.isSuperAdmin);
 
   return (
     <div className="min-h-screen bg-background">
@@ -477,7 +484,7 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="customers">
-            <CustomerSection customers={customers} companies={companies} />
+            <CustomerSection customers={customers} />
           </TabsContent>
 
           <TabsContent value="events">
