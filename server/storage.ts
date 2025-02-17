@@ -143,6 +143,65 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async createUser(insertUser: InsertUser & { companyId?: number, companyRoleId?: number }): Promise<User> {
+    try {
+      console.log('Starting user creation process:', {
+        username: insertUser.username,
+        timestamp: new Date().toISOString()
+      });
+
+      // If companyName is provided, create company first
+      let companyId = insertUser.companyId;
+      if (insertUser.companyName && !companyId) {
+        const company = await this.createCompany({
+          name: insertUser.companyName,
+          settings: {}
+        });
+        companyId = company.id;
+        console.log('Created new company:', {
+          companyId,
+          companyName: insertUser.companyName,
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      // Create user with company association
+      const values = {
+        username: insertUser.username,
+        password: insertUser.password,
+        firstName: insertUser.firstName,
+        lastName: insertUser.lastName,
+        title: insertUser.title,
+        mobile: insertUser.mobile,
+        companyId,
+        companyName: insertUser.companyName,
+        status: 'active',
+        isAdmin: false,
+        isSuperAdmin: false,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } as const;
+
+      const [user] = await db.insert(users).values(values).returning();
+
+      console.log('User creation completed:', {
+        userId: user.id,
+        username: user.username,
+        companyId: user.companyId,
+        timestamp: new Date().toISOString()
+      });
+
+      return user;
+    } catch (error) {
+      console.error('Error in createUser:', {
+        error,
+        username: insertUser.username,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
+  }
+
   async updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined> {
     try {
       const startTime = Date.now();

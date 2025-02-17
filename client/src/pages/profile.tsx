@@ -24,32 +24,20 @@ export default function ProfilePage() {
       username: user?.username || "",
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
-      companyName: user?.companyName || "",
+      companyName: user?.companyName || "", // Ensure it's always a string
       title: user?.title || "",
       mobile: user?.mobile || "",
     },
   });
 
-  const onSubmit = (data: Partial<InsertUser>) => {
-    const updates = {
-      ...data,
-      companyName: data.companyName || user?.companyName,
-    };
-    console.log('Profile update initiated:', {
-      updates,
-      timestamp: new Date().toISOString()
-    });
-    updateProfileMutation.mutate(updates);
-  };
-
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: Partial<InsertUser>) => {
+    mutationFn: async (data: Omit<InsertUser, "password">) => {
       console.log('Making profile update request:', {
         data,
         timestamp: new Date().toISOString()
       });
       const response = await apiRequest("PATCH", "/api/profile", data);
-      return response;
+      return response.json();
     },
     onMutate: async (newData) => {
       console.log('Optimistic update started:', {
@@ -57,13 +45,9 @@ export default function ProfilePage() {
         timestamp: new Date().toISOString()
       });
 
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ["/api/user"] });
-
-      // Snapshot the previous value
       const previousUser = queryClient.getQueryData(["/api/user"]);
 
-      // Optimistically update to new value immediately
       queryClient.setQueryData(["/api/user"], (old: any) => ({
         ...old,
         ...newData,
@@ -77,7 +61,6 @@ export default function ProfilePage() {
         error,
         timestamp: new Date().toISOString()
       });
-      // Rollback on error
       queryClient.setQueryData(["/api/user"], context?.previousUser);
       toast({
         title: "Error",
@@ -90,15 +73,21 @@ export default function ProfilePage() {
         updatedUser,
         timestamp: new Date().toISOString()
       });
-      // Update cache with server response
       queryClient.setQueryData(["/api/user"], updatedUser);
-
       toast({
         title: "Success",
         description: "Profile updated successfully",
       });
     },
   });
+
+  const onSubmit = (data: Omit<InsertUser, "password">) => {
+    console.log('Profile update initiated:', {
+      updates: data,
+      timestamp: new Date().toISOString()
+    });
+    updateProfileMutation.mutate(data);
+  };
 
   if (!user) return null;
 
