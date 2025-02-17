@@ -10,7 +10,6 @@ export const companies = pgTable("companies", {
     maxUsers?: number;
     maxEvents?: number;
     allowedEventTypes?: string[];
-    requireEventApproval?: boolean;
   }>().notNull().default({}),
   status: text("status", { enum: ['active', 'inactive'] }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

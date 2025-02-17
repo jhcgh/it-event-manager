@@ -44,14 +44,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCompany(insertCompany: InsertCompany): Promise<Company> {
-    const [company] = await db.insert(companies).values({
-      name: insertCompany.name,
-      settings: insertCompany.settings || {},
-      status: insertCompany.status || 'active',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }).returning();
-    return company;
+    try {
+      console.log('Creating company:', {
+        name: insertCompany.name,
+        timestamp: new Date().toISOString()
+      });
+
+      const [company] = await db.insert(companies)
+        .values({
+          id: undefined,
+          name: insertCompany.name,
+          settings: insertCompany.settings || {},
+          status: insertCompany.status || 'active',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } satisfies typeof companies.$inferInsert)
+        .returning();
+
+      console.log('Company created successfully:', {
+        companyId: company.id,
+        timestamp: new Date().toISOString()
+      });
+
+      return company;
+    } catch (error) {
+      console.error('Error creating company:', {
+        error,
+        name: insertCompany.name,
+        timestamp: new Date().toISOString()
+      });
+      throw error;
+    }
   }
 
   async getCompany(id: number): Promise<Company | undefined> {

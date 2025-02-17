@@ -26,7 +26,6 @@ const EVENT_TYPES = ["conference", "workshop", "seminar", "meetup", "training"];
 const customerSettingsSchema = z.object({
   maxUsers: z.number().min(1, "Must allow at least 1 user"),
   maxEvents: z.number().min(1, "Must allow at least 1 event"),
-  requireEventApproval: z.boolean(),
   allowedEventTypes: z.array(z.string()).min(1, "Must allow at least one event type")
 });
 
@@ -64,7 +63,6 @@ export default function CustomerSettingsPage() {
     defaultValues: {
       maxUsers: customer?.settings?.maxUsers ?? 10,
       maxEvents: customer?.settings?.maxEvents ?? 20,
-      requireEventApproval: customer?.settings?.requireEventApproval ?? false,
       allowedEventTypes: customer?.settings?.allowedEventTypes ?? ["conference", "workshop", "seminar"]
     }
   });
@@ -164,29 +162,6 @@ export default function CustomerSettingsPage() {
                     <FormDescription>
                       Maximum number of events this customer can create
                     </FormDescription>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="requireEventApproval"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">
-                        Require Event Approval
-                      </FormLabel>
-                      <FormDescription>
-                        Events will need approval before being published
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
                   </FormItem>
                 )}
               />
