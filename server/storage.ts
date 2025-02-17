@@ -53,6 +53,10 @@ export class DatabaseStorage implements IStorage {
       const [company] = await db.insert(companies)
         .values({
           name: insertCompany.name,
+          address: insertCompany.address,
+          phoneNumber: insertCompany.phoneNumber,
+          adminName: insertCompany.adminName,
+          adminEmail: insertCompany.adminEmail,
           status: insertCompany.status || 'active',
           updatedAt: new Date(),
           createdAt: new Date()
