@@ -178,7 +178,8 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
 
   const customersByCompany = customers.reduce((acc, customer) => {
     const company = companies.find((c: Company) => c.id === customer.companyId);
-    const companyName = company?.name || 'Other';
+    // Use customer's companyName if no matching company record is found
+    const companyName = company?.name || customer.companyName || 'Unassigned';
     if (!acc[companyName]) {
       acc[companyName] = {
         company,

@@ -30,6 +30,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   deleteUser(id: number): Promise<void>;
   getUsersByCompany(companyId: number): Promise<User[]>;
+  deleteUserEvents(userId: number): Promise<void>;
 
   // Event Management Methods
   createEvent(userId: number, insertEvent: InsertEvent): Promise<Event>;
@@ -195,9 +196,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: number): Promise<void> {
-    await db.update(users)
-      .set({ status: 'deleted', updatedAt: new Date() })
-      .where(eq(users.id, id));
+    try {
+      console.log(`Starting deletion process for user ${id}`);
+
+      // First delete all events
+      await this.deleteUserEvents(id);
+
+      // Then update the user status to deleted and remove company associations
+      await db.update(users)
+        .set({ 
+          status: 'deleted', 
+          updatedAt: new Date(),
+          companyId: null,
+          companyRoleId: null,
+          companyName: null
+        })
+        .where(eq(users.id, id));
+
+      console.log(`Successfully completed deletion process for user ${id}`);
+    } catch (error) {
+      console.error(`Error during user deletion process:`, error);
+      throw error;
+    }
   }
 
   // Event Management Methods
@@ -236,6 +256,12 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEvent(id: number): Promise<void> {
     await db.delete(events).where(eq(events.id, id));
+  }
+
+  async deleteUserEvents(userId: number): Promise<void> {
+    console.log(`Deleting all events for user ${userId}`);
+    await db.delete(events).where(eq(events.userId, userId));
+    console.log(`Successfully deleted all events for user ${userId}`);
   }
 
   // Admin Methods

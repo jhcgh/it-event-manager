@@ -284,8 +284,26 @@ export function registerRoutes(app: Express): Server {
 
   app.delete("/api/admin/users/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
-    await storage.deleteUser(parseInt(req.params.id));
-    res.sendStatus(200);
+
+    try {
+      const userId = parseInt(req.params.id);
+      console.log(`Deleting user ${userId}`);
+
+      // First, delete all events created by this user
+      await storage.deleteUserEvents(userId);
+
+      // Then delete the user
+      await storage.deleteUser(userId);
+
+      console.log(`Successfully deleted user ${userId} and their associated data`);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ 
+        message: "Failed to delete user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
   });
 
   app.post("/api/admin/users/super", async (req, res) => {
@@ -518,7 +536,7 @@ export function registerRoutes(app: Express): Server {
 
       if (companyId !== req.user.companyId && !req.user.isAdmin) {
         console.log(`POST /api/companies/${companyId}/users - Forbidden: User doesn't belong to company`);
-        return res.sendStatus(403);
+        return res.sendStatus(402);
       }
 
       const parsed = insertUserSchema.parse(req.body);
@@ -599,7 +617,13 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "User not found" });
       }
 
+      // First delete all events created by this user
+      await storage.deleteUserEvents(userId);
+
+      // Then delete the user
       await storage.deleteUser(userId);
+
+      console.log(`Successfully deleted user ${userId} and their associated data`);
       res.sendStatus(200);
     } catch (error) {
       console.error("Error deleting user:", error);
