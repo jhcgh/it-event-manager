@@ -44,18 +44,31 @@ import {
 } from "@/components/ui/accordion";
 
 function CustomerSection({ customers }: { customers: Customer[] }) {
-  const customersByOrg = customers.reduce((acc, user) => {
-    if (!acc[user.name]) {
-      acc[user.name] = {
-        details: user,
+  const customerGroups = customers.reduce((acc, customer) => {
+    if (!acc[customer.id]) {
+      acc[customer.id] = {
+        details: customer,
         users: []
       };
     }
-    acc[user.name].users.push(user);
     return acc;
-  }, {} as Record<string, { details: Customer, users: User[] }>);
+  }, {} as Record<number, { details: Customer, users: User[] }>);
 
-  const sortedCustomers = Object.keys(customersByOrg).sort();
+  // Get all users for each customer
+  const { data: allUsers = [] } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
+  });
+
+  // Group users by their customerId
+  allUsers.forEach(user => {
+    if (user.customerId && customerGroups[user.customerId]) {
+      customerGroups[user.customerId].users.push(user);
+    }
+  });
+
+  const sortedCustomers = Object.values(customerGroups).sort((a, b) =>
+    a.details.name.localeCompare(b.details.name)
+  );
 
   return (
     <Card>
@@ -69,60 +82,57 @@ function CustomerSection({ customers }: { customers: Customer[] }) {
       </CardHeader>
       <CardContent>
         <Accordion type="single" collapsible className="space-y-4">
-          {sortedCustomers.map((customerName) => {
-            const { details, users } = customersByOrg[customerName];
-            return (
-              <AccordionItem key={customerName} value={customerName} className="border rounded-lg px-4">
-                <AccordionTrigger>
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      <span className="font-semibold">{customerName}</span>
-                    </div>
-                    <Badge variant="outline">
-                      {users.length} {users.length === 1 ? 'user' : 'users'}
-                    </Badge>
+          {sortedCustomers.map(({ details, users }) => (
+            <AccordionItem key={details.id} value={details.id.toString()} className="border rounded-lg px-4">
+              <AccordionTrigger>
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    <span className="font-semibold">{details.name}</span>
                   </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="mt-4">
-                    <div className="mb-4 text-sm text-muted-foreground">
-                      <p>Admin: {details.adminName}</p>
-                      <p>Email: {details.adminEmail}</p>
-                      <p>Phone: {details.phoneNumber}</p>
-                      <p>Address: {details.address}</p>
-                    </div>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Title</TableHead>
-                          <TableHead>Actions</TableHead>
+                  <Badge variant="outline">
+                    {users.length} {users.length === 1 ? 'user' : 'users'}
+                  </Badge>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="mt-4">
+                  <div className="mb-4 text-sm text-muted-foreground">
+                    <p>Admin: {details.adminName}</p>
+                    <p>Email: {details.adminEmail}</p>
+                    <p>Phone: {details.phoneNumber}</p>
+                    <p>Address: {details.address}</p>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {users.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell>
+                            {user.firstName} {user.lastName}
+                          </TableCell>
+                          <TableCell>{user.username}</TableCell>
+                          <TableCell>{user.title}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <UserEventsDialog user={user} />
+                            </div>
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {users.map((user) => (
-                          <TableRow key={user.id}>
-                            <TableCell>
-                              {user.firstName} {user.lastName}
-                            </TableCell>
-                            <TableCell>{user.username}</TableCell>
-                            <TableCell>{user.title}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <UserEventsDialog user={user} />
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            );
-          })}
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
         </Accordion>
       </CardContent>
     </Card>
@@ -180,7 +190,7 @@ function CreateSuperUserDialog() {
       password: "",
       firstName: "",
       lastName: "",
-      companyName: "",
+      customerName: "",
       title: "",
       mobile: "",
     },
@@ -280,10 +290,10 @@ function CreateSuperUserDialog() {
             </div>
             <FormField
               control={form.control}
-              name="companyName"
+              name="customerName"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Company Name</FormLabel>
+                  <FormLabel>Customer Name</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -348,11 +358,11 @@ export default function AdminPage() {
     queryKey: ["/api/admin/users"],
   });
 
-  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Customer[]>({
-    queryKey: ["/api/admin/companies"],
+  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>({
+    queryKey: ["/api/admin/customers"],
   });
 
-  const { data: allEvents = [], isLoading: isLoadingEvents, error: eventsError } = useQuery<Event[]>({
+  const { data: allEvents = [], isLoading: isLoadingEvents } = useQuery<Event[]>({
     queryKey: ["/api/admin/events"],
     retry: 3
   });
@@ -382,12 +392,7 @@ export default function AdminPage() {
     }
   };
 
-  const { data: customers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>({
-    queryKey: ["/api/admin/customers"],
-  });
-
-
-  if (isLoadingUsers || isLoadingEvents || isLoadingCustomers || isLoadingCompanies) {
+  if (isLoadingUsers || isLoadingEvents || isLoadingCustomers) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -396,7 +401,6 @@ export default function AdminPage() {
   }
 
   const superUsers = users.filter(u => u.isSuperAdmin === true);
-  const customerUsers = users.filter(u => !u.isSuperAdmin);
 
   return (
     <div className="min-h-screen bg-background">
@@ -463,7 +467,7 @@ export default function AdminPage() {
                       {superUsers.map((u) => (
                         <TableRow key={u.id}>
                           <TableCell>{u.username}</TableCell>
-                          <TableCell>{companies.find(c => c.id === u.companyId)?.name || 'N/A'}</TableCell>
+                          <TableCell>{customers.find(c => c.id === u.customerId)?.name || 'N/A'}</TableCell>
                           <TableCell>{u.title}</TableCell>
                           <TableCell>{u.mobile}</TableCell>
                           <TableCell>

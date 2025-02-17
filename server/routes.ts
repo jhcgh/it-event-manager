@@ -48,7 +48,7 @@ export function registerRoutes(app: Express): Server {
         password: "Admin@123!",
         firstName: "System",
         lastName: "Admin",
-        companyName: "SaaS Platform",
+        customerName: "SaaS Platform",
         title: "Super Administrator",
         mobile: "+1234567890"
       };
@@ -226,7 +226,7 @@ export function registerRoutes(app: Express): Server {
 
       const updatedEvent = await storage.updateEvent(
         parseInt(req.params.id),
-        event.userId, // Use original event's userId for admin updates
+        event.userId,
         parsed.data
       );
 
@@ -426,96 +426,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/company-settings", async (req, res) => {
-    try {
-      console.log('GET /api/company-settings - Request received:', {
-        isAuthenticated: req.isAuthenticated(),
-        userId: req.user?.id,
-        companyId: req.user?.companyId,
-        sessionID: req.sessionID,
-        timestamp: new Date().toISOString()
-      });
-
-      if (!req.user) {
-        console.log('GET /api/company-settings - Unauthorized: No user in session');
-        return res.sendStatus(401);
-      }
-
-      if (!req.user.companyId) {
-        console.log('GET /api/company-settings - Not Found: User has no company');
-        return res.sendStatus(404);
-      }
-
-      const company = await storage.getCompany(req.user.companyId);
-      if (!company) {
-        console.log('GET /api/company-settings - Company not found:', req.user.companyId);
-        return res.sendStatus(404);
-      }
-
-      console.log('GET /api/company-settings - Success:', {
-        userId: req.user.id,
-        companyId: req.user.companyId,
-        timestamp: new Date().toISOString()
-      });
-
-      res.json(company);
-    } catch (error) {
-      console.error('Error fetching company settings:', error);
-      res.status(500).json({
-        message: "Failed to fetch company settings",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
-  app.patch("/api/company-settings", async (req, res) => {
-    try {
-      console.log('PATCH /api/company-settings - Request received:', {
-        isAuthenticated: req.isAuthenticated(),
-        userId: req.user?.id,
-        companyId: req.user?.companyId,
-        updates: req.body,
-        timestamp: new Date().toISOString()
-      });
-
-      if (!req.user) {
-        console.log('PATCH /api/company-settings - Unauthorized: No user in session');
-        return res.sendStatus(401);
-      }
-
-      if (!req.user.companyId) {
-        console.log('PATCH /api/company-settings - Not Found: User has no company');
-        return res.sendStatus(404);
-      }
-
-      const parsed = insertCompanySchema.partial().safeParse(req.body);
-      if (!parsed.success) {
-        console.log('PATCH /api/company-settings - Invalid data:', parsed.error);
-        return res.status(400).json(parsed.error);
-      }
-
-      const updatedCompany = await storage.updateCompany(req.user.companyId, parsed.data);
-      if (!updatedCompany) {
-        console.log('PATCH /api/company-settings - Company not found:', req.user.companyId);
-        return res.sendStatus(404);
-      }
-
-      console.log('PATCH /api/company-settings - Success:', {
-        userId: req.user.id,
-        companyId: req.user.companyId,
-        timestamp: new Date().toISOString()
-      });
-
-      res.json(updatedCompany);
-    } catch (error) {
-      console.error('Error updating company settings:', error);
-      res.status(500).json({
-        message: "Failed to update company settings",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
   app.get("/api/customer-settings", async (req, res) => {
     try {
       console.log('GET /api/customer-settings - Request received:', {
@@ -603,6 +513,19 @@ export function registerRoutes(app: Express): Server {
         message: "Failed to update customer settings",
         error: error instanceof Error ? error.message : String(error)
       });
+    }
+  });
+
+  app.get("/api/admin/customers", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+    try {
+      console.log('Fetching all customers');
+      const customers = await storage.getAllCustomers();
+      console.log(`Retrieved ${customers.length} customers`);
+      res.json(customers);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      res.status(500).json({ message: "Failed to fetch customers" });
     }
   });
 

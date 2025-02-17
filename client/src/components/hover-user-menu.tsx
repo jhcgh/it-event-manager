@@ -48,8 +48,8 @@ export function HoverUserMenu({ user }: HoverUserMenuProps) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/company-settings" className="cursor-pointer">
-            Company Settings
+          <Link href="/customer-settings" className="cursor-pointer">
+            Customer Settings
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />

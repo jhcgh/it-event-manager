@@ -38,7 +38,7 @@ import { useState } from "react";
 
 type UserFormData = InsertUser;
 
-export default function CompanyUsersPage() {
+export default function CustomerUsersPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [_, navigate] = useLocation();
@@ -54,28 +54,28 @@ export default function CompanyUsersPage() {
       password: "",
       title: "",
       mobile: "",
-      companyName: "",
+      customerName: "",
       status: "active"
     },
   });
 
   const { data: users, isLoading: isLoadingUsers } = useQuery<User[]>({
-    queryKey: [`/api/companies/${user?.companyId}/users`],
-    enabled: !!user?.companyId,
+    queryKey: [`/api/customers/${user?.customerId}/users`],
+    enabled: !!user?.customerId,
   });
 
   const createUser = useMutation({
     mutationFn: async (data: UserFormData) => {
       const response = await apiRequest(
         "POST",
-        `/api/companies/${user?.companyId}/users`,
+        `/api/customers/${user?.customerId}/users`,
         data
       );
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [`/api/companies/${user?.companyId}/users`],
+        queryKey: [`/api/customers/${user?.customerId}/users`],
       });
       setIsUserFormOpen(false);
       form.reset();
@@ -98,14 +98,14 @@ export default function CompanyUsersPage() {
       const { id, ...updateData } = data;
       const response = await apiRequest(
         "PATCH",
-        `/api/companies/${user?.companyId}/users/${id}`,
+        `/api/customers/${user?.customerId}/users/${id}`,
         updateData
       );
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [`/api/companies/${user?.companyId}/users`],
+        queryKey: [`/api/customers/${user?.customerId}/users`],
       });
       setIsUserFormOpen(false);
       setSelectedUser(null);
@@ -124,7 +124,6 @@ export default function CompanyUsersPage() {
     },
   });
 
-
   const onSubmit = (data: UserFormData) => {
     if (selectedUser) {
       updateUser.mutate({ ...data, id: selectedUser.id });
@@ -141,17 +140,17 @@ export default function CompanyUsersPage() {
       username: user.username,
       title: user.title,
       mobile: user.mobile,
-      companyName: user.companyName || "",
+      customerName: user.customerName || "",
       status: user.status
     });
     setIsUserFormOpen(true);
   };
 
-  if (!user?.companyId) {
+  if (!user?.customerId) {
     return (
       <div className="container mx-auto px-4 py-8">
         <p className="text-muted-foreground">
-          You are not associated with any company.
+          You are not associated with any customer.
         </p>
       </div>
     );
@@ -180,7 +179,7 @@ export default function CompanyUsersPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Company Users</h1>
+          <h1 className="text-3xl font-bold">Customer Users</h1>
           <Dialog open={isUserFormOpen} onOpenChange={setIsUserFormOpen}>
             <DialogTrigger asChild>
               <Button
