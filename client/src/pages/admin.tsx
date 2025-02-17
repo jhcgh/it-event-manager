@@ -12,34 +12,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema } from "@shared/schema";
 import {
   Loader2,
-  UserX,
   Calendar,
   Users,
   AlertTriangle,
   Shield,
-  Ban,
-  CheckCircle,
+  Building2,
   UserPlus,
   ArrowLeft,
-  LogOut,
-  Settings,
-  Building2
+  Pencil
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
-import { Redirect, Link, useLocation } from "wouter";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Redirect, Link } from "wouter";
 import {
   Table,
   TableBody,
@@ -50,7 +35,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { EditEventDialog } from "@/components/edit-event-dialog";
-import { Trash2 } from "lucide-react";
 import { HoverUserMenu } from "@/components/hover-user-menu";
 import { UploadEventsDialog } from "@/components/upload-events-dialog";
 import {
@@ -60,13 +44,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
-// Remove the CompanySettingsDialog component as it's no longer needed
-// The functionality has been moved to the dedicated company-settings page
-
 function CustomerSection({ customers, companies }: { customers: User[], companies: Company[] }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [_, navigate] = useLocation();
 
   const customersByCompany = customers.reduce((acc, customer) => {
     const company = companies.find((c: Company) => c.id === customer.companyId);
@@ -105,19 +85,9 @@ function CustomerSection({ customers, companies }: { customers: User[], companie
                       <Building2 className="h-4 w-4" />
                       <span className="font-semibold">{companyName}</span>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <Badge variant="outline">
-                        {users.length} {users.length === 1 ? 'user' : 'users'}
-                      </Badge>
-                      {company && user?.isSuperAdmin && (
-                        <Link href={`/company-settings?id=${company.id}`}>
-                          <Button variant="outline" size="sm" className="flex items-center gap-1">
-                            <Settings className="h-4 w-4" />
-                            Settings
-                          </Button>
-                        </Link>
-                      )}
-                    </div>
+                    <Badge variant="outline">
+                      {users.length} {users.length === 1 ? 'user' : 'users'}
+                    </Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -167,9 +137,6 @@ function UserEventsDialog({ user }: { user: User }) {
     enabled: !!user.id,
   });
 
-  const { toast } = useToast();
-  //Removed deleteEventMutation
-
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -197,7 +164,6 @@ function UserEventsDialog({ user }: { user: User }) {
                     <p>Type: {event.type}</p>
                   </div>
                 </div>
-                {/* Removed AlertDialog for delete functionality */}
               </div>
             </div>
           ))}
@@ -373,29 +339,7 @@ function CreateSuperUserDialog() {
 }
 
 export default function AdminPage() {
-  const { user, logoutMutation } = useAuth();
-  const { toast } = useToast();
-  const [_, navigate] = useLocation();
-
-  const superUserDeleteMutation = useMutation({
-    mutationFn: async (userId: number) => {
-      await apiRequest("DELETE", `/api/admin/users/${userId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      toast({
-        title: "Success",
-        description: "Super user deleted successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+  const { user } = useAuth();
 
   if (!user?.isAdmin && !user?.isSuperAdmin) {
     return <Redirect to="/" />;
@@ -424,15 +368,6 @@ export default function AdminPage() {
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
-  }
-
-  if (eventsError) {
-    console.error("Events loading error:", eventsError);
-    toast({
-      title: "Error loading events",
-      description: "There was a problem loading the events. Please try again.",
-      variant: "destructive",
-    });
   }
 
   const superUsers = users.filter(u => u.isSuperAdmin === true);
@@ -511,7 +446,7 @@ export default function AdminPage() {
                               variant={u.status === "active" ? "default" : "destructive"}
                               className="capitalize"
                             >
-                              {u.status === 'deleted' ? 'inactive' : u.status}
+                              {u.status === 'inactive' ? 'inactive' : 'active'}
                             </Badge>
                           </TableCell>
                         </TableRow>
