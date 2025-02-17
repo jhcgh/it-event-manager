@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Loader2, ArrowLeft, UserPlus, Pencil, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, UserPlus, Pencil, Trash2, AlertTriangle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -10,18 +10,21 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation, Link } from "wouter";
 import type { User, InsertUser } from "@shared/schema";
@@ -34,7 +37,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +52,14 @@ import {
 
 type UserFormData = InsertUser;
 
+// Company Settings Schema
+const companySettingsSchema = z.object({
+  maxUsers: z.number().min(1, "Must allow at least 1 user"),
+  maxEvents: z.number().min(1, "Must allow at least 1 event"),
+  requireEventApproval: z.boolean(),
+  allowedEventTypes: z.array(z.string()).min(1, "Must allow at least one event type")
+});
+
 export default function CompanyUsersPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -56,6 +68,49 @@ export default function CompanyUsersPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [isDeleteCompanyDialogOpen, setIsDeleteCompanyDialogOpen] = useState(false);
+
+  // Company settings form
+  const settingsForm = useForm({
+    resolver: zodResolver(companySettingsSchema),
+    defaultValues: {
+      maxUsers: 10,
+      maxEvents: 20,
+      requireEventApproval: false,
+      allowedEventTypes: ["conference", "workshop", "seminar"]
+    }
+  });
+
+  // Delete company mutation
+  const deleteCompany = useMutation({
+    mutationFn: async () => {
+      if (!user?.companyId) return;
+      const response = await apiRequest(
+        "DELETE",
+        `/api/companies/${user.companyId}`
+      );
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete company');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['/api/companies'],
+      });
+      navigate('/');
+      toast({
+        title: "Success",
+        description: "Company has been deleted successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(insertUserSchema),
@@ -67,11 +122,10 @@ export default function CompanyUsersPage() {
       title: "",
       mobile: "",
       companyName: "",
-      status: "active"
     },
   });
 
-  const { data: users, isLoading: isLoadingUsers } = useQuery<User[]>({
+  const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: [`/api/companies/${user?.companyId}/users`],
     enabled: !!user?.companyId,
   });
@@ -83,7 +137,7 @@ export default function CompanyUsersPage() {
         `/api/companies/${user?.companyId}/users`,
         data
       );
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -113,7 +167,7 @@ export default function CompanyUsersPage() {
         `/api/companies/${user?.companyId}/users/${id}`,
         updateData
       );
-      return response.json();
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -151,38 +205,7 @@ export default function CompanyUsersPage() {
       setSelectedUser(null);
       toast({
         title: "Success",
-        description: "User has been removed successfully.",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const deleteCompany = useMutation({
-    mutationFn: async () => {
-      if (!user?.companyId) return;
-      const response = await apiRequest(
-        "DELETE",
-        `/api/companies/${user.companyId}`
-      );
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete company');
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['/api/companies'],
-      });
-      navigate('/');
-      toast({
-        title: "Success",
-        description: "Company has been deleted successfully.",
+        description: "User has been deleted successfully.",
       });
     },
     onError: (error: Error) => {
@@ -211,7 +234,6 @@ export default function CompanyUsersPage() {
       title: user.title,
       mobile: user.mobile,
       companyName: user.companyName || "",
-      status: user.status
     });
     setIsUserFormOpen(true);
   };
@@ -231,7 +253,7 @@ export default function CompanyUsersPage() {
     );
   }
 
-  if (isLoadingUsers) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -243,12 +265,26 @@ export default function CompanyUsersPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/">
-            <Button variant="ghost" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
-            </Button>
-          </Link>
+          <div className="flex items-center justify-between">
+            <Link href="/">
+              <Button variant="ghost" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Dashboard
+              </Button>
+            </Link>
+            {user?.isSuperAdmin && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  onClick={() => setIsDeleteCompanyDialogOpen(true)}
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                  Delete Company
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -324,10 +360,6 @@ export default function CompanyUsersPage() {
                           <FormControl>
                             <Input {...field} type="password" />
                           </FormControl>
-                          <FormDescription>
-                            Must be at least 8 characters with a number and special
-                            character
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -393,7 +425,7 @@ export default function CompanyUsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users?.map((user) => (
+              {users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     {user.firstName} {user.lastName}
@@ -429,7 +461,7 @@ export default function CompanyUsersPage() {
         >
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogTitle>Delete User</AlertDialogTitle>
               <AlertDialogDescription>
                 This action cannot be undone. This will permanently remove the user
                 from your company.
@@ -454,65 +486,43 @@ export default function CompanyUsersPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {user?.isSuperAdmin && (
-          <div className="mt-8 border-t pt-8">
-            <h2 className="text-2xl font-bold mb-4">Danger Zone</h2>
-            <div className="bg-destructive/10 border-destructive border rounded-lg p-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold">Delete Company</h3>
-                  <p className="text-sm text-muted-foreground">
-                    This action cannot be undone. This will permanently delete the company
-                    and all associated data.
-                  </p>
-                </div>
-                <Button
-                  variant="destructive"
-                  onClick={() => setIsDeleteCompanyDialogOpen(true)}
-                  disabled={deleteCompany.isPending}
-                >
-                  {deleteCompany.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deleting...
-                    </>
-                  ) : (
-                    "Delete Company"
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            <AlertDialog
-              open={isDeleteCompanyDialogOpen}
-              onOpenChange={setIsDeleteCompanyDialogOpen}
-            >
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the
-                    company and all associated data including:
-                    <ul className="list-disc list-inside mt-2">
-                      <li>All user accounts</li>
-                      <li>All events</li>
-                      <li>All company settings</li>
-                    </ul>
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => deleteCompany.mutate()}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Delete Company
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )}
+        <AlertDialog
+          open={isDeleteCompanyDialogOpen}
+          onOpenChange={setIsDeleteCompanyDialogOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-destructive">
+                Delete Company
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                This action cannot be undone. This will permanently delete your company
+                and remove all associated data including:
+                <ul className="list-disc list-inside mt-4 space-y-2">
+                  <li>All user accounts</li>
+                  <li>All events</li>
+                  <li>All company settings</li>
+                </ul>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteCompany.mutate()}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleteCompany.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting Company...
+                  </>
+                ) : (
+                  "Delete Company"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
