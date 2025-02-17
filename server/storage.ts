@@ -15,6 +15,16 @@ export interface IStorage {
   getCompany(id: number): Promise<Company | undefined>;
   updateCompanySettings(id: number, settings: Partial<Company['settings']>): Promise<Company | undefined>;
   getAllCompanies(): Promise<Company[]>;
+  deleteCompany(id: number): Promise<void>;
+  validateCompanyDeletion(id: number): Promise<{ 
+    canDelete: boolean; 
+    reason?: string;
+    company?: Company;
+    impactedData?: {
+      usersCount: number;
+      eventsCount: number;
+    };
+  }>;
 
   // User Management Methods with Company Context
   getUser(id: number): Promise<User | undefined>;
@@ -49,12 +59,13 @@ export class DatabaseStorage implements IStorage {
 
   // Company Management Methods
   async createCompany(insertCompany: InsertCompany): Promise<Company> {
-    const [company] = await db.insert(companies).values({
-      ...insertCompany,
-      status: 'active',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }).returning();
+    const [company] = await db.insert(companies)
+      .values({
+        name: insertCompany.name,
+        settings: insertCompany.settings,
+        status: insertCompany.status
+      })
+      .returning();
     return company;
   }
 
@@ -78,6 +89,72 @@ export class DatabaseStorage implements IStorage {
 
   async getAllCompanies(): Promise<Company[]> {
     return await db.select().from(companies).where(eq(companies.status, 'active')).orderBy(desc(companies.createdAt));
+  }
+
+  async deleteCompany(id: number): Promise<void> {
+    try {
+      console.log(`Starting deletion process for company ${id}`);
+
+      const validation = await this.validateCompanyDeletion(id);
+      if (!validation.canDelete) {
+        throw new Error(validation.reason);
+      }
+
+      // Update company status to deleted
+      await db.update(companies)
+        .set({ 
+          status: 'deleted',
+          updatedAt: new Date()
+        })
+        .where(eq(companies.id, id));
+
+      // Mark all users as deleted
+      await db.update(users)
+        .set({ 
+          status: 'deleted',
+          updatedAt: new Date()
+        })
+        .where(eq(users.companyId, id));
+
+      console.log(`Successfully completed deletion process for company ${id}`);
+    } catch (error) {
+      console.error(`Error during company deletion process:`, error);
+      throw error;
+    }
+  }
+
+  async validateCompanyDeletion(id: number): Promise<{ 
+    canDelete: boolean; 
+    reason?: string;
+    company?: Company;
+    impactedData?: {
+      usersCount: number;
+      eventsCount: number;
+    };
+  }> {
+    const company = await this.getCompany(id);
+    if (!company) {
+      return { canDelete: false, reason: 'Company not found' };
+    }
+
+    if (company.status === 'deleted') {
+      return { canDelete: false, reason: 'Company is already deleted' };
+    }
+
+    // Get counts of affected data
+    const users = await this.getUsersByCompany(id);
+    const activeUsers = users.filter(u => u.status === 'active');
+    const events = await Promise.all(activeUsers.map(u => this.getUserEvents(u.id)));
+    const totalEvents = events.reduce((sum, arr) => sum + arr.length, 0);
+
+    return { 
+      canDelete: true, 
+      company,
+      impactedData: {
+        usersCount: activeUsers.length,
+        eventsCount: totalEvents
+      }
+    };
   }
 
   // User Management Methods with Company Context
@@ -158,6 +235,17 @@ export class DatabaseStorage implements IStorage {
         timestamp: new Date().toISOString()
       });
 
+      // Extract only valid update fields
+      const validUpdateFields = {
+        ...(updateData.username && { username: updateData.username }),
+        ...(updateData.firstName && { firstName: updateData.firstName }),
+        ...(updateData.lastName && { lastName: updateData.lastName }),
+        ...(updateData.title && { title: updateData.title }),
+        ...(updateData.mobile && { mobile: updateData.mobile }),
+        ...(updateData.status && { status: updateData.status }),
+        updatedAt: new Date()
+      };
+
       // If company name is being updated, handle company creation/update
       if (updateData.companyName) {
         const user = await this.getUser(id);
@@ -174,17 +262,15 @@ export class DatabaseStorage implements IStorage {
               settings: {},
               status: 'active'
             });
-            updateData = { ...updateData, companyId: company.id };
+            // Add companyId to valid update fields
+            Object.assign(validUpdateFields, { companyId: company.id });
           }
         }
       }
 
       const [result] = await db
         .update(users)
-        .set({
-          ...updateData,
-          updatedAt: new Date()
-        })
+        .set(validUpdateFields)
         .where(eq(users.id, id))
         .returning();
 

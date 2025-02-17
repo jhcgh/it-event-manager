@@ -20,20 +20,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation, Link } from "wouter";
-import type { User, CompanyRole, InsertUser } from "@shared/schema";
+import type { User, InsertUser } from "@shared/schema";
 import { insertUserSchema } from "@shared/schema";
-import { z } from "zod";
 import {
   Table,
   TableBody,
@@ -42,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,14 +45,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useState } from "react";
 
-// Extended schema for company user management
-const userFormSchema = insertUserSchema.extend({
-  companyRoleId: z.number().optional(),
-});
-
-type UserFormData = z.infer<typeof userFormSchema>;
+type UserFormData = InsertUser;
 
 export default function CompanyUsersPage() {
   const { user } = useAuth();
@@ -68,9 +55,10 @@ export default function CompanyUsersPage() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
+  const [isDeleteCompanyDialogOpen, setIsDeleteCompanyDialogOpen] = useState(false);
 
   const form = useForm<UserFormData>({
-    resolver: zodResolver(userFormSchema),
+    resolver: zodResolver(insertUserSchema),
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -78,16 +66,13 @@ export default function CompanyUsersPage() {
       password: "",
       title: "",
       mobile: "",
+      companyName: "",
+      status: "active"
     },
   });
 
   const { data: users, isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: [`/api/companies/${user?.companyId}/users`],
-    enabled: !!user?.companyId,
-  });
-
-  const { data: roles, isLoading: isLoadingRoles } = useQuery<CompanyRole[]>({
-    queryKey: [`/api/companies/${user?.companyId}/roles`],
     enabled: !!user?.companyId,
   });
 
@@ -178,6 +163,37 @@ export default function CompanyUsersPage() {
     },
   });
 
+  const deleteCompany = useMutation({
+    mutationFn: async () => {
+      if (!user?.companyId) return;
+      const response = await apiRequest(
+        "DELETE",
+        `/api/companies/${user.companyId}`
+      );
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete company');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['/api/companies'],
+      });
+      navigate('/');
+      toast({
+        title: "Success",
+        description: "Company has been deleted successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: UserFormData) => {
     if (selectedUser) {
       updateUser.mutate({ ...data, id: selectedUser.id });
@@ -194,7 +210,8 @@ export default function CompanyUsersPage() {
       username: user.username,
       title: user.title,
       mobile: user.mobile,
-      companyRoleId: user.companyRoleId ?? undefined,
+      companyName: user.companyName || "",
+      status: user.status
     });
     setIsUserFormOpen(true);
   };
@@ -214,7 +231,7 @@ export default function CompanyUsersPage() {
     );
   }
 
-  if (isLoadingUsers || isLoadingRoles) {
+  if (isLoadingUsers) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -342,38 +359,6 @@ export default function CompanyUsersPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="companyRoleId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role</FormLabel>
-                        <Select
-                          onValueChange={(value) =>
-                            field.onChange(parseInt(value))
-                          }
-                          defaultValue={field.value?.toString()}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a role" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {roles?.map((role) => (
-                              <SelectItem
-                                key={role.id}
-                                value={role.id.toString()}
-                              >
-                                {role.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   <Button
                     type="submit"
                     className="w-full"
@@ -402,7 +387,6 @@ export default function CompanyUsersPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Role</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Mobile</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
@@ -415,10 +399,6 @@ export default function CompanyUsersPage() {
                     {user.firstName} {user.lastName}
                   </TableCell>
                   <TableCell>{user.username}</TableCell>
-                  <TableCell>
-                    {roles?.find((r) => r.id === user.companyRoleId)?.name ??
-                      "No Role"}
-                  </TableCell>
                   <TableCell>{user.title}</TableCell>
                   <TableCell>{user.mobile}</TableCell>
                   <TableCell className="space-x-2">
@@ -473,6 +453,66 @@ export default function CompanyUsersPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {user?.isSuperAdmin && (
+          <div className="mt-8 border-t pt-8">
+            <h2 className="text-2xl font-bold mb-4">Danger Zone</h2>
+            <div className="bg-destructive/10 border-destructive border rounded-lg p-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-semibold">Delete Company</h3>
+                  <p className="text-sm text-muted-foreground">
+                    This action cannot be undone. This will permanently delete the company
+                    and all associated data.
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setIsDeleteCompanyDialogOpen(true)}
+                  disabled={deleteCompany.isPending}
+                >
+                  {deleteCompany.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Delete Company"
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <AlertDialog
+              open={isDeleteCompanyDialogOpen}
+              onOpenChange={setIsDeleteCompanyDialogOpen}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the
+                    company and all associated data including:
+                    <ul className="list-disc list-inside mt-2">
+                      <li>All user accounts</li>
+                      <li>All events</li>
+                      <li>All company settings</li>
+                    </ul>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteCompany.mutate()}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete Company
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        )}
       </main>
     </div>
   );

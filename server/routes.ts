@@ -508,15 +508,38 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.get("/api/companies/:id/roles", async (req, res) => {
-    if (!req.user?.isAdmin) return res.sendStatus(403);
+
+  app.post("/api/companies/:id/users", async (req, res) => {
+    if (!req.user) {
+      console.log("POST /api/companies/:id/users - Unauthorized: No user in session");
+      return res.sendStatus(401);
+    }
 
     try {
-      const roles = await storage.getCompanyRoles(parseInt(req.params.id));
-      res.json(roles);
+      const companyId = parseInt(req.params.id);
+      console.log(`POST /api/companies/${companyId}/users - User:`, req.user.id);
+
+      if (companyId !== req.user.companyId && !req.user.isAdmin) {
+        console.log(`POST /api/companies/${companyId}/users - Forbidden: User doesn't belong to company`);
+        return res.sendStatus(403);
+      }
+
+      const parsed = insertUserSchema.parse(req.body);
+      const hashedPassword = await hashPassword(parsed.password);
+
+      const newUser = await storage.createUser({
+        ...parsed,
+        password: hashedPassword,
+        companyId
+      });
+
+      res.status(201).json(newUser);
     } catch (error) {
-      console.error("Error fetching company roles:", error);
-      res.status(500).json({ message: "Failed to fetch company roles" });
+      console.error("Error creating user:", error);
+      res.status(500).json({
+        message: "Failed to create user",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
@@ -617,41 +640,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/companies/:id/users", async (req, res) => {
-    if (!req.user) {
-      console.log("POST /api/companies/:id/users - Unauthorized: No user in session");
-      return res.sendStatus(401);
-    }
-
-    try {
-      const companyId = parseInt(req.params.id);
-      console.log(`POST /api/companies/${companyId}/users - User:`, req.user.id);
-
-      if (companyId !== req.user.companyId && !req.user.isAdmin) {
-        console.log(`POST /api/companies/${companyId}/users - Forbidden: User doesn't belong to company`);
-        return res.sendStatus(402);
-      }
-
-      const parsed = insertUserSchema.parse(req.body);
-      const hashedPassword = await hashPassword(parsed.password);
-
-      const newUser = await storage.createUser({
-        ...parsed,
-        password: hashedPassword,
-        companyId,
-        companyRoleId: req.body.companyRoleId
-      });
-
-      res.status(201).json(newUser);
-    } catch (error) {
-      console.error("Error creating user:", error);
-      res.status(500).json({
-        message: "Failed to create user",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
   app.patch("/api/companies/:id/users/:userId", async (req, res) => {
     if (!req.user) {
       console.log("PATCH /api/companies/:id/users/:userId - Unauthorized: No user in session");
@@ -701,7 +689,7 @@ export function registerRoutes(app: Express): Server {
       console.log(`DELETE /api/companies/${companyId}/users/${userId} - User:`, req.user.id);
 
       if (companyId !== req.user.companyId && !req.user.isAdmin) {
-        console.log(`DELETE /api/companies/${companyId}/users/${userId} - Forbidden: User doesn't belong to company`);
+        console.log(`DELETE /api/companies/:id/users/:userId - Forbidden: User doesn't belong to company`);
         return res.sendStatus(403);
       }
 
@@ -736,6 +724,52 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.get("/api/companies/:id/validate-deletion", async (req, res) => {
+    if (!req.user?.isSuperAdmin) {
+      console.log("GET /api/companies/:id/validate-deletion - Forbidden: User is not a super admin");
+      return res.sendStatus(403);
+    }
+
+    try {
+      const companyId = parseInt(req.params.id);
+      const validation = await storage.validateCompanyDeletion(companyId);
+
+      res.json(validation);
+    } catch (error) {
+      console.error("Error validating company deletion:", error);
+      res.status(500).json({
+        message: "Failed to validate company deletion",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.delete("/api/companies/:id", async (req, res) => {
+    if (!req.user?.isSuperAdmin) {
+      console.log("DELETE /api/companies/:id - Forbidden: User is not a super admin");
+      return res.sendStatus(403);
+    }
+
+    try {
+      const companyId = parseInt(req.params.id);
+      const validation = await storage.validateCompanyDeletion(companyId);
+
+      if (!validation.canDelete) {
+        return res.status(400).json({
+          message: validation.reason
+        });
+      }
+
+      await storage.deleteCompany(companyId);
+      res.sendStatus(200);
+    } catch (error) {
+      console.error("Error deleting company:", error);
+      res.status(500).json({
+        message: "Failed to delete company",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

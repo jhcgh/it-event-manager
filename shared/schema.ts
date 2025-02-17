@@ -12,7 +12,7 @@ export const companies = pgTable("companies", {
     allowedEventTypes?: string[];
     requireEventApproval?: boolean;
   }>().notNull().default({}),
-  status: text("status", { enum: ['active', 'inactive'] }).default("active").notNull(),
+  status: text("status", { enum: ['active', 'inactive', 'deleted'] }).default("active").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -73,7 +73,7 @@ export const eventRelations = relations(events, ({ one }) => ({
 
 export const insertCompanySchema = createInsertSchema(companies)
   .extend({
-    status: z.enum(['active', 'inactive']).default('active'),
+    status: z.enum(['active', 'inactive', 'deleted']).default('active'),
   })
   .omit({
     id: true,
@@ -120,7 +120,7 @@ export const updateUserSchema = createInsertSchema(users)
   .extend({
     status: z.enum(["active", "deleted"]).optional(),
     isAdmin: z.boolean().optional(),
-    companyName: z.string().optional() 
+    companyName: z.string().optional()
   })
   .omit({
     id: true,
