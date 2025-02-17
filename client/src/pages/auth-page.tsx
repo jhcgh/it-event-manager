@@ -59,6 +59,7 @@ export default function AuthPage() {
       lastName: "",
       title: "",
       mobile: "",
+      companyName: "", // Added company name default value
     },
     mode: "onBlur",
   });
@@ -229,6 +230,19 @@ export default function AuthPage() {
                           </p>
                         )}
                       </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="companyName">Company Name</Label>
+                      <Input
+                        id="companyName"
+                        {...registerForm.register("companyName")}
+                      />
+                      {registerForm.formState.errors.companyName && (
+                        <p className="text-sm text-destructive">
+                          {registerForm.formState.errors.companyName.message}
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">

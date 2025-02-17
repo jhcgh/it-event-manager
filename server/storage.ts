@@ -25,7 +25,7 @@ export interface IStorage {
   // User Management Methods with Company Context
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(insertUser: InsertUser & { companyId: number, companyRoleId?: number }): Promise<User>;
+  createUser(insertUser: InsertUser & { companyId?: number, companyRoleId?: number }): Promise<User>;
   updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   deleteUser(id: number): Promise<void>;
@@ -133,19 +133,6 @@ export class DatabaseStorage implements IStorage {
   }
 
   // User Management Methods with Company Context
-  async createUser(insertUser: InsertUser & { companyId: number, companyRoleId?: number }): Promise<User> {
-    const result = await db.insert(users).values([insertUser]).returning();
-    return result[0];
-  }
-
-  async getUsersByCompany(companyId: number): Promise<User[]> {
-    return await db
-      .select()
-      .from(users)
-      .where(and(eq(users.companyId, companyId), ne(users.status, 'deleted')))
-      .orderBy(desc(users.createdAt));
-  }
-
   async getUser(id: number): Promise<User | undefined> {
     const result = await db.select().from(users).where(eq(users.id, id));
     return result[0];
@@ -164,6 +151,26 @@ export class DatabaseStorage implements IStorage {
         updates: updateData,
         timestamp: new Date().toISOString()
       });
+
+      // If company name is being updated, handle company creation/update
+      if (updateData.companyName) {
+        const user = await this.getUser(id);
+        if (user) {
+          if (user.companyId) {
+            // Update existing company name
+            await db.update(companies)
+              .set({ name: updateData.companyName, updatedAt: new Date() })
+              .where(eq(companies.id, user.companyId));
+          } else {
+            // Create new company and associate with user
+            const company = await this.createCompany({
+              name: updateData.companyName,
+              settings: {}
+            });
+            updateData = { ...updateData, companyId: company.id };
+          }
+        }
+      }
 
       const values = {
         ...updateData,
@@ -220,6 +227,20 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async deleteUserEvents(userId: number): Promise<void> {
+    console.log(`Deleting all events for user ${userId}`);
+    await db.delete(events).where(eq(events.userId, userId));
+    console.log(`Successfully deleted all events for user ${userId}`);
+  }
+
+  async getUsersByCompany(companyId: number): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(and(eq(users.companyId, companyId), ne(users.status, 'deleted')))
+      .orderBy(desc(users.createdAt));
+  }
+
   // Event Management Methods
   async createEvent(userId: number, insertEvent: InsertEvent): Promise<Event> {
     const result = await db
@@ -258,11 +279,6 @@ export class DatabaseStorage implements IStorage {
     await db.delete(events).where(eq(events.id, id));
   }
 
-  async deleteUserEvents(userId: number): Promise<void> {
-    console.log(`Deleting all events for user ${userId}`);
-    await db.delete(events).where(eq(events.userId, userId));
-    console.log(`Successfully deleted all events for user ${userId}`);
-  }
 
   // Admin Methods
   async adminGetAllUsers(includeDeleted: boolean = false): Promise<User[]> {

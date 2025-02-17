@@ -118,7 +118,8 @@ export const insertUserSchema = createInsertSchema(users)
   .extend({
     password: z.string().min(8).regex(/[0-9]/, "Password must contain at least one number")
       .regex(/[!@#$%^&*]/, "Password must contain at least one special character"),
-    username: z.string().email("Must be a valid email address")
+    username: z.string().email("Must be a valid email address"),
+    companyName: z.string().min(1, "Company name is required")
   })
   .omit({
     id: true,
@@ -153,7 +154,7 @@ export const updateUserSchema = createInsertSchema(users)
   .extend({
     status: z.enum(["active", "deleted"]).optional(),
     isAdmin: z.boolean().optional(),
-    companyName: z.string().optional() // Added companyName to partial update schema
+    companyName: z.string().optional() 
   })
   .omit({
     id: true,
