@@ -114,6 +114,10 @@ export class DatabaseStorage implements IStorage {
       if (insertUser.companyName && !companyId) {
         const company = await this.createCompany({
           name: insertUser.companyName,
+          address: "Please update address",
+          phoneNumber: "Please update phone number",
+          adminName: "Please update admin name",
+          adminEmail: insertUser.username,
           status: 'active'
         });
         companyId = company.id;
@@ -187,6 +191,10 @@ export class DatabaseStorage implements IStorage {
           } else {
             const company = await this.createCompany({
               name: updateData.companyName,
+              address: "Please update address",
+              phoneNumber: "Please update phone number",
+              adminName: "Please update admin name",
+              adminEmail: user.username || "please.update@example.com",
               status: 'active'
             });
             Object.assign(validUpdateFields, { companyId: company.id });
@@ -325,7 +333,7 @@ export class DatabaseStorage implements IStorage {
   }
   async updateCompany(id: number, updateData: Partial<InsertCompany>): Promise<Company | undefined> {
     try {
-      console.log('Updating company settings:', {
+      console.log('Storage updateCompany started:', {
         companyId: id,
         updates: updateData,
         timestamp: new Date().toISOString()
@@ -350,7 +358,8 @@ export class DatabaseStorage implements IStorage {
       console.error('Error updating company settings:', {
         error,
         companyId: id,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        stack: error instanceof Error ? error.stack : undefined
       });
       throw error;
     }

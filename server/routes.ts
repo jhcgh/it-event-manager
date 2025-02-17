@@ -427,11 +427,36 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.get("/api/company-settings", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-
     try {
+      console.log('GET /api/company-settings - Request received:', {
+        isAuthenticated: req.isAuthenticated(),
+        userId: req.user?.id,
+        companyId: req.user?.companyId,
+        sessionID: req.sessionID,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!req.user) {
+        console.log('GET /api/company-settings - Unauthorized: No user in session');
+        return res.sendStatus(401);
+      }
+
+      if (!req.user.companyId) {
+        console.log('GET /api/company-settings - Not Found: User has no company');
+        return res.sendStatus(404);
+      }
+
       const company = await storage.getCompany(req.user.companyId);
-      if (!company) return res.sendStatus(404);
+      if (!company) {
+        console.log('GET /api/company-settings - Company not found:', req.user.companyId);
+        return res.sendStatus(404);
+      }
+
+      console.log('GET /api/company-settings - Success:', {
+        userId: req.user.id,
+        companyId: req.user.companyId,
+        timestamp: new Date().toISOString()
+      });
 
       res.json(company);
     } catch (error) {
@@ -444,14 +469,42 @@ export function registerRoutes(app: Express): Server {
   });
 
   app.patch("/api/company-settings", async (req, res) => {
-    if (!req.user) return res.sendStatus(401);
-
     try {
+      console.log('PATCH /api/company-settings - Request received:', {
+        isAuthenticated: req.isAuthenticated(),
+        userId: req.user?.id,
+        companyId: req.user?.companyId,
+        updates: req.body,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!req.user) {
+        console.log('PATCH /api/company-settings - Unauthorized: No user in session');
+        return res.sendStatus(401);
+      }
+
+      if (!req.user.companyId) {
+        console.log('PATCH /api/company-settings - Not Found: User has no company');
+        return res.sendStatus(404);
+      }
+
       const parsed = insertCompanySchema.partial().safeParse(req.body);
-      if (!parsed.success) return res.status(400).json(parsed.error);
+      if (!parsed.success) {
+        console.log('PATCH /api/company-settings - Invalid data:', parsed.error);
+        return res.status(400).json(parsed.error);
+      }
 
       const updatedCompany = await storage.updateCompany(req.user.companyId, parsed.data);
-      if (!updatedCompany) return res.sendStatus(404);
+      if (!updatedCompany) {
+        console.log('PATCH /api/company-settings - Company not found:', req.user.companyId);
+        return res.sendStatus(404);
+      }
+
+      console.log('PATCH /api/company-settings - Success:', {
+        userId: req.user.id,
+        companyId: req.user.companyId,
+        timestamp: new Date().toISOString()
+      });
 
       res.json(updatedCompany);
     } catch (error) {

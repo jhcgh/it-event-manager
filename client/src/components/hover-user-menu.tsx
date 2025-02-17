@@ -44,7 +44,7 @@ export function HoverUserMenu({ user }: HoverUserMenuProps) {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/profile" className="cursor-pointer">
-            View Profile
+            Profile Settings
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

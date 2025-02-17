@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Building2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 type CompanyFormValues = {
@@ -92,7 +92,10 @@ export default function CompanySettings() {
     <div className="container mx-auto py-10">
       <Card>
         <CardHeader>
-          <CardTitle>Company Settings</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Company Settings
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
