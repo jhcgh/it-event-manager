@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Building2, ArrowLeft, Users, UserPlus, Pencil } from "lucide-react";
+import { Loader2, Building2, ArrowLeft, Users, UserPlus, Pencil, Trash2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
 import {
@@ -41,6 +41,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type CustomerFormValues = {
   name: string;
@@ -56,6 +67,9 @@ export default function CustomerSettings() {
   const { toast } = useToast();
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  const params = new URLSearchParams(window.location.search);
+  const defaultTab = params.get('tab') || "customer-settings";
 
   const customerForm = useForm<CustomerFormValues>({
     resolver: zodResolver(insertCustomerSchema.omit({ status: true })),
@@ -88,6 +102,7 @@ export default function CustomerSettings() {
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: [`/api/customers/${customer?.id}/users`],
     enabled: !!customer?.id,
+    select: (data) => data.filter(user => user.status === 'active')
   });
 
   const createUser = useMutation({
@@ -137,6 +152,35 @@ export default function CustomerSettings() {
       toast({
         title: "Success",
         description: "User has been updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      if (!customer?.id) throw new Error("No customer ID available");
+      const response = await apiRequest(
+        "PATCH",
+        `/api/customers/${customer.id}/users/${userId}`,
+        { status: 'inactive' }
+      );
+      if (!response.ok) {
+        throw new Error('Failed to delete user');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/customers/${customer?.id}/users`] });
+      toast({
+        title: "Success",
+        description: "User has been deleted successfully",
       });
     },
     onError: (error: Error) => {
@@ -230,7 +274,7 @@ export default function CustomerSettings() {
       </header>
 
       <div className="container mx-auto py-10">
-        <Tabs defaultValue="customer-settings" className="space-y-6 bg-white/10 backdrop-blur-sm rounded-lg p-4">
+        <Tabs defaultValue={defaultTab} className="space-y-6 bg-white/10 backdrop-blur-sm rounded-lg p-4">
           <TabsList className="w-full border-b px-2 bg-card">
             <TabsTrigger
               value="customer-settings"
@@ -513,13 +557,51 @@ export default function CustomerSettings() {
                         <TableCell>{user.title}</TableCell>
                         <TableCell>{user.mobile}</TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditUser(user)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-destructive hover:text-destructive/90"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the user
+                                    "{user.firstName} {user.lastName}" and remove their access to the system.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteUserMutation.mutate(user.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    {deleteUserMutation.isPending ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                        Deleting...
+                                      </>
+                                    ) : (
+                                      "Delete User"
+                                    )}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

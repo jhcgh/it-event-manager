@@ -243,7 +243,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(users.customerId, customerId),
-          sql`${users.status} != 'deleted'`
+          eq(users.status, 'active')  // Only return active users
         )
       )
       .orderBy(desc(users.createdAt));

@@ -1,25 +1,12 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Event } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Loader2,  Trash2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
 import { EditEventDialog } from "@/components/edit-event-dialog";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -32,43 +19,11 @@ import { HoverUserMenu } from "@/components/hover-user-menu";
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { toast } = useToast();
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events", user?.id],
     select: (data) => data.filter(event => event.status === 'active')
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  });
-
-  const deleteEventMutation = useMutation({
-    mutationFn: async (eventId: number) => {
-      const response = await apiRequest(
-        "PATCH", 
-        `/api/events/${eventId}`,
-        { status: 'inactive' }
-      );
-      if (!response.ok) {
-        throw new Error('Failed to delete event');
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/events"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/events"] });
-      if (user?.id) {
-        queryClient.invalidateQueries({ queryKey: [`/api/users/${user.id}/events`] });
-      }
-      toast({
-        title: "Success",
-        description: "Event deleted successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
   if (isLoading) {
@@ -150,39 +105,6 @@ export default function DashboardPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <EditEventDialog event={event} />
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="flex items-center gap-2 text-destructive hover:bg-destructive/10">
-                              <Trash2 className="h-4 w-4" />
-                              Delete
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the event
-                                "{event.title}" and remove it from our records.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteEventMutation.mutate(event.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                {deleteEventMutation.isPending ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                    Deleting...
-                                  </>
-                                ) : (
-                                  "Delete Event"
-                                )}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
                       </div>
                     </TableCell>
                   </TableRow>
