@@ -528,7 +528,21 @@ export default function AdminPage() {
   const events = allEvents
     .filter(event => {
       const eventDate = new Date(event.date);
-      return eventDate >= new Date() && event.status === 'active';
+      const now = new Date();
+
+      // Set both dates to UTC midnight to compare just the dates
+      const eventDateUTC = Date.UTC(
+        eventDate.getUTCFullYear(),
+        eventDate.getUTCMonth(),
+        eventDate.getUTCDate()
+      );
+      const nowUTC = Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate()
+      );
+
+      return eventDateUTC >= nowUTC && event.status === 'active';
     })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -767,7 +781,21 @@ export default function AdminPage() {
                       allEvents
                         .filter(event => {
                           const eventDate = new Date(event.date);
-                          return eventDate < new Date() && event.status === 'active';
+                          const now = new Date();
+
+                          // Set both dates to UTC midnight to compare just the dates
+                          const eventDateUTC = Date.UTC(
+                            eventDate.getUTCFullYear(),
+                            eventDate.getUTCMonth(),
+                            eventDate.getUTCDate()
+                          );
+                          const nowUTC = Date.UTC(
+                            now.getUTCFullYear(),
+                            now.getUTCMonth(),
+                            now.getUTCDate()
+                          );
+
+                          return eventDateUTC < nowUTC && event.status === 'active';
                         })
                         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                         .map((event) => {

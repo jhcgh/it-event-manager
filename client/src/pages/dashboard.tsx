@@ -18,9 +18,12 @@ import {
 } from "@/components/ui/table";
 import { HoverUserMenu } from "@/components/hover-user-menu";
 import { useState } from "react";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("active");
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
@@ -38,6 +41,27 @@ export default function DashboardPage() {
       }
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   });
+
+  const handleDeleteEvent = async (event: Event) => {
+    try {
+      await apiRequest(
+        "PATCH",
+        `/api/events/${event.id}`,
+        { status: 'inactive' }
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/events", user?.id] });
+      toast({
+        title: "Success",
+        description: "Event has been deleted successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete event",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -118,14 +142,14 @@ export default function DashboardPage() {
                       {format(new Date(event.date), "PPP")}
                     </TableCell>
                     <TableCell>
-                      {event.isHybrid ? "In Person & Online" : 
-                       event.isRemote ? "Online" : 
-                       `${event.city}, ${event.country}`}
+                      {event.isHybrid ? "In Person & Online" :
+                        event.isRemote ? "Online" :
+                        `${event.city}, ${event.country}`}
                     </TableCell>
                     <TableCell className="capitalize">{event.type}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <EditEventDialog event={event} />
+                        <EditEventDialog event={event} onDelete={handleDeleteEvent} />
                       </div>
                     </TableCell>
                   </TableRow>
