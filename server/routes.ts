@@ -675,6 +675,7 @@ export function registerRoutes(app: Express): Server {
         userId: req.user?.id,
         customerId: req.params.customerId,
         targetUserId: req.params.id,
+        updateData: { ...req.body, password: req.body.password ? '[REDACTED]' : undefined },
         timestamp: new Date().toISOString()
       });
 
@@ -700,6 +701,13 @@ export function registerRoutes(app: Express): Server {
       // Don't allow password updates through this endpoint
       const parsed = insertUserSchema.omit({ password: true }).partial().parse(req.body);
 
+      console.log('Updating user:', {
+        userId,
+        customerId,
+        updateFields: Object.keys(parsed),
+        timestamp: new Date().toISOString()
+      });
+
       const updatedUser = await storage.updateUser(userId, {
         ...parsed,
         username: parsed.username?.toLowerCase()
@@ -710,10 +718,20 @@ export function registerRoutes(app: Express): Server {
         return res.status(500).json({ message: "Failed to update user" });
       }
 
-      console.log('Updated user:', { id: updatedUser.id, customerId });
+      console.log('Updated user successfully:', {
+        userId: updatedUser.id,
+        customerId,
+        timestamp: new Date().toISOString()
+      });
+
       res.json(updatedUser);
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error('Error updating user:', {
+        error,
+        customerId: req.params.customerId,
+        userId: req.params.id,
+        timestamp: new Date().toISOString()
+      });
       res.status(500).json({
         message: "Failed to update user",
         error: error instanceof Error ? error.message : String(error)

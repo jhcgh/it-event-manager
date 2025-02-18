@@ -120,43 +120,77 @@ export default function CustomerSettings() {
 
   const updateUser = useMutation({
     mutationFn: async (data: UserFormData & { id: number }) => {
-      const { id, ...updateData } = data;
+      const { id, password, ...updateData } = data;  // Exclude password from updates
       if (!customer?.id) throw new Error("No customer ID available");
+
+      console.log('Starting user update:', {
+        userId: id,
+        customerId: customer.id,
+        updateFields: Object.keys(updateData)
+      });
+
       const response = await apiRequest(
         "PATCH",
         `/api/customers/${customer.id}/users/${id}`,
         updateData
       );
-      return response.json();
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Update user failed:', errorData);
+        throw new Error(errorData.message || 'Failed to update user');
+      }
+
+      const result = await response.json();
+      console.log('Update successful:', { userId: id, result });
+      return result;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/customers/${customer?.id}/users`] });
       setIsUserFormOpen(false);
       setSelectedUser(null);
       userForm.reset();
+      queryClient.invalidateQueries({ queryKey: [`/api/customers/${customer?.id}/users`] });
       toast({
         title: "Success",
         description: "User has been updated successfully.",
       });
     },
     onError: (error: Error) => {
+      console.error('Update user mutation error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to update user",
         variant: "destructive",
       });
     },
   });
 
-  const onSubmitUser = (data: UserFormData) => {
-    if (selectedUser) {
-      updateUser.mutate({ ...data, id: selectedUser.id });
-    } else {
-      createUser.mutate(data);
+  const handleSubmitUser = async (formData: UserFormData) => {
+    try {
+      if (selectedUser) {
+        console.log('Updating existing user:', {
+          userId: selectedUser.id,
+          formData: { ...formData, password: '[REDACTED]' }
+        });
+        await updateUser.mutateAsync({ ...formData, id: selectedUser.id });
+      } else {
+        console.log('Creating new user:', {
+          formData: { ...formData, password: '[REDACTED]' }
+        });
+        await createUser.mutateAsync(formData);
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save user information. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleEditUser = (user: User) => {
+    console.log('Editing user:', user);
     setSelectedUser(user);
     userForm.reset({
       firstName: user.firstName,
@@ -164,7 +198,6 @@ export default function CustomerSettings() {
       username: user.username,
       title: user.title,
       mobile: user.mobile,
-      customerName: user.customerName || "",
       status: user.status
     });
     setIsUserFormOpen(true);
@@ -365,12 +398,19 @@ export default function CustomerSettings() {
                     <Users className="h-5 w-5 text-primary" />
                     User Management
                   </CardTitle>
-                  <Dialog open={isUserFormOpen} onOpenChange={setIsUserFormOpen}>
+                  <Dialog open={isUserFormOpen} onOpenChange={(open) => {
+                    if (!open) {
+                      setSelectedUser(null);
+                      userForm.reset();
+                    }
+                    setIsUserFormOpen(open);
+                  }}>
                     <DialogTrigger asChild>
                       <Button
                         onClick={() => {
                           setSelectedUser(null);
                           userForm.reset();
+                          setIsUserFormOpen(true);
                         }}
                         className="gap-2"
                       >
@@ -378,14 +418,20 @@ export default function CustomerSettings() {
                         Add User
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[425px]">
                       <DialogHeader>
                         <DialogTitle>
                           {selectedUser ? "Edit User" : "Add New User"}
                         </DialogTitle>
                       </DialogHeader>
                       <Form {...userForm}>
-                        <form onSubmit={userForm.handleSubmit(onSubmitUser)} className="space-y-4">
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            userForm.handleSubmit(handleSubmitUser)(e);
+                          }}
+                          className="space-y-4"
+                        >
                           <FormField
                             control={userForm.control}
                             name="firstName"

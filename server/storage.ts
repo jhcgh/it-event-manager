@@ -174,7 +174,7 @@ export class DatabaseStorage implements IStorage {
       const startTime = Date.now();
       console.log('Storage updateUser started:', {
         userId: id,
-        updates: updateData,
+        updates: { ...updateData, password: updateData.password ? '[REDACTED]' : undefined },
         timestamp: new Date().toISOString()
       });
 
@@ -188,26 +188,11 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date()
       };
 
-      if (updateData.customerName) {
-        const user = await this.getUser(id);
-        if (user) {
-          if (user.customerId) {
-            await db.update(customers)
-              .set({ name: updateData.customerName, updatedAt: new Date() })
-              .where(eq(customers.id, user.customerId));
-          } else {
-            const customer = await this.createCustomer({
-              name: updateData.customerName,
-              address: "Please update address",
-              phoneNumber: "Please update phone number",
-              adminName: "Please update admin name",
-              adminEmail: user.username || "please.update@example.com",
-              status: 'active'
-            });
-            Object.assign(validUpdateFields, { customerId: customer.id });
-          }
-        }
-      }
+      console.log('Executing update query with fields:', {
+        userId: id,
+        updateFields: Object.keys(validUpdateFields),
+        timestamp: new Date().toISOString()
+      });
 
       const [result] = await db
         .update(users)
@@ -218,14 +203,18 @@ export class DatabaseStorage implements IStorage {
       const endTime = Date.now();
       console.log('Storage updateUser completed:', {
         userId: id,
-        processingTime: `${endTime - startTime}ms`,
         success: !!result,
+        processingTime: `${endTime - startTime}ms`,
         timestamp: new Date().toISOString()
       });
 
       return result;
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error('Error in storage.updateUser:', {
+        userId: id,
+        error,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }
