@@ -55,6 +55,7 @@ export default function HomePage() {
     const matchesSearch = event.title.toLowerCase().includes(search.toLowerCase()) ||
                          event.description.toLowerCase().includes(search.toLowerCase());
     const eventDate = new Date(event.date);
+    const isUpcoming = eventDate >= new Date(); // Only show future events
     const matchesMonth = !selectedMonth || (
       eventDate >= startOfMonth(selectedMonth) &&
       eventDate <= endOfMonth(selectedMonth)
@@ -64,7 +65,7 @@ export default function HomePage() {
                             (selectedLocation === "online" ? (event.isRemote && !event.isHybrid) :
                              selectedLocation === "in-person" ? (!event.isRemote && !event.isHybrid) :
                              event.isHybrid);
-    return matchesSearch && matchesMonth && matchesType && matchesLocation;
+    return matchesSearch && matchesMonth && matchesType && matchesLocation && isUpcoming && event.status === 'active';
   });
 
   const months = Array.from({ length: 24 }, (_, i) => {

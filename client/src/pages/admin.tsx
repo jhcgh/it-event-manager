@@ -526,7 +526,10 @@ export default function AdminPage() {
   });
 
   const events = allEvents
-    .filter(event => event.status === 'active')
+    .filter(event => {
+      const eventDate = new Date(event.date);
+      return eventDate >= new Date() && event.status === 'active';
+    })
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const handleDeleteEvent = async (event: Event) => {
@@ -585,7 +588,7 @@ export default function AdminPage() {
 
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="users">
-          <TabsList className="grid w-[600px] grid-cols-3 mb-8">
+          <TabsList className="grid w-[600px] grid-cols-4 mb-8">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
               Admin Settings
@@ -596,7 +599,11 @@ export default function AdminPage() {
             </TabsTrigger>
             <TabsTrigger value="events" className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Events
+              Active Events
+            </TabsTrigger>
+            <TabsTrigger value="completed-events" className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Past Events
             </TabsTrigger>
           </TabsList>
 
@@ -721,6 +728,80 @@ export default function AdminPage() {
                           </TableRow>
                         );
                       })
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="completed-events">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Completed Events
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Organizer</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allEvents.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          No completed events found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      allEvents
+                        .filter(event => {
+                          const eventDate = new Date(event.date);
+                          return eventDate < new Date() && event.status === 'active';
+                        })
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map((event) => {
+                          const organizer = users.find(
+                            (u) => u.id === event.userId
+                          );
+                          return (
+                            <TableRow
+                              key={event.id}
+                              className="cursor-pointer transition-colors hover:bg-muted/50"
+                            >
+                              <TableCell className="font-medium">
+                                {event.title}
+                              </TableCell>
+                              <TableCell>
+                                {format(new Date(event.date), "PPP 'at' p")}
+                              </TableCell>
+                              <TableCell>
+                                {event.isHybrid ? "In Person & Online" :
+                                  event.isRemote ? "Online" :
+                                    `${event.city}, ${event.country}`}
+                              </TableCell>
+                              <TableCell className="capitalize">
+                                {event.type}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className="capitalize">
+                                  Completed
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{organizer?.username}</TableCell>
+                            </TableRow>
+                          );
+                        })
                     )}
                   </TableBody>
                 </Table>
