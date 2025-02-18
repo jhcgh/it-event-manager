@@ -118,13 +118,25 @@ const isPortAvailable = (port: number, timeout = 5000): Promise<boolean> => {
       serveStatic(app);
     }
 
-    const PORT = parseInt(process.env.PORT || "5000", 10);
-    log(`Starting server on port ${PORT}...`);
+    const BASE_PORT = parseInt(process.env.PORT || "5000", 10);
+    const MAX_PORT_ATTEMPTS = 10;
 
-    // Check port availability with improved error handling
-    const isAvailable = await isPortAvailable(PORT);
-    if (!isAvailable) {
-      throw new Error(`Port ${PORT} is already in use or not available`);
+    // Try ports in range BASE_PORT to BASE_PORT + MAX_PORT_ATTEMPTS
+    let port = BASE_PORT;
+    let portFound = false;
+
+    while (!portFound && port < BASE_PORT + MAX_PORT_ATTEMPTS) {
+      log(`Attempting to start server on port ${port}...`);
+      const isAvailable = await isPortAvailable(port);
+      if (isAvailable) {
+        portFound = true;
+      } else {
+        port++;
+      }
+    }
+
+    if (!portFound) {
+      throw new Error(`No available ports found in range ${BASE_PORT}-${BASE_PORT + MAX_PORT_ATTEMPTS - 1}`);
     }
 
     // Create a Promise to handle server startup with proper port binding
@@ -144,12 +156,12 @@ const isPortAvailable = (port: number, timeout = 5000): Promise<boolean> => {
           onError(new Error('Server startup timed out'));
         }, 10000);
 
-        server.listen(PORT, "0.0.0.0", () => {
+        server.listen(port, "0.0.0.0", () => {
           clearTimeout(serverStartTimeout);
           const address = server.address();
-          const port = typeof address === 'object' ? address?.port : PORT;
-          log(`Server bound successfully to port ${port}`);
-          console.log(`Server is listening on port ${port}`);
+          const actualPort = typeof address === 'object' ? address?.port : port;
+          log(`Server bound successfully to port ${actualPort}`);
+          console.log(`Server is listening on port ${actualPort}`);
 
           // Signal that the server is ready
           if (process.send) {

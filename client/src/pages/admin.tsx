@@ -83,8 +83,36 @@ function CustomerSection({ customers }: { customers: Customer[] }) {
     },
   });
 
+  // Add delete user mutation
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const response = await apiRequest("PATCH", `/api/admin/users/${userId}/status`, {
+        status: 'inactive'
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete user");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "User has been successfully deleted",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Only show active customers
   const customerGroups = customers.reduce((acc, customer) => {
-    // Only show active customers
     if (customer.status !== 'inactive') {
       if (!acc[customer.id]) {
         acc[customer.id] = {
@@ -101,9 +129,9 @@ function CustomerSection({ customers }: { customers: Customer[] }) {
     queryKey: ["/api/admin/users"],
   });
 
-  // Group users by their customerId
+  // Group users by their customerId, only including active users
   allUsers.forEach(user => {
-    if (user.customerId && customerGroups[user.customerId]) {
+    if (user.customerId && customerGroups[user.customerId] && user.status === 'active') {
       customerGroups[user.customerId].users.push(user);
     }
   });
@@ -213,6 +241,45 @@ function CustomerSection({ customers }: { customers: Customer[] }) {
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <UserEventsDialog user={user} />
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="destructive"
+                                      size="sm"
+                                      className="flex items-center gap-2"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Delete
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Are you sure you want to delete this user?
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This action cannot be undone. The user will be deactivated
+                                        and will no longer have access to the system.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => deleteUserMutation.mutate(user.id)}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        {deleteUserMutation.isPending ? (
+                                          <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Deleting...
+                                          </>
+                                        ) : (
+                                          "Delete User"
+                                        )}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -539,7 +606,7 @@ export default function AdminPage() {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="h-5 w-5" />
-                    Admin Users
+                    Super Users
                   </CardTitle>
                   <CreateSuperUserDialog />
                 </CardHeader>
