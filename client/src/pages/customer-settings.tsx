@@ -1,9 +1,8 @@
-// Import the same content from company-settings.tsx but keep our customer-related changes
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { insertCustomerSchema, type Customer } from "@shared/schema";
+import { insertCustomerSchema, type Customer, insertUserSchema, type InsertUser } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,9 +16,23 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Building2, ArrowLeft, Users } from "lucide-react";
+import { Loader2, Building2, ArrowLeft, Users, UserPlus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { useState } from "react";
 
 type CustomerFormValues = {
   name: string;
@@ -29,9 +42,13 @@ type CustomerFormValues = {
   adminEmail: string;
 };
 
+type UserFormData = InsertUser;
+
 export default function CustomerSettings() {
   const { toast } = useToast();
-  const form = useForm<CustomerFormValues>({
+  const [isUserFormOpen, setIsUserFormOpen] = useState(false);
+
+  const customerForm = useForm<CustomerFormValues>({
     resolver: zodResolver(insertCustomerSchema.omit({ status: true })),
     defaultValues: {
       name: "",
@@ -42,13 +59,57 @@ export default function CustomerSettings() {
     },
   });
 
+  const userForm = useForm<UserFormData>({
+    resolver: zodResolver(insertUserSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      username: "",
+      password: "",
+      title: "",
+      mobile: "",
+      status: "active"
+    },
+  });
+
   const { data: customer, isLoading } = useQuery<Customer>({
     queryKey: ["/api/customer-settings"],
   });
 
+  const createUser = useMutation({
+    mutationFn: async (data: UserFormData) => {
+      if (!customer?.id) throw new Error("No customer ID available");
+      const response = await apiRequest(
+        "POST",
+        `/api/customers/${customer.id}/users`,
+        data
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      setIsUserFormOpen(false);
+      userForm.reset();
+      toast({
+        title: "Success",
+        description: "User has been created successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmitUser = (data: UserFormData) => {
+    createUser.mutate(data);
+  };
+
   React.useEffect(() => {
     if (customer) {
-      form.reset({
+      customerForm.reset({
         name: customer.name,
         address: customer.address,
         phoneNumber: customer.phoneNumber,
@@ -56,7 +117,7 @@ export default function CustomerSettings() {
         adminEmail: customer.adminEmail,
       });
     }
-  }, [customer, form]);
+  }, [customer, customerForm]);
 
   const updateCustomerMutation = useMutation({
     mutationFn: async (data: CustomerFormValues) => {
@@ -101,123 +162,252 @@ export default function CustomerSettings() {
                 Back to Dashboard
               </Button>
             </Link>
-            <Link href="/company-users">
-              <Button className="gap-2">
-                <Users className="h-4 w-4" />
-                Manage Users
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              <Dialog open={isUserFormOpen} onOpenChange={setIsUserFormOpen}>
+                <DialogTrigger asChild>
+                  <Button className="gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    Add User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New User</DialogTitle>
+                  </DialogHeader>
+                  <Form {...userForm}>
+                    <form onSubmit={userForm.handleSubmit(onSubmitUser)} className="space-y-4">
+                      <FormField
+                        control={userForm.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>First Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={userForm.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Last Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={userForm.control}
+                        name="username"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="email" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={userForm.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="password" />
+                            </FormControl>
+                            <FormDescription>
+                              Must be at least 8 characters with a number and special
+                              character
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={userForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Job Title</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={userForm.control}
+                        name="mobile"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Mobile Number</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={createUser.isPending}
+                      >
+                        {createUser.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Creating...
+                          </>
+                        ) : (
+                          "Create User"
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+              <Link href="/company-users">
+                <Button className="gap-2">
+                  <Users className="h-4 w-4" />
+                  Manage Users
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
 
       <div className="container mx-auto py-10">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
+        <Tabs defaultValue="customer-settings" className="space-y-6 bg-white/10 backdrop-blur-sm rounded-lg p-4">
+          <TabsList className="w-full border-b px-2 bg-card">
+            <TabsTrigger
+              value="customer-settings"
+              className="flex items-center gap-2 px-4 py-2 data-[state=active]:border-primary data-[state=active]:text-primary hover:bg-muted/50 transition-colors"
+            >
+              <Building2 className="h-4 w-4" />
               Customer Settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit((data) =>
-                  updateCustomerMutation.mutate(data)
-                )}
-                className="space-y-6"
-              >
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Customer Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your customer name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+            </TabsTrigger>
+          </TabsList>
 
-                <FormField
-                  control={form.control}
-                  name="address"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Customer Address</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter customer address" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          <TabsContent value="customer-settings" className="mt-6">
+            <Card className="border-2 shadow-sm">
+              <CardHeader className="bg-muted/50">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  Customer Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <Form {...customerForm}>
+                  <form
+                    onSubmit={customerForm.handleSubmit((data) =>
+                      updateCustomerMutation.mutate(data)
+                    )}
+                    className="space-y-6"
+                  >
+                    <FormField
+                      control={customerForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Customer Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter your customer name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="phoneNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Customer Phone Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter customer phone number" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Format: +1 (123) 456-7890 or 1234567890
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={customerForm.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Customer Address</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter customer address" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="adminName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Admin Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter admin name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={customerForm.control}
+                      name="phoneNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Customer Phone Number</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter customer phone number" {...field} />
+                          </FormControl>
+                          <FormDescription>
+                            Format: +1 (123) 456-7890 or 1234567890
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <FormField
-                  control={form.control}
-                  name="adminEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Admin Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter admin email" type="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    <FormField
+                      control={customerForm.control}
+                      name="adminName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Admin Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter admin name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={updateCustomerMutation.isPending}
-                >
-                  {updateCustomerMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Customer Information"
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                    <FormField
+                      control={customerForm.control}
+                      name="adminEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Admin Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter admin email" type="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={updateCustomerMutation.isPending}
+                    >
+                      {updateCustomerMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Customer Information"
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
