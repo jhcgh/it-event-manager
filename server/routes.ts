@@ -613,29 +613,54 @@ export function registerRoutes(app: Express): Server {
         return res.sendStatus(403);
       }
 
+      // Get customer information first
       const customer = await storage.getCustomerById(customerId);
       if (!customer) {
         console.log('Customer not found:', customerId);
         return res.status(404).json({ message: "Customer not found" });
       }
 
-      const parsed = insertUserSchema.parse({
-        ...req.body,
-        customerId,
-        status: "active"
+      console.log('Found customer:', {
+        customerId: customer.id,
+        customerName: customer.name,
+        timestamp: new Date().toISOString()
       });
 
+      // Prepare user data with customer information
+      const userData = {
+        ...req.body,
+        customerName: customer.name, // Add customer name from the existing customer
+        status: 'active'
+      };
+
+      console.log('Prepared user data:', {
+        ...userData,
+        password: '[REDACTED]',
+        timestamp: new Date().toISOString()
+      });
+
+      // Validate the prepared data
+      const parsed = insertUserSchema.parse(userData);
+
+      console.log('Validation passed, creating user');
+
+      // Hash password and create user
       const hashedPassword = await hashPassword(parsed.password);
       const newUser = await storage.createUser({
         ...parsed,
         password: hashedPassword,
-        username: parsed.username.toLowerCase()
+        username: parsed.username.toLowerCase(),
+        customerId
       });
 
       console.log('Created user:', { id: newUser.id, customerId });
       res.status(201).json(newUser);
     } catch (error) {
-      console.error('Error creating user:', error);
+      console.error('Error creating user:', {
+        error,
+        requestBody: { ...req.body, password: '[REDACTED]' },
+        timestamp: new Date().toISOString()
+      });
       res.status(500).json({
         message: "Failed to create user",
         error: error instanceof Error ? error.message : String(error)

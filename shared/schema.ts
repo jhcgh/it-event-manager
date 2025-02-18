@@ -86,7 +86,7 @@ export const insertUserSchema = createInsertSchema(users)
     password: z.string().min(8).regex(/[0-9]/, "Password must contain at least one number")
       .regex(/[!@#$%^&*]/, "Password must contain at least one special character"),
     username: z.string().email("Must be a valid email address"),
-    customerName: z.string().min(1, "Customer name is required"),
+    customerName: z.string().optional(),
     status: z.enum(['active', 'inactive']).default('active'),
   })
   .omit({

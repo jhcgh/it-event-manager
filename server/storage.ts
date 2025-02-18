@@ -103,11 +103,23 @@ export class DatabaseStorage implements IStorage {
     try {
       console.log('Starting user creation process:', {
         username: insertUser.username,
+        customerId: insertUser.customerId,
         timestamp: new Date().toISOString()
       });
 
+      let customerName = insertUser.customerName;
       let customerId = insertUser.customerId;
-      if (insertUser.customerName && !customerId) {
+
+      // If customerId is provided, get the customer's name
+      if (customerId) {
+        const customer = await this.getCustomerById(customerId);
+        if (!customer) {
+          throw new Error('Customer not found');
+        }
+        customerName = customer.name;
+      }
+      // Only create a new customer if no customerId is provided and customerName exists
+      else if (insertUser.customerName) {
         const customer = await this.createCustomer({
           name: insertUser.customerName,
           address: "Please update address",
@@ -117,6 +129,7 @@ export class DatabaseStorage implements IStorage {
           status: 'active'
         });
         customerId = customer.id;
+        customerName = customer.name;
         console.log('Created new customer:', {
           customerId,
           customerName: insertUser.customerName,
@@ -133,7 +146,7 @@ export class DatabaseStorage implements IStorage {
           title: insertUser.title,
           mobile: insertUser.mobile,
           customerId,
-          customerName: insertUser.customerName,
+          customerName,
           status: 'active',
           isAdmin: false,
           isSuperAdmin: false,
