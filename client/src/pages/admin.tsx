@@ -591,7 +591,7 @@ export default function AdminPage() {
             </div>
             <h1 className="text-2xl font-bold flex items-center gap-2 flex-1 justify-center">
               <AlertTriangle className="h-6 w-6 text-destructive" />
-              Admin Dashboard
+              Admin Portal
             </h1>
             <div className="w-32 flex justify-end items-center gap-1.5">
               {user && <HoverUserMenu user={user} />}
@@ -605,7 +605,7 @@ export default function AdminPage() {
           <TabsList className="grid w-[600px] grid-cols-4 mb-8">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Shield className="h-4 w-4" />
-              Admin Settings
+              Super Users
             </TabsTrigger>
             <TabsTrigger value="customers" className="flex items-center gap-2">
               <Users className="h-4 w-4" />

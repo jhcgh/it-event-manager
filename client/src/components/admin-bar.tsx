@@ -12,7 +12,7 @@ export function AdminBar() {
         </div>
         <Link href="/admin">
           <Button size="sm" variant="outline" className="text-destructive border-destructive/20 hover:bg-destructive/10">
-            Admin Panel
+            Admin Portal
           </Button>
         </Link>
       </div>

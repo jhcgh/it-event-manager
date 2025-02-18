@@ -103,7 +103,7 @@ export default function DashboardPage() {
             <TabsList className="grid w-full max-w-md grid-cols-3">
               <TabsTrigger value="active">Active Events</TabsTrigger>
               <TabsTrigger value="saved">Saved Events</TabsTrigger>
-              <TabsTrigger value="completed">Completed Events</TabsTrigger>
+              <TabsTrigger value="completed">Past Events</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -126,7 +126,7 @@ export default function DashboardPage() {
               {events.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No {activeTab} events found.
+                    No {activeTab === 'completed' ? 'past' : activeTab} events found.
                   </TableCell>
                 </TableRow>
               ) : (
