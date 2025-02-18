@@ -560,6 +560,142 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Customer user management endpoints
+  app.get("/api/customers/:customerId/users", async (req, res) => {
+    try {
+      console.log('GET /api/customers/:customerId/users - Request received:', {
+        isAuthenticated: req.isAuthenticated(),
+        userId: req.user?.id,
+        customerId: req.params.customerId,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!req.user) {
+        console.log('Unauthorized: No user in session');
+        return res.sendStatus(401);
+      }
+
+      const customerId = parseInt(req.params.customerId);
+      if (req.user.customerId !== customerId && !req.user.isAdmin) {
+        console.log('Forbidden: User does not belong to this customer');
+        return res.sendStatus(403);
+      }
+
+      const users = await storage.getCustomerUsers(customerId);
+      console.log(`Retrieved ${users.length} users for customer ${customerId}`);
+      res.json(users);
+    } catch (error) {
+      console.error('Error fetching customer users:', error);
+      res.status(500).json({
+        message: "Failed to fetch users",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.post("/api/customers/:customerId/users", async (req, res) => {
+    try {
+      console.log('POST /api/customers/:customerId/users - Request received:', {
+        isAuthenticated: req.isAuthenticated(),
+        userId: req.user?.id,
+        customerId: req.params.customerId,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!req.user) {
+        console.log('Unauthorized: No user in session');
+        return res.sendStatus(401);
+      }
+
+      const customerId = parseInt(req.params.customerId);
+      if (req.user.customerId !== customerId && !req.user.isAdmin) {
+        console.log('Forbidden: User does not belong to this customer');
+        return res.sendStatus(403);
+      }
+
+      const customer = await storage.getCustomerById(customerId);
+      if (!customer) {
+        console.log('Customer not found:', customerId);
+        return res.status(404).json({ message: "Customer not found" });
+      }
+
+      const parsed = insertUserSchema.parse({
+        ...req.body,
+        customerId,
+        status: "active"
+      });
+
+      const hashedPassword = await hashPassword(parsed.password);
+      const newUser = await storage.createUser({
+        ...parsed,
+        password: hashedPassword,
+        username: parsed.username.toLowerCase()
+      });
+
+      console.log('Created user:', { id: newUser.id, customerId });
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({
+        message: "Failed to create user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  app.patch("/api/customers/:customerId/users/:id", async (req, res) => {
+    try {
+      console.log('PATCH /api/customers/:customerId/users/:id - Request received:', {
+        isAuthenticated: req.isAuthenticated(),
+        userId: req.user?.id,
+        customerId: req.params.customerId,
+        targetUserId: req.params.id,
+        timestamp: new Date().toISOString()
+      });
+
+      if (!req.user) {
+        console.log('Unauthorized: No user in session');
+        return res.sendStatus(401);
+      }
+
+      const customerId = parseInt(req.params.customerId);
+      if (req.user.customerId !== customerId && !req.user.isAdmin) {
+        console.log('Forbidden: User does not belong to this customer');
+        return res.sendStatus(403);
+      }
+
+      const userId = parseInt(req.params.id);
+      const targetUser = await storage.getUser(userId);
+
+      if (!targetUser || targetUser.customerId !== customerId) {
+        console.log('User not found or does not belong to customer:', { userId, customerId });
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Don't allow password updates through this endpoint
+      const parsed = insertUserSchema.omit({ password: true }).partial().parse(req.body);
+
+      const updatedUser = await storage.updateUser(userId, {
+        ...parsed,
+        username: parsed.username?.toLowerCase()
+      });
+
+      if (!updatedUser) {
+        console.log('Failed to update user:', userId);
+        return res.status(500).json({ message: "Failed to update user" });
+      }
+
+      console.log('Updated user:', { id: updatedUser.id, customerId });
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).json({
+        message: "Failed to update user",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

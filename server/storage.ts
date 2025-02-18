@@ -23,6 +23,7 @@ export interface IStorage {
   updateUser(id: number, updateData: Partial<InsertUser>): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   getUsersByCustomer(customerId: number): Promise<User[]>;
+  getCustomerUsers(customerId: number): Promise<User[]>;
 
   // Event Management Methods
   createEvent(userId: number, insertEvent: InsertEvent): Promise<Event>;
@@ -233,6 +234,10 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(desc(users.createdAt));
+  }
+
+  async getCustomerUsers(customerId: number): Promise<User[]> {
+    return this.getUsersByCustomer(customerId);
   }
 
   async updateCustomerById(id: number, updateData: Partial<InsertCustomer>): Promise<Customer | undefined> {

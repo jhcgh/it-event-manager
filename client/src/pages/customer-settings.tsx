@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Building2, ArrowLeft } from "lucide-react";
+import { Loader2, Building2, ArrowLeft, Users } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
 
@@ -94,12 +94,20 @@ export default function CustomerSettings() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/">
-            <Button variant="ghost" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Dashboard
-            </Button>
-          </Link>
+          <div className="flex items-center justify-between">
+            <Link href="/">
+              <Button variant="ghost" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Dashboard
+              </Button>
+            </Link>
+            <Link href="/company-users">
+              <Button className="gap-2">
+                <Users className="h-4 w-4" />
+                Manage Users
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -113,7 +121,12 @@ export default function CustomerSettings() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit((data) => updateCustomerMutation.mutate(data))} className="space-y-6">
+              <form
+                onSubmit={form.handleSubmit((data) =>
+                  updateCustomerMutation.mutate(data)
+                )}
+                className="space-y-6"
+              >
                 <FormField
                   control={form.control}
                   name="name"
