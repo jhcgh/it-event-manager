@@ -2,7 +2,7 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { insertCustomerSchema, type Customer, insertUserSchema, type InsertUser } from "@shared/schema";
+import { insertCustomerSchema, type Customer, insertUserSchema, type InsertUser, type User } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Building2, ArrowLeft, Users, UserPlus } from "lucide-react";
+import { Loader2, Building2, ArrowLeft, Users, UserPlus, Pencil } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
 import {
@@ -32,6 +32,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { useState } from "react";
 
 type CustomerFormValues = {
@@ -47,6 +55,7 @@ type UserFormData = InsertUser;
 export default function CustomerSettings() {
   const { toast } = useToast();
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
   const customerForm = useForm<CustomerFormValues>({
     resolver: zodResolver(insertCustomerSchema.omit({ status: true })),
@@ -72,8 +81,13 @@ export default function CustomerSettings() {
     },
   });
 
-  const { data: customer, isLoading } = useQuery<Customer>({
+  const { data: customer, isLoading: isLoadingCustomer } = useQuery<Customer>({
     queryKey: ["/api/customer-settings"],
+  });
+
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
+    queryKey: [`/api/customers/${customer?.id}/users`],
+    enabled: !!customer?.id,
   });
 
   const createUser = useMutation({
@@ -89,6 +103,7 @@ export default function CustomerSettings() {
     onSuccess: () => {
       setIsUserFormOpen(false);
       userForm.reset();
+      queryClient.invalidateQueries({ queryKey: [`/api/customers/${customer?.id}/users`] });
       toast({
         title: "Success",
         description: "User has been created successfully.",
@@ -103,8 +118,56 @@ export default function CustomerSettings() {
     },
   });
 
+  const updateUser = useMutation({
+    mutationFn: async (data: UserFormData & { id: number }) => {
+      const { id, ...updateData } = data;
+      if (!customer?.id) throw new Error("No customer ID available");
+      const response = await apiRequest(
+        "PATCH",
+        `/api/customers/${customer.id}/users/${id}`,
+        updateData
+      );
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/customers/${customer?.id}/users`] });
+      setIsUserFormOpen(false);
+      setSelectedUser(null);
+      userForm.reset();
+      toast({
+        title: "Success",
+        description: "User has been updated successfully.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmitUser = (data: UserFormData) => {
-    createUser.mutate(data);
+    if (selectedUser) {
+      updateUser.mutate({ ...data, id: selectedUser.id });
+    } else {
+      createUser.mutate(data);
+    }
+  };
+
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    userForm.reset({
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      title: user.title,
+      mobile: user.mobile,
+      customerName: user.customerName || "",
+      status: user.status
+    });
+    setIsUserFormOpen(true);
   };
 
   React.useEffect(() => {
@@ -139,7 +202,7 @@ export default function CustomerSettings() {
     },
   });
 
-  if (isLoading) {
+  if (isLoadingCustomer || isLoadingUsers) {
     return (
       <div className="container mx-auto py-10">
         <Card>
@@ -162,127 +225,6 @@ export default function CustomerSettings() {
                 Back to Dashboard
               </Button>
             </Link>
-            <div className="flex gap-2">
-              <Dialog open={isUserFormOpen} onOpenChange={setIsUserFormOpen}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <UserPlus className="h-4 w-4" />
-                    Add User
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Add New User</DialogTitle>
-                  </DialogHeader>
-                  <Form {...userForm}>
-                    <form onSubmit={userForm.handleSubmit(onSubmitUser)} className="space-y-4">
-                      <FormField
-                        control={userForm.control}
-                        name="firstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>First Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={userForm.control}
-                        name="lastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Last Name</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={userForm.control}
-                        name="username"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="email" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={userForm.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="password" />
-                            </FormControl>
-                            <FormDescription>
-                              Must be at least 8 characters with a number and special
-                              character
-                            </FormDescription>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={userForm.control}
-                        name="title"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Job Title</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={userForm.control}
-                        name="mobile"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Mobile Number</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button
-                        type="submit"
-                        className="w-full"
-                        disabled={createUser.isPending}
-                      >
-                        {createUser.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Creating...
-                          </>
-                        ) : (
-                          "Create User"
-                        )}
-                      </Button>
-                    </form>
-                  </Form>
-                </DialogContent>
-              </Dialog>
-              <Link href="/company-users">
-                <Button className="gap-2">
-                  <Users className="h-4 w-4" />
-                  Manage Users
-                </Button>
-              </Link>
-            </div>
           </div>
         </div>
       </header>
@@ -296,6 +238,13 @@ export default function CustomerSettings() {
             >
               <Building2 className="h-4 w-4" />
               Customer Settings
+            </TabsTrigger>
+            <TabsTrigger
+              value="users"
+              className="flex items-center gap-2 px-4 py-2 data-[state=active]:border-primary data-[state=active]:text-primary hover:bg-muted/50 transition-colors"
+            >
+              <Users className="h-4 w-4" />
+              Users
             </TabsTrigger>
           </TabsList>
 
@@ -404,6 +353,178 @@ export default function CustomerSettings() {
                     </Button>
                   </form>
                 </Form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="users" className="mt-6">
+            <Card className="border-2 shadow-sm">
+              <CardHeader className="bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                    <Users className="h-5 w-5 text-primary" />
+                    User Management
+                  </CardTitle>
+                  <Dialog open={isUserFormOpen} onOpenChange={setIsUserFormOpen}>
+                    <DialogTrigger asChild>
+                      <Button
+                        onClick={() => {
+                          setSelectedUser(null);
+                          userForm.reset();
+                        }}
+                        className="gap-2"
+                      >
+                        <UserPlus className="h-4 w-4" />
+                        Add User
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>
+                          {selectedUser ? "Edit User" : "Add New User"}
+                        </DialogTitle>
+                      </DialogHeader>
+                      <Form {...userForm}>
+                        <form onSubmit={userForm.handleSubmit(onSubmitUser)} className="space-y-4">
+                          <FormField
+                            control={userForm.control}
+                            name="firstName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>First Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={userForm.control}
+                            name="lastName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Last Name</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={userForm.control}
+                            name="username"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email</FormLabel>
+                                <FormControl>
+                                  <Input {...field} type="email" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          {!selectedUser && (
+                            <FormField
+                              control={userForm.control}
+                              name="password"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Password</FormLabel>
+                                  <FormControl>
+                                    <Input {...field} type="password" />
+                                  </FormControl>
+                                  <FormDescription>
+                                    Must be at least 8 characters with a number and special
+                                    character
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          )}
+                          <FormField
+                            control={userForm.control}
+                            name="title"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Job Title</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={userForm.control}
+                            name="mobile"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Mobile Number</FormLabel>
+                                <FormControl>
+                                  <Input {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <Button
+                            type="submit"
+                            className="w-full"
+                            disabled={createUser.isPending || updateUser.isPending}
+                          >
+                            {createUser.isPending || updateUser.isPending ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                {selectedUser ? "Updating..." : "Creating..."}
+                              </>
+                            ) : selectedUser ? (
+                              "Update User"
+                            ) : (
+                              "Create User"
+                            )}
+                          </Button>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Mobile</TableHead>
+                      <TableHead className="w-[100px]">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          {user.firstName} {user.lastName}
+                        </TableCell>
+                        <TableCell>{user.username}</TableCell>
+                        <TableCell>{user.title}</TableCell>
+                        <TableCell>{user.mobile}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditUser(user)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
