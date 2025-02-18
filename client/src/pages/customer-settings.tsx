@@ -69,7 +69,11 @@ export default function CustomerSettings() {
   });
 
   const userForm = useForm<UserFormData>({
-    resolver: zodResolver(insertUserSchema),
+    resolver: zodResolver(
+      selectedUser
+        ? insertUserSchema.omit({ password: true })
+        : insertUserSchema
+    ),
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -98,6 +102,12 @@ export default function CustomerSettings() {
         `/api/customers/${customer.id}/users`,
         data
       );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create user');
+      }
+
       return response.json();
     },
     onSuccess: () => {
@@ -110,6 +120,7 @@ export default function CustomerSettings() {
       });
     },
     onError: (error: Error) => {
+      console.error('Create user error:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -119,14 +130,15 @@ export default function CustomerSettings() {
   });
 
   const updateUser = useMutation({
-    mutationFn: async (data: UserFormData & { id: number }) => {
-      const { id, password, ...updateData } = data;  // Exclude password from updates
+    mutationFn: async (data: Partial<UserFormData> & { id: number }) => {
       if (!customer?.id) throw new Error("No customer ID available");
+      const { id, password, ...updateData } = data;
 
-      console.log('Starting user update:', {
+      console.log('Starting user update mutation:', {
         userId: id,
         customerId: customer.id,
-        updateFields: Object.keys(updateData)
+        updateFields: Object.keys(updateData),
+        updateData: { ...updateData, password: undefined }
       });
 
       const response = await apiRequest(
@@ -136,9 +148,9 @@ export default function CustomerSettings() {
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Update user failed:', errorData);
-        throw new Error(errorData.message || 'Failed to update user');
+        const error = await response.json();
+        console.error('Update user API error:', error);
+        throw new Error(error.message || 'Failed to update user');
       }
 
       const result = await response.json();
@@ -167,12 +179,26 @@ export default function CustomerSettings() {
 
   const handleSubmitUser = async (formData: UserFormData) => {
     try {
+      console.log('Form submission started:', {
+        isUpdate: !!selectedUser,
+        formData: { ...formData, password: formData.password ? '[REDACTED]' : undefined }
+      });
+
       if (selectedUser) {
         console.log('Updating existing user:', {
           userId: selectedUser.id,
-          formData: { ...formData, password: '[REDACTED]' }
+          formData: { ...formData, password: undefined }
         });
-        await updateUser.mutateAsync({ ...formData, id: selectedUser.id });
+
+        // Validate required fields
+        if (!formData.firstName || !formData.lastName || !formData.username) {
+          throw new Error("Please fill in all required fields");
+        }
+
+        await updateUser.mutateAsync({
+          ...formData,
+          id: selectedUser.id,
+        });
       } else {
         console.log('Creating new user:', {
           formData: { ...formData, password: '[REDACTED]' }
@@ -183,14 +209,14 @@ export default function CustomerSettings() {
       console.error('Form submission error:', error);
       toast({
         title: "Error",
-        description: "Failed to save user information. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to save user information. Please try again.",
         variant: "destructive",
       });
     }
   };
 
   const handleEditUser = (user: User) => {
-    console.log('Editing user:', user);
+    console.log('Editing user:', { ...user, password: undefined });
     setSelectedUser(user);
     userForm.reset({
       firstName: user.firstName,
@@ -426,10 +452,7 @@ export default function CustomerSettings() {
                       </DialogHeader>
                       <Form {...userForm}>
                         <form
-                          onSubmit={(e) => {
-                            e.preventDefault();
-                            userForm.handleSubmit(handleSubmitUser)(e);
-                          }}
+                          onSubmit={userForm.handleSubmit(handleSubmitUser)}
                           className="space-y-4"
                         >
                           <FormField

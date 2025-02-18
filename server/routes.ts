@@ -685,14 +685,23 @@ export function registerRoutes(app: Express): Server {
       }
 
       const customerId = parseInt(req.params.customerId);
+      if (!customerId) {
+        return res.status(400).json({ message: "Invalid customer ID" });
+      }
+
+      // Check if user has permission to update users for this customer
       if (req.user.customerId !== customerId && !req.user.isAdmin) {
         console.log('Forbidden: User does not belong to this customer');
         return res.sendStatus(403);
       }
 
       const userId = parseInt(req.params.id);
-      const targetUser = await storage.getUser(userId);
+      if (!userId) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
 
+      // Verify the target user exists and belongs to the customer
+      const targetUser = await storage.getUser(userId);
       if (!targetUser || targetUser.customerId !== customerId) {
         console.log('User not found or does not belong to customer:', { userId, customerId });
         return res.status(404).json({ message: "User not found" });
