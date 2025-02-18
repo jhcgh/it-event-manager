@@ -174,20 +174,25 @@ export class DatabaseStorage implements IStorage {
       const startTime = Date.now();
       console.log('Storage updateUser started:', {
         userId: id,
-        updates: updateData,
+        updates: {
+          ...updateData,
+          password: updateData.password ? '[REDACTED]' : undefined
+        },
         timestamp: new Date().toISOString()
       });
 
+      // Create an object with all valid update fields
       const validUpdateFields = {
         ...(updateData.username && { username: updateData.username }),
         ...(updateData.firstName && { firstName: updateData.firstName }),
         ...(updateData.lastName && { lastName: updateData.lastName }),
-        ...(updateData.title && { title: updateData.title }),
-        ...(updateData.mobile && { mobile: updateData.mobile }),
+        ...(updateData.title !== undefined && { title: updateData.title }),
+        ...(updateData.mobile !== undefined && { mobile: updateData.mobile }),
         ...(updateData.status && { status: updateData.status }),
         updatedAt: new Date()
       };
 
+      // Handle customer name update if provided
       if (updateData.customerName) {
         const user = await this.getUser(id);
         if (user) {
@@ -204,10 +209,19 @@ export class DatabaseStorage implements IStorage {
               adminEmail: user.username || "please.update@example.com",
               status: 'active'
             });
-            Object.assign(validUpdateFields, { customerId: customer.id });
+            Object.assign(validUpdateFields, { 
+              customerId: customer.id,
+              customerName: customer.name
+            });
           }
         }
       }
+
+      console.log('Applying user updates:', {
+        userId: id,
+        fields: Object.keys(validUpdateFields),
+        timestamp: new Date().toISOString()
+      });
 
       const [result] = await db
         .update(users)
@@ -220,12 +234,17 @@ export class DatabaseStorage implements IStorage {
         userId: id,
         processingTime: `${endTime - startTime}ms`,
         success: !!result,
+        updatedFields: Object.keys(validUpdateFields),
         timestamp: new Date().toISOString()
       });
 
       return result;
     } catch (error) {
-      console.error('Error updating user:', error);
+      console.error('Error updating user:', {
+        error,
+        userId: id,
+        timestamp: new Date().toISOString()
+      });
       throw error;
     }
   }

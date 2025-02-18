@@ -61,7 +61,10 @@ type CustomerFormValues = {
   adminEmail: string;
 };
 
-type UserFormData = InsertUser;
+type UserFormData = Omit<InsertUser, 'password'> & {
+  password?: string;
+  status: 'active' | 'inactive';
+};
 
 export default function CustomerSettings() {
   const { toast } = useToast();
@@ -83,15 +86,19 @@ export default function CustomerSettings() {
   });
 
   const userForm = useForm<UserFormData>({
-    resolver: zodResolver(insertUserSchema),
+    resolver: zodResolver(
+      insertUserSchema.omit({ password: true }).extend({
+        password: insertUserSchema.shape.password.optional(),
+        status: insertUserSchema.shape.status
+      })
+    ),
     defaultValues: {
       firstName: "",
       lastName: "",
       username: "",
-      password: "",
       title: "",
       mobile: "",
-      status: "active"
+      status: "active" as const
     },
   });
 
@@ -137,14 +144,50 @@ export default function CustomerSettings() {
     mutationFn: async (data: UserFormData & { id: number }) => {
       const { id, ...updateData } = data;
       if (!customer?.id) throw new Error("No customer ID available");
-      const response = await apiRequest(
-        "PATCH",
-        `/api/customers/${customer.id}/users/${id}`,
-        updateData
-      );
-      return response.json();
+
+      console.log('Starting user update mutation:', {
+        userId: id,
+        customerData: customer?.id,
+        fields: Object.keys(updateData),
+        timestamp: new Date().toISOString()
+      });
+
+      try {
+        const response = await apiRequest(
+          "PATCH",
+          `/api/customers/${customer?.id}/users/${id}`,
+          updateData
+        );
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error('Update failed:', {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorData,
+            timestamp: new Date().toISOString()
+          });
+          throw new Error(errorData || 'Failed to update user');
+        }
+
+        const result = await response.json();
+        console.log('Update successful:', {
+          userId: id,
+          result,
+          timestamp: new Date().toISOString()
+        });
+        return result;
+      } catch (error) {
+        console.error('Update mutation error:', {
+          error,
+          userId: id,
+          timestamp: new Date().toISOString()
+        });
+        throw error;
+      }
     },
     onSuccess: () => {
+      console.log('Update mutation success, invalidating queries');
       queryClient.invalidateQueries({ queryKey: [`/api/customers/${customer?.id}/users`] });
       setIsUserFormOpen(false);
       setSelectedUser(null);
@@ -155,6 +198,7 @@ export default function CustomerSettings() {
       });
     },
     onError: (error: Error) => {
+      console.error('Update user error:', error);
       toast({
         title: "Error",
         description: error.message,
@@ -168,7 +212,7 @@ export default function CustomerSettings() {
       if (!customer?.id) throw new Error("No customer ID available");
       const response = await apiRequest(
         "PATCH",
-        `/api/customers/${customer.id}/users/${userId}`,
+        `/api/customers/${customer?.id}/users/${userId}`,
         { status: 'inactive' }
       );
       if (!response.ok) {
@@ -192,7 +236,24 @@ export default function CustomerSettings() {
     },
   });
 
-  const onSubmitUser = (data: UserFormData) => {
+  const onSubmit = async (data: UserFormData) => {
+    console.log('Form submission started:', {
+      formData: { ...data, password: data.password ? '[REDACTED]' : undefined },
+      timestamp: new Date().toISOString()
+    });
+
+    // Check for form validation errors
+    const errors = userForm.formState.errors;
+    if (Object.keys(errors).length > 0) {
+      console.error('Form validation errors:', errors);
+      toast({
+        title: "Validation Error",
+        description: "Please check the form for errors",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (selectedUser) {
       updateUser.mutate({ ...data, id: selectedUser.id });
     } else {
@@ -206,10 +267,9 @@ export default function CustomerSettings() {
       firstName: user.firstName,
       lastName: user.lastName,
       username: user.username,
-      title: user.title,
-      mobile: user.mobile,
-      customerName: user.customerName || "",
-      status: user.status
+      title: user.title || "",
+      mobile: user.mobile || "",
+      status: user.status,
     });
     setIsUserFormOpen(true);
   };
@@ -429,7 +489,7 @@ export default function CustomerSettings() {
                         </DialogTitle>
                       </DialogHeader>
                       <Form {...userForm}>
-                        <form onSubmit={userForm.handleSubmit(onSubmitUser)} className="space-y-4">
+                        <form onSubmit={userForm.handleSubmit(onSubmit)} className="space-y-4">
                           <FormField
                             control={userForm.control}
                             name="firstName"

@@ -12,26 +12,27 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
+type ProfileFormData = Omit<InsertUser, "password" | "status">;
+
 export default function ProfilePage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const form = useForm({
+  const form = useForm<ProfileFormData>({
     resolver: zodResolver(
-      insertUserSchema.omit({ password: true })
+      insertUserSchema.omit({ password: true, status: true })
     ),
     defaultValues: {
       username: user?.username || "",
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
-      companyName: user?.companyName || "", // Ensure it's always a string
       title: user?.title || "",
       mobile: user?.mobile || "",
     },
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: async (data: Omit<InsertUser, "password">) => {
+    mutationFn: async (data: ProfileFormData) => {
       console.log('Making profile update request:', {
         data,
         timestamp: new Date().toISOString()
@@ -81,7 +82,7 @@ export default function ProfilePage() {
     },
   });
 
-  const onSubmit = (data: Omit<InsertUser, "password">) => {
+  const onSubmit = (data: ProfileFormData) => {
     console.log('Profile update initiated:', {
       updates: data,
       timestamp: new Date().toISOString()
@@ -152,19 +153,6 @@ export default function ProfilePage() {
                 {form.formState.errors.username && (
                   <p className="text-sm text-destructive">
                     {form.formState.errors.username.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="companyName">Company Name</Label>
-                <Input
-                  id="companyName"
-                  {...form.register("companyName")}
-                />
-                {form.formState.errors.companyName && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.companyName.message}
                   </p>
                 )}
               </div>
