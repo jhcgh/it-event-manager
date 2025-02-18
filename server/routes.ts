@@ -529,6 +529,37 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Add new delete customer endpoint
+  app.delete("/api/admin/customers/:id", async (req, res) => {
+    if (!req.user?.isAdmin) return res.sendStatus(403);
+    try {
+      const customerId = parseInt(req.params.id);
+      console.log(`Attempting to delete customer: ${customerId}`);
+
+      // Check if customer exists
+      const customer = await storage.getCustomerById(customerId);
+      if (!customer) {
+        console.log(`Customer not found: ${customerId}`);
+        return res.sendStatus(404);
+      }
+
+      // Update customer status to inactive instead of deleting
+      const updatedCustomer = await storage.updateCustomerById(customerId, { status: 'inactive' });
+      if (!updatedCustomer) {
+        throw new Error('Failed to update customer status');
+      }
+
+      console.log(`Successfully deactivated customer: ${customerId}`);
+      res.json({ message: "Customer successfully deactivated" });
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      res.status(500).json({
+        message: "Failed to delete customer",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

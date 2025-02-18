@@ -19,6 +19,7 @@ import {
   Building2,
   UserPlus,
   ArrowLeft,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -42,14 +43,55 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 function CustomerSection({ customers }: { customers: Customer[] }) {
+  const { toast } = useToast();
+
+  const deleteCustomerMutation = useMutation({
+    mutationFn: async (customerId: number) => {
+      const response = await apiRequest("DELETE", `/api/admin/customers/${customerId}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to delete customer");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
+      toast({
+        title: "Success",
+        description: "Customer has been successfully deleted",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete customer. Please ensure you have admin permissions.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const customerGroups = customers.reduce((acc, customer) => {
-    if (!acc[customer.id]) {
-      acc[customer.id] = {
-        details: customer,
-        users: []
-      };
+    // Only show active customers
+    if (customer.status !== 'inactive') {
+      if (!acc[customer.id]) {
+        acc[customer.id] = {
+          details: customer,
+          users: []
+        };
+      }
     }
     return acc;
   }, {} as Record<number, { details: Customer, users: User[] }>);
@@ -81,59 +123,108 @@ function CustomerSection({ customers }: { customers: Customer[] }) {
         </div>
       </CardHeader>
       <CardContent>
-        <Accordion type="single" collapsible className="space-y-4">
-          {sortedCustomers.map(({ details, users }) => (
-            <AccordionItem key={details.id} value={details.id.toString()} className="border rounded-lg px-4">
-              <AccordionTrigger>
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4" />
-                    <span className="font-semibold">{details.name}</span>
+        {sortedCustomers.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No active customers found
+          </div>
+        ) : (
+          <Accordion type="single" collapsible className="space-y-4">
+            {sortedCustomers.map(({ details, users }) => (
+              <AccordionItem key={details.id} value={details.id.toString()} className="border rounded-lg px-4">
+                <AccordionTrigger>
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4" />
+                      <span className="font-semibold">{details.name}</span>
+                    </div>
+                    <Badge variant="outline">
+                      {users.length} {users.length === 1 ? 'user' : 'users'}
+                    </Badge>
                   </div>
-                  <Badge variant="outline">
-                    {users.length} {users.length === 1 ? 'user' : 'users'}
-                  </Badge>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="mt-4">
-                  <div className="mb-4 text-sm text-muted-foreground">
-                    <p>Admin: {details.adminName}</p>
-                    <p>Email: {details.adminEmail}</p>
-                    <p>Phone: {details.phoneNumber}</p>
-                    <p>Address: {details.address}</p>
-                  </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell>
-                            {user.firstName} {user.lastName}
-                          </TableCell>
-                          <TableCell>{user.username}</TableCell>
-                          <TableCell>{user.title}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <UserEventsDialog user={user} />
-                            </div>
-                          </TableCell>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="mt-4">
+                    <div className="mb-4">
+                      <div className="flex justify-between items-start">
+                        <div className="text-sm text-muted-foreground">
+                          <p>Admin: {details.adminName}</p>
+                          <p>Email: {details.adminEmail}</p>
+                          <p>Phone: {details.phoneNumber}</p>
+                          <p>Address: {details.address}</p>
+                        </div>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="flex items-center gap-2"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete Customer
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>
+                                Are you sure you want to delete this customer?
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will deactivate the customer
+                                and all associated user accounts.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteCustomerMutation.mutate(details.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                {deleteCustomerMutation.isPending ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Deleting...
+                                  </>
+                                ) : (
+                                  "Delete Customer"
+                                )}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Title</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+                      </TableHeader>
+                      <TableBody>
+                        {users.map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell>
+                              {user.firstName} {user.lastName}
+                            </TableCell>
+                            <TableCell>{user.username}</TableCell>
+                            <TableCell>{user.title}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <UserEventsDialog user={user} />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        )}
       </CardContent>
     </Card>
   );
