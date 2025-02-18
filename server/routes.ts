@@ -675,7 +675,6 @@ export function registerRoutes(app: Express): Server {
         userId: req.user?.id,
         customerId: req.params.customerId,
         targetUserId: req.params.id,
-        updateData: { ...req.body, password: req.body.password ? '[REDACTED]' : undefined },
         timestamp: new Date().toISOString()
       });
 
@@ -685,23 +684,14 @@ export function registerRoutes(app: Express): Server {
       }
 
       const customerId = parseInt(req.params.customerId);
-      if (!customerId) {
-        return res.status(400).json({ message: "Invalid customer ID" });
-      }
-
-      // Check if user has permission to update users for this customer
       if (req.user.customerId !== customerId && !req.user.isAdmin) {
         console.log('Forbidden: User does not belong to this customer');
         return res.sendStatus(403);
       }
 
       const userId = parseInt(req.params.id);
-      if (!userId) {
-        return res.status(400).json({ message: "Invalid user ID" });
-      }
-
-      // Verify the target user exists and belongs to the customer
       const targetUser = await storage.getUser(userId);
+
       if (!targetUser || targetUser.customerId !== customerId) {
         console.log('User not found or does not belong to customer:', { userId, customerId });
         return res.status(404).json({ message: "User not found" });
@@ -709,13 +699,6 @@ export function registerRoutes(app: Express): Server {
 
       // Don't allow password updates through this endpoint
       const parsed = insertUserSchema.omit({ password: true }).partial().parse(req.body);
-
-      console.log('Updating user:', {
-        userId,
-        customerId,
-        updateFields: Object.keys(parsed),
-        timestamp: new Date().toISOString()
-      });
 
       const updatedUser = await storage.updateUser(userId, {
         ...parsed,
@@ -727,20 +710,10 @@ export function registerRoutes(app: Express): Server {
         return res.status(500).json({ message: "Failed to update user" });
       }
 
-      console.log('Updated user successfully:', {
-        userId: updatedUser.id,
-        customerId,
-        timestamp: new Date().toISOString()
-      });
-
+      console.log('Updated user:', { id: updatedUser.id, customerId });
       res.json(updatedUser);
     } catch (error) {
-      console.error('Error updating user:', {
-        error,
-        customerId: req.params.customerId,
-        userId: req.params.id,
-        timestamp: new Date().toISOString()
-      });
+      console.error('Error updating user:', error);
       res.status(500).json({
         message: "Failed to update user",
         error: error instanceof Error ? error.message : String(error)

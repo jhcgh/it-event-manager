@@ -104,16 +104,6 @@ const isPortAvailable = (port: number, timeout = 5000): Promise<boolean> => {
   });
 };
 
-const findAvailablePort = async (startPort: number, maxAttempts: number = 10): Promise<number> => {
-  for (let port = startPort; port < startPort + maxAttempts; port++) {
-    const available = await isPortAvailable(port);
-    if (available) {
-      return port;
-    }
-  }
-  throw new Error(`No available ports found between ${startPort} and ${startPort + maxAttempts - 1}`);
-};
-
 (async () => {
   try {
     log("Starting server setup...");
@@ -128,11 +118,14 @@ const findAvailablePort = async (startPort: number, maxAttempts: number = 10): P
       serveStatic(app);
     }
 
-    const BASE_PORT = parseInt(process.env.PORT || "5000", 10);
-    log(`Finding available port starting from ${BASE_PORT}...`);
+    const PORT = parseInt(process.env.PORT || "5000", 10);
+    log(`Starting server on port ${PORT}...`);
 
-    const port = await findAvailablePort(BASE_PORT);
-    log(`Starting server on port ${port}...`);
+    // Check port availability with improved error handling
+    const isAvailable = await isPortAvailable(PORT);
+    if (!isAvailable) {
+      throw new Error(`Port ${PORT} is already in use or not available`);
+    }
 
     // Create a Promise to handle server startup with proper port binding
     const startServer = new Promise<void>((resolve, reject) => {
@@ -151,12 +144,12 @@ const findAvailablePort = async (startPort: number, maxAttempts: number = 10): P
           onError(new Error('Server startup timed out'));
         }, 10000);
 
-        server.listen(port, "0.0.0.0", () => {
+        server.listen(PORT, "0.0.0.0", () => {
           clearTimeout(serverStartTimeout);
           const address = server.address();
-          const boundPort = typeof address === 'object' ? address?.port : port;
-          log(`Server bound successfully to port ${boundPort}`);
-          console.log(`Server is listening on port ${boundPort}`);
+          const port = typeof address === 'object' ? address?.port : PORT;
+          log(`Server bound successfully to port ${port}`);
+          console.log(`Server is listening on port ${port}`);
 
           // Signal that the server is ready
           if (process.send) {
