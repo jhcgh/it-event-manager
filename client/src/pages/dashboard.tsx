@@ -7,6 +7,7 @@ import { Link } from "wouter";
 import { format } from "date-fns";
 import { CreateEventDialog } from "@/components/create-event-dialog";
 import { EditEventDialog } from "@/components/edit-event-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -16,14 +17,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { HoverUserMenu } from "@/components/hover-user-menu";
+import { useState } from "react";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("active");
 
   const { data: events = [], isLoading } = useQuery<Event[]>({
     queryKey: ["/api/events", user?.id],
-    select: (data) => data.filter(event => event.status === 'active')
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    select: (data) => data.filter(event => {
+      const eventDate = new Date(event.date);
+      const today = new Date();
+
+      if (activeTab === "active") {
+        return event.status === 'active' && eventDate >= today;
+      } else if (activeTab === "saved") {
+        return event.status === 'inactive';
+      } else { // completed
+        return event.status === 'active' && eventDate < today;
+      }
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   });
 
   if (isLoading) {
@@ -57,10 +70,18 @@ export default function DashboardPage() {
 
       <div className="bg-gradient-to-b from-primary/5 to-background border-b">
         <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-semibold">My Events</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold">Events Dashboard</h2>
             <CreateEventDialog />
           </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full max-w-md grid-cols-3">
+              <TabsTrigger value="active">Active Events</TabsTrigger>
+              <TabsTrigger value="saved">Saved Events</TabsTrigger>
+              <TabsTrigger value="completed">Completed Events</TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </div>
 
@@ -81,7 +102,7 @@ export default function DashboardPage() {
               {events.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    No events found. Create your first event to get started.
+                    No {activeTab} events found.
                   </TableCell>
                 </TableRow>
               ) : (
