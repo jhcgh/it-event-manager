@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://itevents.io/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 10
+
+# Disallow sensitive routes
+Disallow: /api/
+Disallow: /admin/
+Disallow: /login
+Disallow: /register

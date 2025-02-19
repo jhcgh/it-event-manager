@@ -67,11 +67,11 @@ function CustomerSection({ customers }: { customers: Customer[] }) {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/customers"] });
       toast({
         title: "Success",
-        description: "Customer has been successfully deleted",
+        description: `Customer and ${data.deactivatedUsersCount} associated ${data.deactivatedUsersCount === 1 ? 'user has' : 'users have'} been successfully deactivated`,
       });
     },
     onError: (error: Error) => {
@@ -198,7 +198,7 @@ function CustomerSection({ customers }: { customers: Customer[] }) {
                               </AlertDialogTitle>
                               <AlertDialogDescription>
                                 This action cannot be undone. This will deactivate the customer
-                                and all associated user accounts.
+                                and all {users.length} associated {users.length === 1 ? 'user account' : 'user accounts'}.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

@@ -499,13 +499,30 @@ export function registerRoutes(app: Express): Server {
         return res.sendStatus(404);
       }
 
+      // First get all users for this customer
+      const customerUsers = await storage.getCustomerUsers(customerId);
+      console.log(`Found ${customerUsers.length} users for customer ${customerId}`);
+
+      // Deactivate all users
+      for (const user of customerUsers) {
+        const updatedUser = await storage.updateUser(user.id, { status: 'inactive' });
+        if (!updatedUser) {
+          throw new Error(`Failed to deactivate user ${user.id}`);
+        }
+        console.log(`Deactivated user: ${user.id}`);
+      }
+
+      // Now deactivate the customer
       const updatedCustomer = await storage.updateCustomerById(customerId, { status: 'inactive' });
       if (!updatedCustomer) {
         throw new Error('Failed to update customer status');
       }
 
-      console.log(`Successfully deactivated customer: ${customerId}`);
-      res.json({ message: "Customer successfully deactivated" });
+      console.log(`Successfully deactivated customer: ${customerId} and ${customerUsers.length} associated users`);
+      res.json({ 
+        message: "Customer and associated users successfully deactivated",
+        deactivatedUsersCount: customerUsers.length
+      });
     } catch (error) {
       console.error('Error deleting customer:', error);
       res.status(500).json({
