@@ -7,10 +7,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema, InsertUser } from "@shared/schema";
-import { Redirect, useLocation, Link } from "wouter";
+import { useLocation, Link } from "wouter";
 import { z } from "zod";
 import { useEffect, useState } from "react";
 import { Loader2, ArrowLeft } from "lucide-react";
+import { Redirect } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { QueryClient } from "@tanstack/react-query"; //Import needed for queryClient
+
 
 // Extend the schema to include password confirmation
 const registerSchema = insertUserSchema.extend({
@@ -27,11 +31,20 @@ const registerSchema = insertUserSchema.extend({
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
+interface AuthResponse {
+  requiresVerification?: boolean;
+  email?: string;
+  message?: string;
+}
+
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
-  const [location] = useLocation();
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<string>("login");
   const [loginError, setLoginError] = useState<string>("");
+  const { toast } = useToast();
+  const queryClient = new QueryClient(); // Initialize queryClient
+
 
   // Set the active tab based on the URL parameter when component mounts
   useEffect(() => {
@@ -40,7 +53,7 @@ export default function AuthPage() {
     if (mode === 'register' || mode === 'login') {
       setActiveTab(mode);
     }
-  }, [location]);
+  }, []);
 
   const loginForm = useForm({
     defaultValues: {
@@ -68,17 +81,62 @@ export default function AuthPage() {
     return <Redirect to={user.isSuperAdmin ? "/admin" : "/dashboard"} />;
   }
 
-  const handleRegister = (data: RegisterFormData) => {
-    const { confirmPassword, ...registrationData } = data;
-    registerMutation.mutate(registrationData);
+  const handleRegister = async (data: RegisterFormData) => {
+    try {
+      console.log('Starting registration process');
+      const { confirmPassword, ...registrationData } = data;
+
+      // Clear any existing session/user data before registration
+      queryClient.setQueryData(["/api/user"], null);
+
+      const response = await registerMutation.mutateAsync(registrationData) as AuthResponse;
+      console.log('Registration response:', { ...response, email: response.email ? '[REDACTED]' : undefined });
+
+      if (response.requiresVerification && response.email) {
+        toast({
+          title: "Registration successful",
+          description: "Please check your email for the verification code.",
+        });
+        // Force navigation to verification page
+        window.location.href = `/verify-email?email=${encodeURIComponent(response.email)}`;
+      }
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      toast({
+        title: "Registration failed",
+        description: error.message || "An error occurred during registration",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleLogin = async (data: any) => {
     try {
       setLoginError(""); 
-      await loginMutation.mutateAsync(data);
+      console.log('Starting login process');
+
+      const response = await loginMutation.mutateAsync(data) as AuthResponse;
+      console.log('Login response:', { 
+        requiresVerification: response.requiresVerification,
+        hasEmail: !!response.email
+      });
+
+      if (response.requiresVerification && response.email) {
+        toast({
+          title: "Verification required",
+          description: "Please verify your email address before logging in.",
+        });
+        // Force navigation to verification page
+        window.location.href = `/verify-email?email=${encodeURIComponent(response.email)}`;
+      }
     } catch (error: any) {
+      console.error("Login error:", error);
       setLoginError(error.message || "Login failed. Please try again.");
+      toast({
+        title: "Login failed",
+        description: error.message || "An error occurred during login",
+        variant: "destructive",
+      });
     }
   };
 

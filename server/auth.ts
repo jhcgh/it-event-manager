@@ -124,17 +124,25 @@ export async function setupAuth(app: Express) {
     try {
       console.log("Registration attempt for:", req.body.username);
 
-      // Ensure user is logged out by destroying any existing session
-      await new Promise<void>((resolve, reject) => {
-        req.session?.destroy((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-
+      // First check if user exists before doing anything else
       const existingUser = await storage.getUserByUsername(req.body.username.toLowerCase());
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
+      }
+
+      // Ensure complete session cleanup
+      if (req.session) {
+        await new Promise<void>((resolve, reject) => {
+          req.session.destroy((err) => {
+            if (err) {
+              console.error("Error destroying session:", err);
+              reject(err);
+            } else {
+              console.log("Session successfully destroyed");
+              resolve();
+            }
+          });
+        });
       }
 
       const hashedPassword = await hashPassword(req.body.password);
@@ -146,6 +154,12 @@ export async function setupAuth(app: Express) {
         username: req.body.username.toLowerCase(),
         password: hashedPassword,
         status: 'pending'
+      });
+
+      console.log("Created user with pending status:", {
+        userId: user.id,
+        username: user.username,
+        status: user.status
       });
 
       // Store verification code
@@ -163,9 +177,17 @@ export async function setupAuth(app: Express) {
       // Clear any existing session cookie
       res.clearCookie('sid');
 
-      // Send response without logging in the user
+      console.log("Registration successful, verification required:", {
+        userId: user.id,
+        username: user.username,
+        requiresVerification: true
+      });
+
+      // Send response with verification required status
       res.status(201).json({
-        message: "Please check your email for a verification code to activate your account."
+        message: "Please check your email for a verification code to activate your account.",
+        requiresVerification: true,
+        email: user.username
       });
     } catch (err) {
       console.error("Registration error:", err);
@@ -215,12 +237,19 @@ export async function setupAuth(app: Express) {
         return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
 
+      if (user.status === 'pending') {
+        console.log("User account is pending verification:", user.id);
+        return res.status(401).json({ 
+          message: "Please verify your email address before logging in.",
+          requiresVerification: true,
+          email: user.username
+        });
+      }
+
       if (user.status !== 'active') {
         console.log("User account is not active:", user.id);
         return res.status(401).json({ 
-          message: user.status === 'pending' 
-            ? "Please verify your email address before logging in." 
-            : "This account has been deactivated. Please contact support." 
+          message: "This account has been deactivated. Please contact support." 
         });
       }
 
