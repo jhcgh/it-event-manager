@@ -8,8 +8,8 @@ if (!process.env.SENDGRID_API_KEY) {
 const mailService = new MailService();
 mailService.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Use environment variable for FROM_EMAIL with fallback
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@techevents.io';
+// Update FROM_EMAIL to use the official domain
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@itevents.io';
 
 interface EmailParams {
   to: string;
@@ -24,7 +24,10 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     // Initialize with required text content
     const msg: MailDataRequired = {
       to: params.to,
-      from: params.from || FROM_EMAIL,
+      from: {
+        email: params.from || FROM_EMAIL,
+        name: 'ITEvents.io'  // Add sender name for better identification
+      },
       subject: params.subject,
       text: params.text || params.html?.replace(/<[^>]*>/g, '') || 'No content provided',
       html: params.html
@@ -155,7 +158,27 @@ export async function sendEventReminder(
   });
 }
 
-// Function to generate a random 6-digit verification code
 export function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export async function sendTestEmail(to: string): Promise<boolean> {
+  return sendEmail({
+    to,
+    subject: 'Test Email from TechEvents.io',
+    text: 'This is a test email to verify your SendGrid integration is working correctly.',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #4F46E5; margin-bottom: 20px;">TechEvents.io Test Email</h2>
+        <p style="font-size: 16px; color: #374151; margin-bottom: 24px;">
+          This is a test email to verify your SendGrid integration is working correctly.
+        </p>
+        <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #E5E7EB;">
+          <p style="color: #9CA3AF; font-size: 12px; text-align: center;">
+            © ${new Date().getFullYear()} TechEvents.io. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `
+  });
 }

@@ -8,6 +8,7 @@ import { createEvent } from "ics";
 import sharp from "sharp";
 import { parse } from 'csv-parse';
 import { Readable } from 'stream';
+import { sendTestEmail } from "./utils/email";
 
 interface FileRequest extends Request {
   file?: Express.Multer.File;
@@ -40,6 +41,66 @@ const upload = multer({
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Add new test email endpoint
+  app.post("/api/test-email", async (req, res) => {
+    console.log('Test email endpoint hit:', {
+      isAuthenticated: req.isAuthenticated(),
+      userId: req.user?.id,
+      isAdmin: req.user?.isAdmin,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!req.user?.isAdmin) {
+      console.log('Unauthorized attempt to send test email:', {
+        userId: req.user?.id,
+        isAuthenticated: req.isAuthenticated(),
+        timestamp: new Date().toISOString()
+      });
+      return res.sendStatus(403);
+    }
+
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ message: "Email address is required" });
+    }
+
+    try {
+      console.log('Sending test email to:', {
+        email,
+        userId: req.user.id,
+        timestamp: new Date().toISOString()
+      });
+      const success = await sendTestEmail(email);
+
+      if (success) {
+        console.log('Test email sent successfully to:', {
+          email,
+          userId: req.user.id,
+          timestamp: new Date().toISOString()
+        });
+        return res.json({ message: "Test email sent successfully" });
+      } else {
+        console.error('Failed to send test email:', {
+          email,
+          userId: req.user.id,
+          timestamp: new Date().toISOString()
+        });
+        return res.status(500).json({ message: "Failed to send test email" });
+      }
+    } catch (error) {
+      console.error('Error sending test email:', {
+        error,
+        email,
+        userId: req.user.id,
+        timestamp: new Date().toISOString()
+      });
+      return res.status(500).json({ 
+        message: "Failed to send test email",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 
   app.post("/api/admin/init", async (req, res) => {
     try {
