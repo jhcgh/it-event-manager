@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User as SelectUser } from "@shared/schema";
+import { User as SelectUser, insertUserSchema } from "@shared/schema";
 
 declare global {
   namespace Express {
@@ -63,6 +63,66 @@ export async function setupAuth(app: Express) {
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
+
+  // Add registration endpoint
+  app.post("/api/register", async (req, res) => {
+    try {
+      console.log('Registration attempt:', {
+        username: req.body.username,
+        timestamp: new Date().toISOString()
+      });
+
+      // Validate the input data using the schema
+      const validationResult = insertUserSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        console.log('Registration validation failed:', validationResult.error);
+        return res.status(400).json({
+          message: "Invalid registration data",
+          errors: validationResult.error.errors
+        });
+      }
+
+      const existingUser = await storage.getUserByUsername(req.body.username?.toLowerCase());
+      if (existingUser) {
+        console.log('Registration failed - username exists:', req.body.username);
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      const hashedPassword = await hashPassword(req.body.password);
+      const user = await storage.createUser({
+        ...validationResult.data,
+        username: validationResult.data.username.toLowerCase(),
+        password: hashedPassword
+      });
+
+      console.log('User created successfully:', {
+        userId: user.id,
+        timestamp: new Date().toISOString()
+      });
+
+      req.login(user, (err) => {
+        if (err) {
+          console.error('Login after registration failed:', err);
+          return res.status(500).json({ message: "Registration successful but login failed" });
+        }
+
+        // Save session explicitly
+        req.session.save((err) => {
+          if (err) {
+            console.error('Session save after registration failed:', err);
+            return res.status(500).json({ message: "Registration successful but session save failed" });
+          }
+          res.status(201).json(user);
+        });
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      res.status(500).json({
+        message: "Registration failed",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
