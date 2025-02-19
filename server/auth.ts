@@ -9,6 +9,13 @@ import { User as SelectUser } from "@shared/schema";
 import { verificationStore } from "./utils/verification-store";
 import { sendVerificationCode, generateVerificationCode } from "./utils/email";
 
+// Custom interface for verification options
+interface CustomVerifyOptions {
+  message: string;
+  requiresVerification?: boolean;
+  email?: string;
+}
+
 declare global {
   namespace Express {
     interface User extends SelectUser {}
@@ -67,25 +74,40 @@ export async function setupAuth(app: Express) {
 
         if (!user) {
           console.log("User not found");
-          return done(null, false, { message: "Invalid username or password" });
+          return done(null, false, { message: "Invalid username or password" } as CustomVerifyOptions);
         }
 
         // Check user status before validating password
         if (user.status === 'pending') {
           console.log("User account is pending verification:", user.id);
-          return done(null, false, { message: "Please verify your email address before logging in." });
+
+          // Only generate new code if the current one has expired
+          const hasValidCode = verificationStore.hasValidCode(user.username);
+          if (!hasValidCode) {
+            console.log("Generating new verification code - previous code expired");
+            const verificationCode = generateVerificationCode();
+            verificationStore.setVerificationCode(user.username, verificationCode);
+            await sendVerificationCode(user.username, verificationCode);
+          }
+
+          const verifyOptions: CustomVerifyOptions = {
+            message: "Please verify your email address before logging in.",
+            requiresVerification: true,
+            email: user.username
+          };
+          return done(null, false, verifyOptions);
         }
 
         if (user.status !== 'active') {
           console.log("User account is not active:", user.id);
-          return done(null, false, { message: "This account has been deactivated. Please contact support." });
+          return done(null, false, { message: "This account has been deactivated. Please contact support." } as CustomVerifyOptions);
         }
 
         const isValid = await comparePasswords(password, user.password);
         console.log("Password validation:", isValid);
 
         if (!isValid) {
-          return done(null, false, { message: "Invalid username or password" });
+          return done(null, false, { message: "Invalid username or password" } as CustomVerifyOptions);
         }
 
         return done(null, user);
@@ -106,7 +128,6 @@ export async function setupAuth(app: Express) {
       console.log("Deserializing user:", id);
       const user = await storage.getUser(id);
 
-      // If user doesn't exist or is not active, fail the deserialization
       if (!user || user.status !== 'active') {
         console.log(`User ${id} is not active or does not exist`);
         return done(null, false);
@@ -204,7 +225,15 @@ export async function setupAuth(app: Express) {
 
     const isValid = verificationStore.verifyCode(email, code);
     if (!isValid) {
-      return res.status(400).json({ message: "Invalid or expired verification code" });
+      // If code is invalid or expired, generate and send a new one
+      const newVerificationCode = generateVerificationCode();
+      verificationStore.setVerificationCode(email, newVerificationCode);
+      await sendVerificationCode(email, newVerificationCode);
+
+      return res.status(400).json({ 
+        message: "Verification code has expired or is invalid. A new code has been sent to your email.",
+        codeExpired: true
+      });
     }
 
     try {
@@ -219,6 +248,9 @@ export async function setupAuth(app: Express) {
         return res.status(500).json({ message: "Failed to activate user" });
       }
 
+      // Remove the verification code after successful verification
+      verificationStore.removeCode(email);
+
       res.json({ message: "Email verified successfully. You can now log in." });
     } catch (error) {
       console.error("Error during email verification:", error);
@@ -227,14 +259,19 @@ export async function setupAuth(app: Express) {
   });
 
   app.post("/api/login", (req, res, next) => {
-    passport.authenticate("local", (err: any, user: any, info: any) => {
+    passport.authenticate("local", (err: any, user: any, info: CustomVerifyOptions) => {
       if (err) {
         console.error("Authentication error:", err);
         return next(err);
       }
       if (!user) {
         console.log("Authentication failed:", info?.message);
-        return res.status(401).json({ message: info?.message || "Authentication failed" });
+        // If verification is required, include that in the response
+        return res.status(401).json({
+          message: info?.message || "Authentication failed",
+          requiresVerification: info?.requiresVerification,
+          email: info?.email
+        });
       }
 
       if (user.status === 'pending') {
@@ -265,15 +302,32 @@ export async function setupAuth(app: Express) {
   });
 
   app.post("/api/logout", (req, res, next) => {
-    req.logout((err) => {
-      if (err) return next(err);
+    if (req.session) {
+      console.log("Logging out user:", req.user?.id);
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Error destroying session:", err);
+          return next(err);
+        }
+        res.clearCookie('sid');
+        console.log("Session destroyed and cookie cleared");
+        res.sendStatus(200);
+      });
+    } else {
       res.sendStatus(200);
-    });
+    }
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated() || req.user.status !== 'active') {
-      console.log("Unauthorized access attempt or pending user");
+    console.log('GET /api/user - Session info:', {
+      isAuthenticated: req.isAuthenticated(),
+      userId: req.user?.id,
+      sessionID: req.sessionID,
+      timestamp: new Date().toISOString()
+    });
+
+    if (!req.isAuthenticated()) {
+      console.log('GET /api/user - Unauthorized: No valid session');
       return res.sendStatus(401);
     }
     res.json(req.user);

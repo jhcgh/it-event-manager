@@ -13,10 +13,8 @@ import { useEffect, useState } from "react";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { Redirect } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { QueryClient } from "@tanstack/react-query"; //Import needed for queryClient
+import { QueryClient } from "@tanstack/react-query"; 
 
-
-// Extend the schema to include password confirmation
 const registerSchema = insertUserSchema.extend({
   confirmPassword: z.string(),
 }).superRefine((data, ctx) => {
@@ -43,10 +41,8 @@ export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
   const [loginError, setLoginError] = useState<string>("");
   const { toast } = useToast();
-  const queryClient = new QueryClient(); // Initialize queryClient
+  const queryClient = new QueryClient();
 
-
-  // Set the active tab based on the URL parameter when component mounts
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const mode = searchParams.get('mode');
@@ -86,7 +82,6 @@ export default function AuthPage() {
       console.log('Starting registration process');
       const { confirmPassword, ...registrationData } = data;
 
-      // Clear any existing session/user data before registration
       queryClient.setQueryData(["/api/user"], null);
 
       const response = await registerMutation.mutateAsync(registrationData) as AuthResponse;
@@ -97,8 +92,8 @@ export default function AuthPage() {
           title: "Registration successful",
           description: "Please check your email for the verification code.",
         });
-        // Force navigation to verification page
-        window.location.href = `/verify-email?email=${encodeURIComponent(response.email)}`;
+        window.location.replace(`/verify-email?email=${encodeURIComponent(response.email)}`);
+        return;
       }
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -115,6 +110,8 @@ export default function AuthPage() {
       setLoginError(""); 
       console.log('Starting login process');
 
+      queryClient.setQueryData(["/api/user"], null);
+
       const response = await loginMutation.mutateAsync(data) as AuthResponse;
       console.log('Login response:', { 
         requiresVerification: response.requiresVerification,
@@ -126,8 +123,8 @@ export default function AuthPage() {
           title: "Verification required",
           description: "Please verify your email address before logging in.",
         });
-        // Force navigation to verification page
-        window.location.href = `/verify-email?email=${encodeURIComponent(response.email)}`;
+        window.location.replace(`/verify-email?email=${encodeURIComponent(response.email)}`);
+        return;
       }
     } catch (error: any) {
       console.error("Login error:", error);

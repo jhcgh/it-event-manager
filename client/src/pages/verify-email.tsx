@@ -15,13 +15,15 @@ export default function VerifyEmailPage() {
   const [email, setEmail] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Get email from URL params
+  // Get email from URL params and handle missing email
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const emailParam = params.get("email");
     if (emailParam) {
+      console.log("Verification page loaded for email:", emailParam);
       setEmail(emailParam);
     } else {
+      console.log("No email parameter found, redirecting to auth page");
       navigate("/auth");
     }
   }, [navigate]);
@@ -39,12 +41,14 @@ export default function VerifyEmailPage() {
 
     setIsVerifying(true);
     try {
+      console.log("Attempting to verify email:", email);
       const response = await apiRequest("POST", "/api/verify-email", {
         email,
         code: verificationCode,
       });
 
       if (response.ok) {
+        console.log("Email verification successful");
         // Invalidate user query to refresh auth state
         queryClient.invalidateQueries({ queryKey: ["/api/user"] });
         toast({
@@ -54,9 +58,21 @@ export default function VerifyEmailPage() {
         navigate("/auth?mode=login");
       } else {
         const error = await response.json();
-        throw new Error(error.message || "Verification failed");
+        console.log("Verification failed:", error);
+        if (error.codeExpired) {
+          // If code has expired, show message about new code being sent
+          toast({
+            title: "Code Expired",
+            description: "A new verification code has been sent to your email.",
+            variant: "default",
+          });
+          setVerificationCode(""); // Clear the input field
+        } else {
+          throw new Error(error.message || "Verification failed");
+        }
       }
     } catch (error: any) {
+      console.error("Verification error:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to verify email. Please try again.",
