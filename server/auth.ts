@@ -38,7 +38,7 @@ async function comparePasswords(supplied: string, stored: string) {
   }
 }
 
-export function setupAuth(app: Express) {
+export async function setupAuth(app: Express) {
   // Generate a secure session secret if not provided
   const sessionSecret = process.env.SESSION_SECRET || randomBytes(32).toString('hex');
 
@@ -48,11 +48,11 @@ export function setupAuth(app: Express) {
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
+      secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     },
-    name: 'sid' // Custom session cookie name
+    name: 'sid'
   };
 
   app.use(session(sessionSettings));
@@ -77,8 +77,8 @@ export function setupAuth(app: Express) {
         }
 
         if (user.status !== 'active') {
-          console.log("User account is deleted:", user.id);
-          return done(null, false, { message: "This account has been deleted. Please contact support." });
+          console.log("User account is not active:", user.id);
+          return done(null, false, { message: "This account has been deactivated. Please contact support." });
         }
 
         const isValid = await comparePasswords(password, user.password);
@@ -106,9 +106,9 @@ export function setupAuth(app: Express) {
       console.log("Deserializing user:", id);
       const user = await storage.getUser(id);
 
-      // If user doesn't exist or is deleted, fail the deserialization
+      // If user doesn't exist or is not active, fail the deserialization
       if (!user || user.status !== 'active') {
-        console.log(`User ${id} is deleted or does not exist`);
+        console.log(`User ${id} is not active or does not exist`);
         return done(null, false);
       }
 
@@ -123,6 +123,15 @@ export function setupAuth(app: Express) {
   app.post("/api/register", async (req, res, next) => {
     try {
       console.log("Registration attempt for:", req.body.username);
+
+      // Ensure user is logged out by destroying any existing session
+      await new Promise<void>((resolve, reject) => {
+        req.session?.destroy((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
       const existingUser = await storage.getUserByUsername(req.body.username.toLowerCase());
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
@@ -150,6 +159,9 @@ export function setupAuth(app: Express) {
           message: "Account created but failed to send verification email. Please contact support."
         });
       }
+
+      // Clear any existing session cookie
+      res.clearCookie('sid');
 
       // Send response without logging in the user
       res.status(201).json({
@@ -208,7 +220,7 @@ export function setupAuth(app: Express) {
         return res.status(401).json({ 
           message: user.status === 'pending' 
             ? "Please verify your email address before logging in." 
-            : "This account has been deleted. Please contact support." 
+            : "This account has been deactivated. Please contact support." 
         });
       }
 
@@ -231,19 +243,10 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      console.log("Unauthorized access attempt");
+    if (!req.isAuthenticated() || req.user.status !== 'active') {
+      console.log("Unauthorized access attempt or pending user");
       return res.sendStatus(401);
     }
-
-    if (req.user.status !== 'active') {
-      console.log("Deleted user attempted to access protected route:", req.user.id);
-      req.logout((err) => {
-        if (err) console.error("Error logging out deleted user:", err);
-      });
-      return res.sendStatus(401);
-    }
-
     res.json(req.user);
   });
 }

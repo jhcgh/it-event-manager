@@ -130,11 +130,6 @@ export class DatabaseStorage implements IStorage {
         });
         customerId = customer.id;
         customerName = customer.name;
-        console.log('Created new customer:', {
-          customerId,
-          customerName: insertUser.customerName,
-          timestamp: new Date().toISOString()
-        });
       }
 
       const [user] = await db.insert(users)
@@ -147,7 +142,7 @@ export class DatabaseStorage implements IStorage {
           mobile: insertUser.mobile,
           customerId,
           customerName,
-          status: 'active',
+          status: insertUser.status || 'pending',
           isAdmin: false,
           isSuperAdmin: false,
           createdAt: new Date(),
