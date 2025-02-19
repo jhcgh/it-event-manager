@@ -146,10 +146,13 @@ export function setupAuth(app: Express) {
       const emailSent = await sendVerificationCode(user.username, verificationCode);
       if (!emailSent) {
         console.error("Failed to send verification email to:", user.username);
+        return res.status(500).json({ 
+          message: "Account created but failed to send verification email. Please contact support."
+        });
       }
 
+      // Send response without logging in the user
       res.status(201).json({
-        ...user,
         message: "Please check your email for a verification code to activate your account."
       });
     } catch (err) {
@@ -158,7 +161,6 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Add new verification endpoint
   app.post("/api/verify-email", async (req, res) => {
     const { email, code } = req.body;
 
