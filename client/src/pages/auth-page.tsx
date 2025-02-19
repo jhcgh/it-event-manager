@@ -6,13 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertUserSchema, InsertUser } from "@shared/schema";
+import { insertUserSchema } from "@shared/schema";
 import { Redirect, useLocation, Link } from "wouter";
 import { z } from "zod";
 import { useEffect, useState } from "react";
 import { Loader2, ArrowLeft } from "lucide-react";
 
-// Extend the schema to include password confirmation
+// Create a registration schema without email verification
 const registerSchema = insertUserSchema.extend({
   confirmPassword: z.string(),
 }).superRefine((data, ctx) => {
