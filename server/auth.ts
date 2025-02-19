@@ -53,6 +53,11 @@ export async function setupAuth(app: Express) {
     name: 'sid'
   };
 
+  console.log('Setting up session middleware with store:', {
+    hasStore: !!storage.sessionStore,
+    timestamp: new Date().toISOString()
+  });
+
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
@@ -80,6 +85,11 @@ export async function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid username or password" });
         }
 
+        console.log("Login successful for user:", {
+          userId: user.id,
+          timestamp: new Date().toISOString()
+        });
+
         return done(null, user);
       } catch (err) {
         console.error("Login error:", err);
@@ -89,13 +99,20 @@ export async function setupAuth(app: Express) {
   );
 
   passport.serializeUser((user, done) => {
-    console.log("Serializing user:", user.id);
+    console.log("Serializing user:", {
+      userId: user.id,
+      timestamp: new Date().toISOString()
+    });
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id: number, done) => {
     try {
-      console.log("Deserializing user:", id);
+      console.log("Deserializing user:", {
+        userId: id,
+        timestamp: new Date().toISOString()
+      });
+
       const user = await storage.getUser(id);
 
       if (!user || user.status !== 'active') {
@@ -103,7 +120,12 @@ export async function setupAuth(app: Express) {
         return done(null, false);
       }
 
-      console.log("User successfully deserialized:", user.id);
+      console.log("User successfully deserialized:", {
+        userId: user.id,
+        hasCustomer: !!user.customerId,
+        timestamp: new Date().toISOString()
+      });
+
       done(null, user);
     } catch (error) {
       console.error("Deserialization error:", error);
@@ -111,45 +133,7 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      console.log("Registration attempt for:", req.body.username);
-
-      // Ensure user is logged out by destroying any existing session
-      await new Promise<void>((resolve, reject) => {
-        req.session?.destroy((err) => {
-          if (err) reject(err);
-          else resolve();
-        });
-      });
-
-      const existingUser = await storage.getUserByUsername(req.body.username.toLowerCase());
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      const hashedPassword = await hashPassword(req.body.password);
-
-      // Create user with active status directly
-      const user = await storage.createUser({
-        ...req.body,
-        username: req.body.username.toLowerCase(),
-        password: hashedPassword,
-        status: 'active'
-      });
-
-      // Clear any existing session cookie
-      res.clearCookie('sid');
-
-      res.status(201).json({
-        message: "Account created successfully. You can now log in."
-      });
-    } catch (err) {
-      console.error("Registration error:", err);
-      next(err);
-    }
-  });
-
+  // Consolidated login endpoint
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
@@ -161,29 +145,70 @@ export async function setupAuth(app: Express) {
         return res.status(401).json({ message: info?.message || "Authentication failed" });
       }
 
-      req.login(user, (err) => {
-        if (err) {
-          console.error("Login error:", err);
-          return next(err);
+      req.login(user, async (loginErr) => {
+        if (loginErr) {
+          console.error("Login error:", loginErr);
+          return next(loginErr);
         }
-        console.log("Login successful for user:", user.username);
-        res.json(user);
+
+        try {
+          await new Promise<void>((resolve, reject) => {
+            req.session.save((err) => {
+              if (err) {
+                console.error("Session save error:", err);
+                reject(err);
+              } else {
+                resolve();
+              }
+            });
+          });
+
+          console.log("Login and session save successful:", {
+            userId: user.id,
+            sessionID: req.sessionID,
+            timestamp: new Date().toISOString()
+          });
+
+          res.json(user);
+        } catch (error) {
+          console.error("Session save error:", error);
+          next(error);
+        }
       });
     })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
-    req.logout((err) => {
-      if (err) return next(err);
-      res.sendStatus(200);
-    });
-  });
-
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      console.log("Unauthorized access attempt");
-      return res.sendStatus(401);
+    if (!req.user) {
+      return res.sendStatus(200);
     }
-    res.json(req.user);
+
+    const userId = req.user.id;
+    console.log("Logout attempt for user:", {
+      userId,
+      timestamp: new Date().toISOString()
+    });
+
+    req.logout((err) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return next(err);
+      }
+
+      req.session.destroy((err) => {
+        if (err) {
+          console.error("Session destruction error:", err);
+          return next(err);
+        }
+
+        console.log("Logout successful:", {
+          userId,
+          timestamp: new Date().toISOString()
+        });
+
+        res.clearCookie('sid');
+        res.sendStatus(200);
+      });
+    });
   });
 }

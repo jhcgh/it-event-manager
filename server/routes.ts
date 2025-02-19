@@ -41,55 +41,12 @@ const upload = multer({
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
 
-  app.post("/api/admin/init", async (req, res) => {
-    try {
-      const adminData = {
-        username: "admin@example.com",
-        password: "Admin@123!",
-        firstName: "System",
-        lastName: "Admin",
-        customerName: "SaaS Platform",
-        title: "Super Administrator",
-        mobile: "+1234567890"
-      };
-
-      const existing = await storage.getUserByUsername(adminData.username);
-      if (existing) {
-        return res.json({
-          message: "Admin account already exists",
-          username: adminData.username,
-          password: adminData.password
-        });
-      }
-
-      const parsed = insertUserSchema.parse(adminData);
-      const hashedPassword = await hashPassword(parsed.password);
-
-      const user = await storage.createUser({
-        ...parsed,
-        password: hashedPassword,
-        status: 'active'
-      });
-
-      res.json({
-        message: "Super admin created successfully",
-        username: adminData.username,
-        password: adminData.password
-      });
-    } catch (error) {
-      console.error('Error creating super admin:', error);
-      res.status(500).json({
-        message: "Failed to create super admin",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
-
   app.get("/api/user", (req, res) => {
     console.log('GET /api/user - Session info:', {
       isAuthenticated: req.isAuthenticated(),
       userId: req.user?.id,
       sessionID: req.sessionID,
+      session: req.session,
       timestamp: new Date().toISOString()
     });
 
@@ -426,30 +383,74 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  app.post("/api/login", async (req, res, next) => {
+    try {
+      console.log('Login attempt:', {
+        username: req.body.username,
+        timestamp: new Date().toISOString()
+      });
+
+      const result = await new Promise((resolve, reject) => {
+        req.login(req.user, async (err) => {
+          if (err) {
+            console.error('Login error:', err);
+            reject(err);
+            return;
+          }
+
+          try {
+            await new Promise<void>((resolve, reject) => {
+              req.session.save((err) => {
+                if (err) reject(err);
+                resolve();
+              });
+            });
+
+            console.log('Session saved successfully:', {
+              userId: req.user?.id,
+              sessionID: req.sessionID,
+              timestamp: new Date().toISOString()
+            });
+
+            resolve(req.user);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+
+      res.json(result);
+    } catch (error) {
+      console.error('Error in login process:', error);
+      next(error);
+    }
+  });
+
+
   app.get("/api/customer-settings", async (req, res) => {
     try {
       console.log('GET /api/customer-settings - Request received:', {
         isAuthenticated: req.isAuthenticated(),
         userId: req.user?.id,
-        customerId: req.user?.customerId,
         sessionID: req.sessionID,
+        session: req.session,
         timestamp: new Date().toISOString()
       });
 
       if (!req.user) {
         console.log('GET /api/customer-settings - Unauthorized: No user in session');
-        return res.sendStatus(401);
+        return res.status(401).json({ message: "Unauthorized" });
       }
 
       if (!req.user.customerId) {
         console.log('GET /api/customer-settings - Not Found: User has no customer');
-        return res.sendStatus(404);
+        return res.status(404).json({ message: "No customer found for user" });
       }
 
       const customer = await storage.getCustomerById(req.user.customerId);
       if (!customer) {
         console.log('GET /api/customer-settings - Customer not found:', req.user.customerId);
-        return res.sendStatus(404);
+        return res.status(404).json({ message: "Customer not found" });
       }
 
       console.log('GET /api/customer-settings - Success:', {
@@ -535,14 +536,12 @@ export function registerRoutes(app: Express): Server {
       const customerId = parseInt(req.params.id);
       console.log(`Attempting to delete customer: ${customerId}`);
 
-      // Check if customer exists
       const customer = await storage.getCustomerById(customerId);
       if (!customer) {
         console.log(`Customer not found: ${customerId}`);
         return res.sendStatus(404);
       }
 
-      // Update customer status to inactive instead of deleting
       const updatedCustomer = await storage.updateCustomerById(customerId, { status: 'inactive' });
       if (!updatedCustomer) {
         throw new Error('Failed to update customer status');
@@ -559,7 +558,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Customer user management endpoints
   app.get("/api/customers/:customerId/users", async (req, res) => {
     try {
       console.log('GET /api/customers/:customerId/users - Request received:', {
@@ -612,7 +610,6 @@ export function registerRoutes(app: Express): Server {
         return res.sendStatus(403);
       }
 
-      // Get customer information first
       const customer = await storage.getCustomerById(customerId);
       if (!customer) {
         console.log('Customer not found:', customerId);
@@ -625,10 +622,9 @@ export function registerRoutes(app: Express): Server {
         timestamp: new Date().toISOString()
       });
 
-      // Prepare user data with customer information
       const userData = {
         ...req.body,
-        customerName: customer.name, // Add customer name from the existing customer
+        customerName: customer.name,
         status: 'active'
       };
 
@@ -638,12 +634,10 @@ export function registerRoutes(app: Express): Server {
         timestamp: new Date().toISOString()
       });
 
-      // Validate the prepared data
       const parsed = insertUserSchema.parse(userData);
 
       console.log('Validation passed, creating user');
 
-      // Hash password and create user
       const hashedPassword = await hashPassword(parsed.password);
       const newUser = await storage.createUser({
         ...parsed,
@@ -696,7 +690,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Don't allow password updates through this endpoint
       const parsed = insertUserSchema.omit({ password: true }).partial().parse(req.body);
 
       const updatedUser = await storage.updateUser(userId, {
