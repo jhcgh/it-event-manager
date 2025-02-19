@@ -11,7 +11,6 @@ import AdminPage from "@/pages/admin";
 import ProfilePage from "@/pages/profile";
 import EventDetailsPage from "@/pages/event-details";
 import CustomerSettingsPage from "@/pages/customer-settings";
-import VerifyEmailPage from "@/pages/verify-email";
 import { ProtectedRoute } from "./lib/protected-route";
 import { useAuth } from './hooks/use-auth';
 import { AdminBar } from "@/components/admin-bar";
@@ -26,7 +25,6 @@ function Router() {
         <Route path="/" component={HomePage} />
         <Route path="/event/:id" component={EventDetailsPage} />
         <Route path="/auth" component={AuthPage} />
-        <Route path="/verify-email" component={VerifyEmailPage} />
         <ProtectedRoute path="/dashboard" component={DashboardPage} />
         <ProtectedRoute path="/admin" component={AdminPage} />
         <ProtectedRoute path="/profile" component={ProfilePage} />
