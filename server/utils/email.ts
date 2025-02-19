@@ -8,7 +8,8 @@ if (!process.env.SENDGRID_API_KEY) {
 const mailService = new MailService();
 mailService.setApiKey(process.env.SENDGRID_API_KEY);
 
-const FROM_EMAIL = 'noreply@techevents.io';
+// Use environment variable for FROM_EMAIL with fallback
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@techevents.io';
 
 interface EmailParams {
   to: string;
@@ -39,7 +40,19 @@ async function sendEmail(params: EmailParams): Promise<boolean> {
     await mailService.send(msg);
     return true;
   } catch (error) {
-    console.error('SendGrid email error:', error);
+    console.error('SendGrid email error:', {
+      error: error instanceof Error ? {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      } : error,
+      params: {
+        to: params.to,
+        from: params.from || FROM_EMAIL,
+        subject: params.subject
+      },
+      timestamp: new Date().toISOString()
+    });
     return false;
   }
 }
@@ -51,16 +64,26 @@ export async function sendVerificationCode(
   return sendEmail({
     to,
     subject: 'Your TechEvents.io Verification Code',
-    text: `Your verification code is: ${code}\n\nThis code will expire in 10 minutes.`,
+    text: `Your verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this email.`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">Your Verification Code</h2>
-        <p style="font-size: 24px; font-weight: bold; color: #4F46E5; letter-spacing: 2px; padding: 20px; background: #F3F4F6; border-radius: 8px; text-align: center;">
-          ${code}
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #4F46E5; margin-bottom: 20px;">Verify Your TechEvents.io Account</h2>
+        <p style="font-size: 16px; color: #374151; margin-bottom: 24px;">
+          Please use the following code to verify your account:
         </p>
-        <p style="color: #666; margin-top: 20px;">
+        <div style="background: #F3F4F6; padding: 24px; border-radius: 8px; text-align: center; margin-bottom: 24px;">
+          <p style="font-size: 32px; font-weight: bold; color: #4F46E5; letter-spacing: 4px; margin: 0;">
+            ${code}
+          </p>
+        </div>
+        <p style="color: #6B7280; font-size: 14px; margin-top: 24px;">
           This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
         </p>
+        <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #E5E7EB;">
+          <p style="color: #9CA3AF; font-size: 12px; text-align: center;">
+            © ${new Date().getFullYear()} TechEvents.io. All rights reserved.
+          </p>
+        </div>
       </div>
     `
   });
@@ -77,20 +100,23 @@ export async function sendEventConfirmation(
     subject: `Event Created: ${eventTitle}`,
     text: `Event "${eventTitle}" has been created successfully.\nDate: ${eventDate}\nView details at: ${eventUrl}`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">Event Successfully Created</h2>
-        <div style="background: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0; color: #4F46E5;">${eventTitle}</h3>
-          <p style="color: #666; margin: 10px 0;">Date: ${eventDate}</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #4F46E5; margin-bottom: 20px;">Event Successfully Created</h2>
+        <div style="background: #F3F4F6; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+          <h3 style="margin: 0 0 12px 0; color: #4F46E5;">${eventTitle}</h3>
+          <p style="color: #374151; margin: 0;">Date: ${eventDate}</p>
         </div>
-        <div style="text-align: center; margin-top: 30px;">
-          <a href="${eventUrl}" style="background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${eventUrl}" 
+             style="background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
             View Event Details
           </a>
         </div>
-        <p style="color: #666; margin-top: 30px; font-size: 14px;">
-          This email was sent by TechEvents.io. If you did not create this event, please contact support.
-        </p>
+        <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #E5E7EB;">
+          <p style="color: #9CA3AF; font-size: 12px; text-align: center;">
+            © ${new Date().getFullYear()} TechEvents.io. All rights reserved.
+          </p>
+        </div>
       </div>
     `
   });
@@ -107,16 +133,22 @@ export async function sendEventReminder(
     subject: `Reminder: ${eventTitle} is Coming Up`,
     text: `Reminder: Your event "${eventTitle}" is coming up!\nDate: ${eventDate}\nView details at: ${eventUrl}`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">Event Reminder</h2>
-        <div style="background: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0; color: #4F46E5;">${eventTitle}</h3>
-          <p style="color: #666; margin: 10px 0;">Date: ${eventDate}</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #4F46E5; margin-bottom: 20px;">Event Reminder</h2>
+        <div style="background: #F3F4F6; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
+          <h3 style="margin: 0 0 12px 0; color: #4F46E5;">${eventTitle}</h3>
+          <p style="color: #374151; margin: 0;">Date: ${eventDate}</p>
         </div>
-        <div style="text-align: center; margin-top: 30px;">
-          <a href="${eventUrl}" style="background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${eventUrl}" 
+             style="background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
             View Event Details
           </a>
+        </div>
+        <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #E5E7EB;">
+          <p style="color: #9CA3AF; font-size: 12px; text-align: center;">
+            © ${new Date().getFullYear()} TechEvents.io. All rights reserved.
+          </p>
         </div>
       </div>
     `
