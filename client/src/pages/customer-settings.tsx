@@ -52,6 +52,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import * as z from 'zod';
 
 type CustomerFormValues = {
   name: string;
@@ -89,7 +90,7 @@ export default function CustomerSettings() {
     resolver: zodResolver(
       insertUserSchema.omit({ password: true }).extend({
         password: insertUserSchema.shape.password.optional(),
-        status: insertUserSchema.shape.status
+        status: z.enum(['active', 'inactive']).default('active')
       })
     ),
     defaultValues: {
@@ -108,8 +109,7 @@ export default function CustomerSettings() {
 
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: [`/api/customers/${customer?.id}/users`],
-    enabled: !!customer?.id,
-    select: (data) => data.filter(user => user.status === 'active')
+    enabled: !!customer?.id
   });
 
   const createUser = useMutation({

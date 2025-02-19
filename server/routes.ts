@@ -8,7 +8,6 @@ import { createEvent } from "ics";
 import sharp from "sharp";
 import { parse } from 'csv-parse';
 import { Readable } from 'stream';
-import { sendTestEmail } from "./utils/email";
 
 interface FileRequest extends Request {
   file?: Express.Multer.File;
@@ -41,66 +40,6 @@ const upload = multer({
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
-
-  // Add new test email endpoint
-  app.post("/api/test-email", async (req, res) => {
-    console.log('Test email endpoint hit:', {
-      isAuthenticated: req.isAuthenticated(),
-      userId: req.user?.id,
-      isAdmin: req.user?.isAdmin,
-      timestamp: new Date().toISOString()
-    });
-
-    if (!req.user?.isAdmin) {
-      console.log('Unauthorized attempt to send test email:', {
-        userId: req.user?.id,
-        isAuthenticated: req.isAuthenticated(),
-        timestamp: new Date().toISOString()
-      });
-      return res.sendStatus(403);
-    }
-
-    const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ message: "Email address is required" });
-    }
-
-    try {
-      console.log('Sending test email to:', {
-        email,
-        userId: req.user.id,
-        timestamp: new Date().toISOString()
-      });
-      const success = await sendTestEmail(email);
-
-      if (success) {
-        console.log('Test email sent successfully to:', {
-          email,
-          userId: req.user.id,
-          timestamp: new Date().toISOString()
-        });
-        return res.json({ message: "Test email sent successfully" });
-      } else {
-        console.error('Failed to send test email:', {
-          email,
-          userId: req.user.id,
-          timestamp: new Date().toISOString()
-        });
-        return res.status(500).json({ message: "Failed to send test email" });
-      }
-    } catch (error) {
-      console.error('Error sending test email:', {
-        error,
-        email,
-        userId: req.user.id,
-        timestamp: new Date().toISOString()
-      });
-      return res.status(500).json({ 
-        message: "Failed to send test email",
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
-  });
 
   app.post("/api/admin/init", async (req, res) => {
     try {
@@ -590,7 +529,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Add new delete customer endpoint
   app.delete("/api/admin/customers/:id", async (req, res) => {
     if (!req.user?.isAdmin) return res.sendStatus(403);
     try {
@@ -781,89 +719,6 @@ export function registerRoutes(app: Express): Server {
       });
     }
   });
-
-  if (app.get("env") === "development") {
-    // Email template preview routes (development only)
-    app.get("/api/preview/email/verification", (req, res) => {
-      const code = "123456"; // Example verification code
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #4F46E5; margin-bottom: 20px;">Verify Your TechEvents.io Account</h2>
-          <p style="font-size: 16px; color: #374151; margin-bottom: 24px;">
-            Please use the following code to verify your account:
-          </p>
-          <div style="background: #F3F4F6; padding: 24px; border-radius: 8px; text-align: center; margin-bottom: 24px;">
-            <p style="font-size: 32px; font-weight: bold; color: #4F46E5; letter-spacing: 4px; margin: 0;">
-              ${code}
-            </p>
-          </div>
-          <p style="color: #6B7280; font-size: 14px; margin-top: 24px;">
-            This code will expire in 10 minutes. If you didn't request this code, please ignore this email.
-          </p>
-          <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #E5E7EB;">
-            <p style="color: #9CA3AF; font-size: 12px; text-align: center;">
-              © ${new Date().getFullYear()} TechEvents.io. All rights reserved.
-            </p>
-          </div>
-        </div>
-      `;
-      res.send(html);
-    });
-
-    app.get("/api/preview/email/event-created", (req, res) => {
-      const eventTitle = "Example Tech Conference 2025";
-      const eventDate = "March 15, 2025";
-      const eventUrl = "http://localhost:5000/event/123";
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #4F46E5; margin-bottom: 20px;">Event Successfully Created</h2>
-          <div style="background: #F3F4F6; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
-            <h3 style="margin: 0 0 12px 0; color: #4F46E5;">${eventTitle}</h3>
-            <p style="color: #374151; margin: 0;">Date: ${eventDate}</p>
-          </div>
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${eventUrl}" 
-               style="background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
-              View Event Details
-            </a>
-          </div>
-          <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #E5E7EB;">
-            <p style="color: #9CA3AF; font-size: 12px; text-align: center;">
-              © ${new Date().getFullYear()} TechEvents.io. All rights reserved.
-            </p>
-          </div>
-        </div>
-      `;
-      res.send(html);
-    });
-
-    app.get("/api/preview/email/event-reminder", (req, res) => {
-      const eventTitle = "Example Tech Conference 2025";
-      const eventDate = "March 15, 2025";
-      const eventUrl = "http://localhost:5000/event/123";
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #4F46E5; margin-bottom: 20px;">Event Reminder</h2>
-          <div style="background: #F3F4F6; padding: 24px; border-radius: 8px; margin-bottom: 24px;">
-            <h3 style="margin: 0 0 12px 0; color: #4F46E5;">${eventTitle}</h3>
-            <p style="color: #374151; margin: 0;">Date: ${eventDate}</p>
-          </div>
-          <div style="text-align: center; margin: 32px 0;">
-            <a href="${eventUrl}" 
-               style="background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">
-              View Event Details
-            </a>
-          </div>
-          <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #E5E7EB;">
-            <p style="color: #9CA3AF; font-size: 12px; text-align: center;">
-              © ${new Date().getFullYear()} TechEvents.io. All rights reserved.
-            </p>
-          </div>
-        </div>
-      `;
-      res.send(html);
-    });
-  }
 
   const httpServer = createServer(app);
   return httpServer;

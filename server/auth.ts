@@ -6,8 +6,6 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
-import { verificationStore } from "./utils/verification-store";
-import { sendVerificationCode, generateVerificationCode } from "./utils/email";
 
 declare global {
   namespace Express {
@@ -70,12 +68,6 @@ export async function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid username or password" });
         }
 
-        // Check user status before validating password
-        if (user.status === 'pending') {
-          console.log("User account is pending verification:", user.id);
-          return done(null, false, { message: "Please verify your email address before logging in." });
-        }
-
         if (user.status !== 'active') {
           console.log("User account is not active:", user.id);
           return done(null, false, { message: "This account has been deactivated. Please contact support." });
@@ -106,7 +98,6 @@ export async function setupAuth(app: Express) {
       console.log("Deserializing user:", id);
       const user = await storage.getUser(id);
 
-      // If user doesn't exist or is not active, fail the deserialization
       if (!user || user.status !== 'active') {
         console.log(`User ${id} is not active or does not exist`);
         return done(null, false);
@@ -138,69 +129,24 @@ export async function setupAuth(app: Express) {
       }
 
       const hashedPassword = await hashPassword(req.body.password);
-      const verificationCode = generateVerificationCode();
 
-      // Create user with pending status
+      // Create user with active status directly
       const user = await storage.createUser({
         ...req.body,
         username: req.body.username.toLowerCase(),
         password: hashedPassword,
-        status: 'pending'
+        status: 'active'
       });
-
-      // Store verification code
-      verificationStore.setVerificationCode(user.username, verificationCode);
-
-      // Send verification email
-      const emailSent = await sendVerificationCode(user.username, verificationCode);
-      if (!emailSent) {
-        console.error("Failed to send verification email to:", user.username);
-        return res.status(500).json({ 
-          message: "Account created but failed to send verification email. Please contact support."
-        });
-      }
 
       // Clear any existing session cookie
       res.clearCookie('sid');
 
-      // Send response without logging in the user
       res.status(201).json({
-        message: "Please check your email for a verification code to activate your account."
+        message: "Account created successfully. You can now log in."
       });
     } catch (err) {
       console.error("Registration error:", err);
       next(err);
-    }
-  });
-
-  app.post("/api/verify-email", async (req, res) => {
-    const { email, code } = req.body;
-
-    if (!email || !code) {
-      return res.status(400).json({ message: "Email and verification code are required" });
-    }
-
-    const isValid = verificationStore.verifyCode(email, code);
-    if (!isValid) {
-      return res.status(400).json({ message: "Invalid or expired verification code" });
-    }
-
-    try {
-      const user = await storage.getUserByUsername(email);
-      if (!user) {
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      // Activate the user
-      const updatedUser = await storage.updateUser(user.id, { status: 'active' });
-      if (!updatedUser) {
-        return res.status(500).json({ message: "Failed to activate user" });
-      }
-
-      res.json({ message: "Email verified successfully. You can now log in." });
-    } catch (error) {
-      console.error("Error during email verification:", error);
-      res.status(500).json({ message: "Failed to verify email" });
     }
   });
 
@@ -213,15 +159,6 @@ export async function setupAuth(app: Express) {
       if (!user) {
         console.log("Authentication failed:", info?.message);
         return res.status(401).json({ message: info?.message || "Authentication failed" });
-      }
-
-      if (user.status !== 'active') {
-        console.log("User account is not active:", user.id);
-        return res.status(401).json({ 
-          message: user.status === 'pending' 
-            ? "Please verify your email address before logging in." 
-            : "This account has been deactivated. Please contact support." 
-        });
       }
 
       req.login(user, (err) => {
@@ -243,8 +180,8 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated() || req.user.status !== 'active') {
-      console.log("Unauthorized access attempt or pending user");
+    if (!req.isAuthenticated()) {
+      console.log("Unauthorized access attempt");
       return res.sendStatus(401);
     }
     res.json(req.user);
