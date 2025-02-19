@@ -37,20 +37,21 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export async function setupAuth(app: Express) {
-  // Generate a secure session secret if not provided
   const sessionSecret = process.env.SESSION_SECRET || randomBytes(32).toString('hex');
 
   const sessionSettings: session.SessionOptions = {
     secret: sessionSecret,
-    resave: false,
-    saveUninitialized: false,
+    resave: true,
+    saveUninitialized: true,
     store: storage.sessionStore,
     cookie: {
       secure: process.env.NODE_ENV === 'production',
       httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      sameSite: 'lax'
     },
-    name: 'sid'
+    name: 'sid',
+    rolling: true
   };
 
   console.log('Setting up session middleware with store:', {
@@ -58,6 +59,7 @@ export async function setupAuth(app: Express) {
     timestamp: new Date().toISOString()
   });
 
+  // Ensure session middleware is set up before passport
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());
@@ -75,14 +77,23 @@ export async function setupAuth(app: Express) {
 
         if (user.status !== 'active') {
           console.log("User account is not active:", user.id);
-          return done(null, false, { message: "This account has been deactivated. Please contact support." });
+          return done(null, false, { message: "This account has been deactivated" });
         }
 
         const isValid = await comparePasswords(password, user.password);
-        console.log("Password validation:", isValid);
+        console.log("Password validation result:", isValid);
 
         if (!isValid) {
           return done(null, false, { message: "Invalid username or password" });
+        }
+
+        // Ensure user has complete data before proceeding
+        if (user.customerId) {
+          const customer = await storage.getCustomerById(user.customerId);
+          if (!customer) {
+            console.log("Customer not found for user:", user.id);
+            return done(null, false, { message: "Account configuration error" });
+          }
         }
 
         console.log("Login successful for user:", {
@@ -95,7 +106,7 @@ export async function setupAuth(app: Express) {
         console.error("Login error:", err);
         return done(err);
       }
-    }),
+    })
   );
 
   passport.serializeUser((user, done) => {
@@ -120,6 +131,15 @@ export async function setupAuth(app: Express) {
         return done(null, false);
       }
 
+      // Ensure customer data is loaded
+      if (user.customerId) {
+        const customer = await storage.getCustomerById(user.customerId);
+        if (!customer) {
+          console.log("Customer not found during deserialization:", user.customerId);
+          return done(null, false);
+        }
+      }
+
       console.log("User successfully deserialized:", {
         userId: user.id,
         hasCustomer: !!user.customerId,
@@ -133,12 +153,11 @@ export async function setupAuth(app: Express) {
     }
   });
 
-  // Consolidated login endpoint
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", (req, res) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         console.error("Authentication error:", err);
-        return next(err);
+        return res.status(500).json({ message: "Internal server error" });
       }
       if (!user) {
         console.log("Authentication failed:", info?.message);
@@ -148,10 +167,11 @@ export async function setupAuth(app: Express) {
       req.login(user, async (loginErr) => {
         if (loginErr) {
           console.error("Login error:", loginErr);
-          return next(loginErr);
+          return res.status(500).json({ message: "Login failed" });
         }
 
         try {
+          // Save session explicitly
           await new Promise<void>((resolve, reject) => {
             req.session.save((err) => {
               if (err) {
@@ -169,16 +189,17 @@ export async function setupAuth(app: Express) {
             timestamp: new Date().toISOString()
           });
 
-          res.json(user);
+          // Return user data only after session is saved
+          return res.json(user);
         } catch (error) {
           console.error("Session save error:", error);
-          next(error);
+          return res.status(500).json({ message: "Failed to save session" });
         }
       });
-    })(req, res, next);
+    })(req, res);
   });
 
-  app.post("/api/logout", (req, res, next) => {
+  app.post("/api/logout", (req, res) => {
     if (!req.user) {
       return res.sendStatus(200);
     }
@@ -192,13 +213,13 @@ export async function setupAuth(app: Express) {
     req.logout((err) => {
       if (err) {
         console.error("Logout error:", err);
-        return next(err);
+        return res.status(500).json({ message: "Logout failed" });
       }
 
       req.session.destroy((err) => {
         if (err) {
           console.error("Session destruction error:", err);
-          return next(err);
+          return res.status(500).json({ message: "Failed to destroy session" });
         }
 
         console.log("Logout successful:", {

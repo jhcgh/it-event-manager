@@ -1,9 +1,17 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { createServer } from "net";
+import { createServer } from "http";
+import { setupAuth } from "./auth";
 
 const app = express();
+
+// Force JSON content type for API routes
+app.use('/api', (req, res, next) => {
+  res.setHeader('Content-Type', 'application/json');
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -56,16 +64,16 @@ app.use((req, res, next) => {
   next();
 });
 
-// Update the error handler middleware
+// Setup auth first
+//Then register routes
+// Error handler middleware - must be after routes
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   const errorDetails = {
     message: err.message || "Internal Server Error",
     status: err.status || err.statusCode || 500,
     timestamp: new Date().toISOString(),
     path: _req.path,
-    method: _req.method,
-    query: _req.query,
-    body: _req.method !== 'GET' ? _req.body : undefined,
+    method: _req.method
   };
 
   // Log detailed error information
@@ -76,38 +84,23 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     ip: _req.ip,
   });
 
-  // Send sanitized error response to client
-  res.status(errorDetails.status).json({
-    error: errorDetails.message,
-    status: errorDetails.status,
-    timestamp: errorDetails.timestamp,
-    path: errorDetails.path
-  });
+  // Always send JSON response for errors
+  res.status(errorDetails.status)
+     .json({
+       error: errorDetails.message,
+       status: errorDetails.status,
+       timestamp: errorDetails.timestamp,
+       path: errorDetails.path
+     });
 });
 
-// Function to check if port is available with timeout
-const isPortAvailable = (port: number, timeout = 5000): Promise<boolean> => {
-  return new Promise((resolve) => {
-    const server = createServer();
-    server.once('error', () => {
-      resolve(false);
-    });
-    server.once('listening', () => {
-      server.close();
-      resolve(true);
-    });
-    server.listen(port, '0.0.0.0');
-    setTimeout(() => {
-      server.close();
-      resolve(false);
-    }, timeout);
-  });
-};
-
+// Setup Vite or static serving after error handler
 (async () => {
   try {
     log("Starting server setup...");
-    const server = registerRoutes(app);
+    const server = createServer(app);
+    await setupAuth(app);
+    registerRoutes(app);
 
     if (app.get("env") === "development") {
       log("Setting up Vite in development mode...");
@@ -118,79 +111,19 @@ const isPortAvailable = (port: number, timeout = 5000): Promise<boolean> => {
       serveStatic(app);
     }
 
-    const BASE_PORT = parseInt(process.env.PORT || "5000", 10);
-    const MAX_PORT_ATTEMPTS = 10;
+    const port = parseInt(process.env.PORT || "5000", 10);
 
-    // Try ports in range BASE_PORT to BASE_PORT + MAX_PORT_ATTEMPTS
-    let port = BASE_PORT;
-    let portFound = false;
-
-    while (!portFound && port < BASE_PORT + MAX_PORT_ATTEMPTS) {
-      log(`Attempting to start server on port ${port}...`);
-      const isAvailable = await isPortAvailable(port);
-      if (isAvailable) {
-        portFound = true;
-      } else {
-        port++;
-      }
-    }
-
-    if (!portFound) {
-      throw new Error(`No available ports found in range ${BASE_PORT}-${BASE_PORT + MAX_PORT_ATTEMPTS - 1}`);
-    }
-
-    // Create a Promise to handle server startup with proper port binding
-    const startServer = new Promise<void>((resolve, reject) => {
-      let serverStartTimeout: NodeJS.Timeout;
-
-      const onError = (error: Error) => {
-        clearTimeout(serverStartTimeout);
-        log(`Error starting server: ${error.message}`);
-        console.error('Failed to start server:', error);
-        reject(error);
-      };
-
-      try {
-        // Set a timeout for server startup
-        serverStartTimeout = setTimeout(() => {
-          onError(new Error('Server startup timed out'));
-        }, 10000);
-
-        server.listen(port, "0.0.0.0", () => {
-          clearTimeout(serverStartTimeout);
-          const address = server.address();
-          const actualPort = typeof address === 'object' ? address?.port : port;
-          log(`Server bound successfully to port ${actualPort}`);
-          console.log(`Server is listening on port ${actualPort}`);
-
-          // Signal that the server is ready
-          if (process.send) {
-            process.send('ready');
-            log('Sent ready signal to parent process');
-          }
-
-          resolve();
-        }).on('error', onError);
-      } catch (error) {
-        onError(error as Error);
-      }
+    // Wait for port to be available
+    await new Promise<void>((resolve, reject) => {
+      server.listen(port, "0.0.0.0", () => {
+        log(`Server is listening on port ${port}`);
+        if (process.send) {
+          process.send('ready');
+        }
+        resolve();
+      }).on('error', reject);
     });
 
-    // Wait for server to start with proper port binding
-    await startServer;
-    log('Server started successfully');
-
-    // Handle graceful shutdown
-    const signals = ['SIGTERM', 'SIGINT'] as const;
-    for (const signal of signals) {
-      process.on(signal, () => {
-        log(`Received ${signal}, shutting down...`);
-        server.close(() => {
-          log('Server closed');
-          process.exit(0);
-        });
-      });
-    }
   } catch (error) {
     console.error("Failed to start server:", error);
     process.exit(1);

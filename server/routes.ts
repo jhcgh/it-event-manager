@@ -383,49 +383,6 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  app.post("/api/login", async (req, res, next) => {
-    try {
-      console.log('Login attempt:', {
-        username: req.body.username,
-        timestamp: new Date().toISOString()
-      });
-
-      const result = await new Promise((resolve, reject) => {
-        req.login(req.user, async (err) => {
-          if (err) {
-            console.error('Login error:', err);
-            reject(err);
-            return;
-          }
-
-          try {
-            await new Promise<void>((resolve, reject) => {
-              req.session.save((err) => {
-                if (err) reject(err);
-                resolve();
-              });
-            });
-
-            console.log('Session saved successfully:', {
-              userId: req.user?.id,
-              sessionID: req.sessionID,
-              timestamp: new Date().toISOString()
-            });
-
-            resolve(req.user);
-          } catch (error) {
-            reject(error);
-          }
-        });
-      });
-
-      res.json(result);
-    } catch (error) {
-      console.error('Error in login process:', error);
-      next(error);
-    }
-  });
-
 
   app.get("/api/customer-settings", async (req, res) => {
     try {
