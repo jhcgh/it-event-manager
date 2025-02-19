@@ -9,7 +9,10 @@ const mailService = new MailService();
 mailService.setApiKey(process.env.SENDGRID_API_KEY);
 
 // Update FROM_EMAIL to use the official domain
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'noreply@itevents.io';
+const FROM_EMAIL = {
+  email: process.env.SENDGRID_FROM_EMAIL || 'noreply@itevents.io',
+  name: 'ITEvents.io' // Add sender name for better identification
+};
 
 interface EmailParams {
   to: string;
@@ -24,16 +27,35 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
     // Initialize with required text content
     const msg: MailDataRequired = {
       to: params.to,
-      from: {
-        email: params.from || FROM_EMAIL,
-        name: 'ITEvents.io'  // Add sender name for better identification
-      },
+      from: FROM_EMAIL,
       subject: params.subject,
       text: params.text || params.html?.replace(/<[^>]*>/g, '') || 'No content provided',
-      html: params.html
+      html: params.html,
+      // Add mail settings for better deliverability
+      mailSettings: {
+        sandboxMode: {
+          enable: false
+        },
+        bypassListManagement: {
+          enable: true
+        }
+      },
+      // Add tracking settings
+      trackingSettings: {
+        openTracking: {
+          enable: true
+        },
+        clickTracking: {
+          enable: true,
+          enableText: true
+        },
+        subscriptionTracking: {
+          enable: false
+        }
+      }
     };
 
-    console.log('Sending test email:', {
+    console.log('Sending email:', {
       to: msg.to,
       from: msg.from,
       subject: msg.subject,
@@ -51,7 +73,6 @@ export async function sendEmail(params: EmailParams): Promise<boolean> {
       } : error,
       params: {
         to: params.to,
-        from: params.from || FROM_EMAIL,
         subject: params.subject
       },
       timestamp: new Date().toISOString()
@@ -66,11 +87,11 @@ export async function sendVerificationCode(
 ): Promise<boolean> {
   return sendEmail({
     to,
-    subject: 'Your TechEvents.io Verification Code',
+    subject: 'Your ITEvents.io Verification Code',
     text: `Your verification code is: ${code}\n\nThis code will expire in 10 minutes.\n\nIf you didn't request this code, please ignore this email.`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #4F46E5; margin-bottom: 20px;">Verify Your TechEvents.io Account</h2>
+        <h2 style="color: #4F46E5; margin-bottom: 20px;">Verify Your ITEvents.io Account</h2>
         <p style="font-size: 16px; color: #374151; margin-bottom: 24px;">
           Please use the following code to verify your account:
         </p>
@@ -84,12 +105,16 @@ export async function sendVerificationCode(
         </p>
         <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #E5E7EB;">
           <p style="color: #9CA3AF; font-size: 12px; text-align: center;">
-            © ${new Date().getFullYear()} TechEvents.io. All rights reserved.
+            © ${new Date().getFullYear()} ITEvents.io. All rights reserved.
           </p>
         </div>
       </div>
     `
   });
+}
+
+export function generateVerificationCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 export async function sendEventConfirmation(
@@ -156,10 +181,6 @@ export async function sendEventReminder(
       </div>
     `
   });
-}
-
-export function generateVerificationCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 export async function sendTestEmail(to: string): Promise<boolean> {

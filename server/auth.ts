@@ -6,6 +6,8 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
+import { verificationStore } from "./utils/verification-store";
+import { sendVerificationCode, generateVerificationCode } from "./utils/email";
 
 declare global {
   namespace Express {
@@ -69,6 +71,11 @@ export function setupAuth(app: Express) {
         }
 
         // Check user status before validating password
+        if (user.status === 'pending') {
+          console.log("User account is pending verification:", user.id);
+          return done(null, false, { message: "Please verify your email address before logging in." });
+        }
+
         if (user.status !== 'active') {
           console.log("User account is deleted:", user.id);
           return done(null, false, { message: "This account has been deleted. Please contact support." });
@@ -113,6 +120,76 @@ export function setupAuth(app: Express) {
     }
   });
 
+  app.post("/api/register", async (req, res, next) => {
+    try {
+      console.log("Registration attempt for:", req.body.username);
+      const existingUser = await storage.getUserByUsername(req.body.username.toLowerCase());
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      const hashedPassword = await hashPassword(req.body.password);
+      const verificationCode = generateVerificationCode();
+
+      // Create user with pending status
+      const user = await storage.createUser({
+        ...req.body,
+        username: req.body.username.toLowerCase(),
+        password: hashedPassword,
+        status: 'pending'
+      });
+
+      // Store verification code
+      verificationStore.setVerificationCode(user.username, verificationCode);
+
+      // Send verification email
+      const emailSent = await sendVerificationCode(user.username, verificationCode);
+      if (!emailSent) {
+        console.error("Failed to send verification email to:", user.username);
+      }
+
+      res.status(201).json({
+        ...user,
+        message: "Please check your email for a verification code to activate your account."
+      });
+    } catch (err) {
+      console.error("Registration error:", err);
+      next(err);
+    }
+  });
+
+  // Add new verification endpoint
+  app.post("/api/verify-email", async (req, res) => {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ message: "Email and verification code are required" });
+    }
+
+    const isValid = verificationStore.verifyCode(email, code);
+    if (!isValid) {
+      return res.status(400).json({ message: "Invalid or expired verification code" });
+    }
+
+    try {
+      const user = await storage.getUserByUsername(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Activate the user
+      const updatedUser = await storage.updateUser(user.id, { status: 'active' });
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to activate user" });
+      }
+
+      res.json({ message: "Email verified successfully. You can now log in." });
+    } catch (error) {
+      console.error("Error during email verification:", error);
+      res.status(500).json({ message: "Failed to verify email" });
+    }
+  });
+
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
@@ -125,8 +202,12 @@ export function setupAuth(app: Express) {
       }
 
       if (user.status !== 'active') {
-        console.log("User account is deleted:", user.id);
-        return res.status(401).json({ message: "This account has been deleted. Please contact support." });
+        console.log("User account is not active:", user.id);
+        return res.status(401).json({ 
+          message: user.status === 'pending' 
+            ? "Please verify your email address before logging in." 
+            : "This account has been deleted. Please contact support." 
+        });
       }
 
       req.login(user, (err) => {
@@ -138,32 +219,6 @@ export function setupAuth(app: Express) {
         res.json(user);
       });
     })(req, res, next);
-  });
-
-  app.post("/api/register", async (req, res, next) => {
-    try {
-      console.log("Registration attempt for:", req.body.username);
-      const existingUser = await storage.getUserByUsername(req.body.username.toLowerCase());
-      if (existingUser) {
-        return res.status(400).json({ message: "Username already exists" });
-      }
-
-      const hashedPassword = await hashPassword(req.body.password);
-      const user = await storage.createUser({
-        ...req.body,
-        username: req.body.username.toLowerCase(),
-        password: hashedPassword,
-        status: 'active'
-      });
-
-      req.login(user, (err) => {
-        if (err) return next(err);
-        res.status(201).json(user);
-      });
-    } catch (err) {
-      console.error("Registration error:", err);
-      next(err);
-    }
   });
 
   app.post("/api/logout", (req, res, next) => {
@@ -179,7 +234,6 @@ export function setupAuth(app: Express) {
       return res.sendStatus(401);
     }
 
-    // Double check user status before sending response
     if (req.user.status !== 'active') {
       console.log("Deleted user attempted to access protected route:", req.user.id);
       req.logout((err) => {

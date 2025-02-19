@@ -31,7 +31,7 @@ export const users = pgTable("users", {
   mobile: text("mobile").notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
   isSuperAdmin: boolean("is_super_admin").default(false).notNull(),
-  status: text("status", { enum: ['active', 'inactive'] }).default("active").notNull(),
+  status: text("status", { enum: ['active', 'inactive', 'pending'] }).default("pending").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -87,7 +87,7 @@ export const insertUserSchema = createInsertSchema(users)
       .regex(/[!@#$%^&*]/, "Password must contain at least one special character"),
     username: z.string().email("Must be a valid email address"),
     customerName: z.string().optional(),
-    status: z.enum(['active', 'inactive']).default('active'),
+    status: z.enum(['active', 'inactive', 'pending']).default('pending'),
   })
   .omit({
     id: true,
@@ -118,7 +118,7 @@ export const insertEventSchema = createInsertSchema(events)
 export const updateUserSchema = createInsertSchema(users)
   .partial()
   .extend({
-    status: z.enum(["active", "inactive"]).optional(),
+    status: z.enum(["active", "inactive", "pending"]).optional(),
     isAdmin: z.boolean().optional(),
     customerName: z.string().optional()
   })
