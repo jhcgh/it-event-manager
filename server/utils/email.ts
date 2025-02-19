@@ -19,7 +19,7 @@ interface EmailParams {
   from?: string;
 }
 
-async function sendEmail(params: EmailParams): Promise<boolean> {
+export async function sendEmail(params: EmailParams): Promise<boolean> {
   try {
     // Initialize with required text content
     const msg: MailDataRequired = {
@@ -30,7 +30,7 @@ async function sendEmail(params: EmailParams): Promise<boolean> {
       html: params.html
     };
 
-    console.log('Sending email:', {
+    console.log('Sending test email:', {
       to: msg.to,
       from: msg.from,
       subject: msg.subject,

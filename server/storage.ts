@@ -209,7 +209,7 @@ export class DatabaseStorage implements IStorage {
               adminEmail: user.username || "please.update@example.com",
               status: 'active'
             });
-            Object.assign(validUpdateFields, { 
+            Object.assign(validUpdateFields, {
               customerId: customer.id,
               customerName: customer.name
             });
@@ -289,10 +289,21 @@ export class DatabaseStorage implements IStorage {
         .where(eq(customers.id, id))
         .returning();
 
-      console.log('Customer settings updated successfully:', {
-        customerId: id,
-        timestamp: new Date().toISOString()
-      });
+      // If customer is set to inactive, also set all associated users to inactive
+      if (updateData.status === 'inactive') {
+        await db
+          .update(users)
+          .set({
+            status: 'inactive',
+            updatedAt: new Date()
+          })
+          .where(eq(users.customerId, id));
+
+        console.log('Customer and associated users set to inactive:', {
+          customerId: id,
+          timestamp: new Date().toISOString()
+        });
+      }
 
       return updatedCustomer;
     } catch (error) {
